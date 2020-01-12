@@ -14,7 +14,7 @@
                 <i class="el-icon-location"></i>
                 <span>传感器</span>
               </template>
-              <div draggable="true" @dragstart="dragStart" @dragend="dragEnd">asdfa</div>
+              <div class="el-menu-item" draggable="true" @dragstart="dragStart" @dragend="dragEnd" type="block-red">红外传感器</div>
               <el-menu-item index="1-1" draggable="true" @dragstart="dragStart" @dragend="dragEnd">触碰传感器</el-menu-item>
               <el-menu-item index="1-2">温度传感器</el-menu-item>
               <!-- <el-menu-item-group>
@@ -65,11 +65,11 @@ export default {
     collapseMenu() {},
 
     dragStart(e){
-        console.log(234)
         let sourceBlockInfo = {
-            type: e.target.index,
+            type: e.target.getAttribute('type'),
             // isDrop: true
         }
+        e.dataTransfer.setData('blockType', sourceBlockInfo.type);
         debugger;
     },
     dragEnd(e){
@@ -77,6 +77,7 @@ export default {
     },
 
     drop(e){
+        
         debugger;
     }
   }
@@ -86,6 +87,7 @@ export default {
 <style scoped>
 .el-submenu .el-menu-item {
   min-width: auto;
+  padding-left: 40px;
 }
 
 .block-menu {
