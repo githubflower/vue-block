@@ -6,6 +6,7 @@ import MoveForm from '@/components/MoveForm'
 import IfForm from '@/components/IfForm'
 import SightForm from '@/components/SightForm'
 import FlowCanvas from '@/components/FlowCanvas'
+import Demo from '@/components/Demo'
 
 Vue.use(Router)
 
@@ -40,6 +41,11 @@ export default new Router({
       path: '/FlowCanvas',
       name: 'FlowCanvas',
       component: FlowCanvas
+    },
+    {
+      path: '/Demo',
+      name: 'Demo',
+      component: Demo
     }
   ]
 })
