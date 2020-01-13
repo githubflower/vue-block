@@ -21,6 +21,8 @@
                 @dragend="dragEnd"
                 type="block-red"
               >红外传感器</div>
+              
+
               <el-menu-item
                 index="1-1"
                 draggable="true"
@@ -44,7 +46,13 @@
                 <i class="el-icon-location"></i>
                 <span>控制器</span>
               </template>
-              <el-menu-item index="2-1">传送带</el-menu-item>
+              <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="setIO"
+              >传送带</div>
               <el-menu-item index="2-2">灯光</el-menu-item>
             </el-submenu>
             <el-submenu index="3">
@@ -61,8 +69,16 @@
       <el-col :span="22">
         <div class="svg" @drop.prevent="drop" @dragover.prevent>
           <svg xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
-            <block v-for="(item, index) in blocks" :key="index" :blockData="item.blockData"></block>
+            <block
+              v-for="(item, index) in blocks"
+              :key="index"
+              :blockData="item.blockData"
+              :formData="item.formData"
+              :editIndex="index"
+              @openSetting="openSetting"
+            />
           </svg>
+          <setting-form v-show="showSettingForm" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
         </div>
       </el-col>
     </el-row>
@@ -70,26 +86,36 @@
 </template>
 
 <script>
-import Block from '@/components/Block'
+import Block from "@/components/Block";
+import SettingForm from "@/components/form/SettingForm";
 
 const defaultCfg = {
-  x: 0,
-  y: 0,
-  width: 200,
+  x: 0.5,
+  y: 0.5,
+  width: 180,
   height: 70
-}
+};
 export default {
   name: "Demo",
   components: {
-    Block
+    Block,
+    SettingForm
   },
   data() {
     return {
-      blocks: [{
-        blockData: Object.assign({
-          blockType: 'red',
-        }, defaultCfg)
-      }]
+      showSettingForm: false,
+      curBlock: 0,
+      blocks: [
+        {
+          blockData: Object.assign(
+            {
+              blockType: "red"
+            },
+            defaultCfg
+          ),
+          formData: {}
+        }
+      ]
     };
   },
   methods: {
@@ -101,11 +127,14 @@ export default {
         type: e.target.getAttribute("type")
         // isDrop: true
       };
-      e.dataTransfer.setData('dragData', JSON.stringify({
-        blockType: sourceBlockInfo.type,
-        offsetX: e.offsetX,
-        offsetY: e.offsetY
-      }));
+      e.dataTransfer.setData(
+        "dragData",
+        JSON.stringify({
+          blockType: sourceBlockInfo.type,
+          offsetX: e.offsetX,
+          offsetY: e.offsetY
+        })
+      );
     },
     dragEnd(e) {
       console.log(e.offsetX, e.offsetY);
@@ -116,13 +145,38 @@ export default {
       this.blocks.push({
         blockData: Object.assign({
           blockType: dragData.blockType,
-          x: e.offsetX - dragData.offsetX,
-          y: e.offsetY - dragData.offsetY,
-          width: 200,
-          height: 70
-        })
+          x: e.offsetX - dragData.offsetX + 0.5, // +0.5解决设置1px实际显示的效果是2px的bug   元素本身bug
+          y: e.offsetY - dragData.offsetY + 0.5,
+          width: defaultCfg.width,
+          height: defaultCfg.height
+        }),
+        formData: {}
       });
+    },
+
+    /**
+     * 打开属性面板
+     * data中参数包括：
+     * blockType: block类型
+     * editIndex: block的索引
+     */
+    openSetting(data) {
+      this.showSettingForm = true;
+      this.curBlock = this.blocks[data.editIndex];
+    //   this.curBlock.formData = data;
+    },
+
+    onClose() {
+      this.showSettingForm = false;
+    },
+
+    onSubmit(data) {
+        this.curBlock.formData = data;
+        
     }
+  },
+  created(){
+      window.blocks = this.blocks;
   }
 };
 </script>
