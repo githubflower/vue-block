@@ -60,7 +60,13 @@
                 <i class="el-icon-menu"></i>
                 <span slot="title">机器人运动</span>
               </template>
-              <el-menu-item index="3-1">直线运动</el-menu-item>
+              <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="motion"
+              >直线运动</div>
               <el-menu-item index="3-2">圆弧运动</el-menu-item>
             </el-submenu>
           </el-menu>
@@ -78,7 +84,7 @@
               @openSetting="openSetting"
             />
           </svg>
-          <setting-form v-show="showSettingForm" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
+          <setting-form v-show="showSettingForm" :block="curBlock" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
         </div>
       </el-col>
     </el-row>
@@ -104,12 +110,12 @@ export default {
   data() {
     return {
       showSettingForm: false,
-      curBlock: 0,
+      curBlock: null,
       blocks: [
         {
           blockData: Object.assign(
             {
-              blockType: "red"
+              blockType: "setIO"
             },
             defaultCfg
           ),
@@ -195,6 +201,6 @@ export default {
 .svg {
   width: 100%;
   height: 800px;
-  border: 1px solid #666;
+  border: 1px solid #909399;
 }
 </style>

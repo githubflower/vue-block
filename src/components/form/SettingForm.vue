@@ -14,14 +14,23 @@
 
 <script>
 import IoForm from "./IoForm";
+import SetIOForm from "./SetIOForm";
+import MotionForm from "./MotionForm";
 export default {
   name: "SettingForm",
+  props: {
+    block: {
+      type: Object
+    }
+  },
   components: {
-    IoForm
+    IoForm,
+    SetIOForm,
+    MotionForm
   },
   data() {
     return {
-      activeForm: "IoForm"
+      //   activeForm: "IoForm"
     };
   },
   methods: {
@@ -29,9 +38,18 @@ export default {
       this.$emit("onClose");
     },
 
-    onSubmit(data){
-        this.$emit('onSubmit', data);
-        this.$emit("onClose");
+    onSubmit(data) {
+      this.$emit("onSubmit", data);
+      this.$emit("onClose");
+    }
+  },
+  computed: {
+    activeForm: function() {
+      if (!this.block) {
+        return "";
+      }
+      let type = this.block.blockData.blockType;
+      return `${type.charAt(0).toUpperCase() + type.slice(1)}Form`;
     }
   }
 };
@@ -47,6 +65,7 @@ export default {
   top: 0px;
   right: 0px;
   padding: 20px;
+  min-width: 370px;
   /* padding-top: 10px; */
   border: 1px solid #999;
   border-radius: 5px;
