@@ -8,7 +8,7 @@
         <el-button icon="el-icon-close" @click="onClose"></el-button>
       </el-col>
     </el-row>
-    <component :is="activeForm" @onSubmit="onSubmit"></component>
+    <component :is="activeForm" :block="block" @onSubmit="onSubmit" @onClose="onClose"></component>
   </div>
 </template>
 
@@ -16,6 +16,8 @@
 import IoForm from "./IoForm";
 import SetIOForm from "./SetIOForm";
 import MotionForm from "./MotionForm";
+import ControlsIfForm from "./ControlsIfForm";
+import ControlsLoopForm from "./ControlsLoopForm";
 export default {
   name: "SettingForm",
   props: {
@@ -26,7 +28,9 @@ export default {
   components: {
     IoForm,
     SetIOForm,
-    MotionForm
+    MotionForm,
+    ControlsIfForm,
+    ControlsLoopForm
   },
   data() {
     return {
@@ -70,6 +74,9 @@ export default {
   border: 1px solid #999;
   border-radius: 5px;
   box-shadow: 3px 3px 3px #999;
+}
+.toolbar span{
+    user-select: none;
 }
 .toolbar button {
   float: right;
