@@ -19,7 +19,7 @@
                 draggable="true"
                 @dragstart="dragStart"
                 @dragend="dragEnd"
-                type="block-red"
+                type="getIO"
               >红外传感器</div>
               
 
@@ -95,6 +95,14 @@
       <el-col :span="22">
         <div class="svg" @drop.prevent="drop" @dragover.prevent>
           <svg xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+            <defs>
+                    <filter id="shadow-offset-grey" x="0" y="0" width="200%" height="200%">
+                        <!-- <feOffset result="offOut" in="SourceAlpha" dx="1" dy="1" /> -->
+                        <feOffset result="offOut" in="SourceGraphic" dx="2" dy="2" />
+                        <feGaussianBlur result="blurOut" in="offOut" stdDeviation="2" />
+                        <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+                    </filter>
+            </defs>
             <block
               v-for="(item, index) in blocks"
               :key="index"

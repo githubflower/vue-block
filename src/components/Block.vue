@@ -12,14 +12,17 @@
   >
     <!-- <path class="icon setting" :d="iconType"/> -->
     <g v-if="isProcessBlock">
-      <rect class="wrap" :width="blockData.width" :height="blockData.height" rx="5"/>
+      <rect class="wrap" :width="blockData.width" :height="blockData.height" rx="5" filter="url(#shadow-offset-grey)"/>
       <rect class="block-title" x="0" y="0" :width="blockData.width" height="25" rx="5"/>
+      <g v-if="isSetIO">
+        <image :xlink:href="startIcon" x="8" y="30" height="16" width="16" @click="openSetting" @mouseenter="changeIcon(true)" @mouseleave="changeIcon(false)"/>
+      </g>
       <image :xlink:href="imgPath" x="158" y="4" height="16" width="16" @click="openSetting"/>
       <image :xlink:href="blockIcon" x="8" y="4" height="16" width="16"/>
       <text v-if="formData.name" x="30" y="16">{{ formData.name | ellipsis }}</text>
     </g>
 
-    <path v-if="isControlsIf" :d="conditionPath"/>
+    <path v-if="isControlsIf" :d="conditionPath" filter="url(#shadow-offset-grey)"/>
     <path v-if="isControlsLoop" :d="loopPath"/>
   </g>
 </template>
@@ -45,6 +48,7 @@ export default {
       dragData: {},
       iconType: icons.setting,
       imgPath: '../../static/imgs/setting.png',
+      startIcon: '../../static/imgs/startNormal.png',
       conditionPath: 'm 0 0 M 80 0  l 80 35 l -80 35 l -80 -35 l 80 -35  m 0 115  a 5 5 0 1 1 0 10  a 5 5 0 1 1 0 -10 z  m 0 -115 m 0 70 v 114 l 0 20  m 0 0 l 4 -8 m -8 0 l 4 8 m 0 -20m 0 0 l 8 -4 m 0 8 l -8 -4 m 0 0 h 115 m -115 0 m 80 -149 h 35 m 0 0 v 149 ',
       loopPath: 'M 95 0  l 80 35 l -80 35 l -80 -35 l 80 -35  m 0 70 v 114 m 0 0 l -95 0 m 0 0 l 0 -149 m 0 0 l 15 0  m 0 0 l -8 -4 m 0 8 l 8 -4  m 160 0 h 15 m 0 0 v 164 m 0 0 h -96 m 0 0 v 30  m 0 0 l 4 -8 m -8 0 l 4 8 M 95 110  a 5 5 0 1 1 0 10  a 5 5 0 1 1 0 -10 z '
     };
@@ -86,6 +90,15 @@ export default {
 
     take2Front(index){
       this.$emit('take2Front', index);
+    },
+
+    changeIcon(bool){
+      if(bool){
+        this.startIcon = '../../static/imgs/startActive.png';
+
+      }else{
+        this.startIcon = '../../static/imgs/startNormal.png';
+      }
     }
   },
   computed: {
@@ -103,6 +116,9 @@ export default {
     },
     isProcessBlock: function(){
       return !/controls/.test(this.blockData.blockType);
+    },
+    isSetIO: function(){
+      return /setIO/.test(this.blockData.blockType)
     }
   },
   filters: {
@@ -130,6 +146,8 @@ export default {
 }
 .block .wrap{
   fill: #ffffff;
+  stroke: #238efe;
+  stroke-width: 2;
 }
 .block text{
   fill: #ffffff;

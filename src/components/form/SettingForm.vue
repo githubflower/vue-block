@@ -75,6 +75,9 @@ export default {
   border-radius: 5px;
   box-shadow: 3px 3px 3px #999;
 }
+.toolbar span{
+    user-select: none;
+}
 .toolbar button {
   float: right;
   margin-bottom: 15px;
