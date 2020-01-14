@@ -16,7 +16,7 @@
     <image :xlink:href="imgPath" x="158" y="4" height="16" width="16" @click="openSetting"/>
 
     <image :xlink:href="blockIcon" x="8" y="4" height="16" width="16"/>
-    <text v-if="formData.name" x="30" y="16">{{ formData.name }}</text>
+    <text v-if="formData.name" x="30" y="16">{{ formData.name | ellipsis }}</text>
   </g>
 </template>
 
@@ -76,6 +76,15 @@ export default {
     },
     blockIcon: function(){
       return `../../static/imgs/${this.blockData.blockType}.png`;
+    }
+  },
+  filters: {
+    ellipsis: function(v){
+      if(v.length > 10){
+        return v.slice(0, 10) + '...'
+      }else{
+        return v;
+      }
     }
   }
 };

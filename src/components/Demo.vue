@@ -84,7 +84,7 @@
               @openSetting="openSetting"
             />
           </svg>
-          <setting-form v-show="showSettingForm" :block="curBlock" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
+          <setting-form v-if="curBlock" v-show="showSettingForm" :block="curBlock" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
         </div>
       </el-col>
     </el-row>
@@ -167,9 +167,11 @@ export default {
      * editIndex: block的索引
      */
     openSetting(data) {
+        this.curBlock = this.blocks[data.editIndex];
+      if(!this.curBlock.formData){
+          this.curBlock.formData = {};
+      }
       this.showSettingForm = true;
-      this.curBlock = this.blocks[data.editIndex];
-    //   this.curBlock.formData = data;
     },
 
     onClose() {

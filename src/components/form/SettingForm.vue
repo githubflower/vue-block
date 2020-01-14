@@ -8,7 +8,7 @@
         <el-button icon="el-icon-close" @click="onClose"></el-button>
       </el-col>
     </el-row>
-    <component :is="activeForm" @onSubmit="onSubmit"></component>
+    <component :is="activeForm" :block="block" @onSubmit="onSubmit" @onClose="onClose"></component>
   </div>
 </template>
 
