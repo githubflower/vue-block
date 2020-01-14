@@ -80,14 +80,14 @@
                 draggable="true"
                 @dragstart="dragStart"
                 @dragend="dragEnd"
-                type="loop"
+                type="controlsLoop"
               >循环</div>
               <div
                 class="el-menu-item"
                 draggable="true"
                 @dragstart="dragStart"
                 @dragend="dragEnd"
-                type="condition"
+                type="controlsIf"
               >条件判断</div>
             </el-submenu>
           </el-menu>
