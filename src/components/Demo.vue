@@ -44,7 +44,7 @@
             <el-submenu index="2">
               <template slot="title">
                 <i class="el-icon-location"></i>
-                <span>控制器</span>
+                <span>执行器</span>
               </template>
               <div
                 class="el-menu-item"
@@ -68,6 +68,26 @@
                 type="motion"
               >直线运动</div>
               <el-menu-item index="3-2">圆弧运动</el-menu-item>
+            </el-submenu>
+             <el-submenu index="4">
+              <template slot="title">
+                <i class="el-icon-location"></i>
+                <span>控制</span>
+              </template>
+              <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="loop"
+              >循环</div>
+              <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="condition"
+              >条件判断</div>
             </el-submenu>
           </el-menu>
         </div>
