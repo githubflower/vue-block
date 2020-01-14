@@ -69,6 +69,26 @@
               >直线运动</div>
               <el-menu-item index="3-2">圆弧运动</el-menu-item>
             </el-submenu>
+            <el-submenu index="5">
+              <template slot="title">
+                <i class="el-icon-menu"></i>
+                <span slot="title">流程控制</span>
+              </template>
+            <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="controlsIf"
+              >条件判断</div>
+              <div
+                class="el-menu-item"
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd"
+                type="controlsLoop"
+              >循环</div>
+            </el-submenu>
           </el-menu>
         </div>
       </el-col>
@@ -82,6 +102,7 @@
               :formData="item.formData"
               :editIndex="index"
               @openSetting="openSetting"
+              @take2Front="take2Front"
             />
           </svg>
           <setting-form v-if="curBlock" v-show="showSettingForm" :block="curBlock" @onClose="onClose" @onSubmit="onSubmit"></setting-form>
@@ -127,6 +148,11 @@ export default {
   methods: {
     expandMenu() {},
     collapseMenu() {},
+    take2Front(index){
+        let tmp = this.blocks[index];
+        this.blocks.splice(index, 1);
+        this.blocks.push(tmp);
+    },
 
     dragStart(e) {
       let sourceBlockInfo = {
@@ -141,6 +167,7 @@ export default {
           offsetY: e.offsetY
         })
       );
+
     },
     dragEnd(e) {
       console.log(e.offsetX, e.offsetY);

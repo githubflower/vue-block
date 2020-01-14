@@ -16,6 +16,8 @@
 import IoForm from "./IoForm";
 import SetIOForm from "./SetIOForm";
 import MotionForm from "./MotionForm";
+import ControlsIfForm from "./ControlsIfForm";
+import ControlsLoopForm from "./ControlsLoopForm";
 export default {
   name: "SettingForm",
   props: {
@@ -26,7 +28,9 @@ export default {
   components: {
     IoForm,
     SetIOForm,
-    MotionForm
+    MotionForm,
+    ControlsIfForm,
+    ControlsLoopForm
   },
   data() {
     return {
