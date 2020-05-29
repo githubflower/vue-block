@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <div class="block">
+    <div class="block" style="display: none;">
       变量 age
       <div id="set" class="set" @click="showForm = !showForm">赋值</div>
       
@@ -26,6 +26,12 @@
         </select>
       </div>
     </div>
+    <el-tabs v-model="activeName"  type="card" @tab-click="handleClick">
+        <el-tab-pane label="运行状态" name="first">
+         
+        </el-tab-pane>
+        <el-tab-pane label="代码编辑" name="second"></el-tab-pane>
+      </el-tabs>
   </div>
 </template>
 
@@ -34,15 +40,19 @@ export default {
   name: "HelloWorld",
   data() {
     return {
+      activeName: 'first',
       showForm: false
     };
+  },
+  methods: {
+    handleClick() {}
   }
 };
 </script>
 
 <style scoped>
 .hello div {
-  border: 1px solid #222;
+  /* border: 1px solid #222; */
 }
 .block {
   width: 200px;

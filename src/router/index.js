@@ -7,7 +7,9 @@ import IfForm from '@/components/IfForm'
 import SightForm from '@/components/SightForm'
 import FlowCanvas from '@/components/FlowCanvas'
 import Demo from '@/components/Demo'
-import PathAnimation from '@/components/PathAnimation'
+import DemoIndex from '@/components/demos/DemoIndex'
+import PathAnimation from '@/components/demos/PathAnimation'
+import State from '@/components/demos/State'
 
 Vue.use(Router)
 
@@ -49,13 +51,17 @@ export default new Router({
       component: Demo
     },
     {
-      path: '/animation',
+      path: '/demos',
       name: 'animation',
-      component: AnimationDemo,
+      component: DemoIndex,
       children: [
         {
           path: 'dashoffset',
           component: PathAnimation
+        },
+        {
+          path: 'state',
+          component: State
         }
       ]
     }

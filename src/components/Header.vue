@@ -6,7 +6,7 @@
       mode="horizontal"
       @select="handleSelect"
     >
-      <el-menu-item index="1">Home</el-menu-item>
+      <el-menu-item index="1">主页</el-menu-item>
       <el-submenu index="9">
         <template slot="title">工程管理</template>
         <el-menu-item index="9-1">新建</el-menu-item>
@@ -25,6 +25,7 @@
         <div @click="showCode">查看代码</div>
       </el-menu-item>
     </el-menu>
+    <img :src="logoPath"/>
   </div>
 </template>
 
@@ -33,6 +34,7 @@ export default {
   name: "Header",
   data() {
     return {
+      logoPath: '',
       activeIndex: "1",
       activeIndex2: "1"
     };
@@ -49,5 +51,12 @@ export default {
 };
 </script>
 
-<style scoped>
+<style  >
+.el-menu--horizontal>.el-menu-item,
+.el-menu--horizontal>.el-submenu .el-submenu__title{
+  height: 35px;
+  line-height: 35px;
+  padding: 0 10px;
+}
 </style>
+

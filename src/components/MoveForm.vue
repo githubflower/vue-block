@@ -1,7 +1,7 @@
 <template>
   <div id="moveForm">
     <el-tabs v-model="activeName" @tab-click="handleClick">
-      <el-tab-pane label="位置1" name="first">
+      <!-- <el-tab-pane label="位置1" name="first">
         <el-form ref="form" :model="form" label-width="110px">
           <el-form-item label="点位信息来源">
             <el-select v-model="form.region" placeholder="请选择点位信息来源">
@@ -31,7 +31,13 @@
           </el-form-item>
         </el-form>
       </el-tab-pane>
-      <el-tab-pane label="位置2" name="second">TODO</el-tab-pane>
+      <el-tab-pane label="位置2" name="second">TODO</el-tab-pane> -->
+      <el-tab-pane label="变量" name="n1">TODO</el-tab-pane>
+      <el-tab-pane label="函数" name="n2">TODO</el-tab-pane>
+      <el-tab-pane label="逻辑" name="n3">TODO</el-tab-pane>
+      <el-tab-pane label="循环" name="n4">TODO</el-tab-pane>
+      <el-tab-pane label="运算" name="n5">TODO</el-tab-pane>
+      <el-tab-pane label="线程" name="n6">TODO</el-tab-pane>
     </el-tabs>
   </div>
 </template>
