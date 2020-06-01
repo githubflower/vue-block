@@ -10,9 +10,14 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "anim-event": "^1.0.16",
+    "cssprefix": "^2.0.16",
     "element-ui": "^2.13.0",
     "less": "^3.11.1",
     "less-loader": "^6.1.0",
+    "m-class-list": "^1.1.9",
+    "plain-draggable": "^2.5.12",
+    "pointer-event": "^1.0.0",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
   },

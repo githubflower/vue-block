@@ -9,7 +9,7 @@ import FlowCanvas from '@/components/FlowCanvas'
 import Demo from '@/components/Demo'
 import DemoIndex from '@/components/demos/DemoIndex'
 import PathAnimation from '@/components/demos/PathAnimation'
-import State from '@/components/demos/State'
+import StatePage from '@/components/demos/StatePage'
 
 Vue.use(Router)
 
@@ -61,7 +61,7 @@ export default new Router({
         },
         {
           path: 'state',
-          component: State
+          component: StatePage
         }
       ]
     }
