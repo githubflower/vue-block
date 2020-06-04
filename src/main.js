@@ -12,6 +12,8 @@ Vue.use(Element, { size: 'small', zIndex: 3000 });
 
 Vue.config.productionTip = false
 
+window.stateManage = {};//状态管理  后续采用vuex实现 TODO
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
