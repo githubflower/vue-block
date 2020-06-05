@@ -4,7 +4,7 @@
         <div v-show="stateData.inCount > 1" class="in event-count">{{stateData.inCount}}</div>
         <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div>
         <div class="connect-point in"></div>
-        <div class="connect-point out" @mousedown="onConnectPointMousedown"></div>
+        <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
     </div>
 </template>
 
@@ -28,7 +28,7 @@ export default {
          * 鼠标在连接点按下
          */
         onConnectPointMousedown(e){
-            // window.stateManage.isConnecting = true;
+            window.stateManage.isConnecting = true;
             let boundingRect = e.target.getBoundingClientRect();
             let curSvg = e.target.closest('svg');
             let curSvgRect = curSvg.getBoundingClientRect();
@@ -36,6 +36,9 @@ export default {
                 x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
                 y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
             };
+        },
+        onMouseup(){
+            stateManage.isConnecting = false;
         }
     },
     mounted(){
