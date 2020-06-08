@@ -1,7 +1,7 @@
 <template>
-    <div class="state-div" :transform="generateStatePos(stateData.transformValue)">
+    <div class="state-div" :transform="generateStatePos(stateData)" :stateId="stateData.stateId ? stateData.stateId : genId()">
         <p x="5" y="16">{{stateData.name}}</p>
-        <div v-show="stateData.inCount > 1" class="in event-count">{{stateData.inCount}}</div>
+        <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inCount}}</div>
         <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div>
         <div class="connect-point in"></div>
         <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
@@ -20,9 +20,11 @@ export default {
         }
     },
     methods: {
-        generateStatePos(index){
-            const gapX = 60;
-            return `translate(${(90 + gapX) * (index - 1)}, 40)`;
+        genId(){
+            return window.genId();
+        },
+        generateStatePos(stateData){
+            return (stateData.x && stateData.y) ? `translate(${stateData.x}, ${stateData.y})` : 'translate(0, 0)';
         },
         /**
          * 鼠标在连接点按下
@@ -45,7 +47,6 @@ export default {
         var elm = this.$el;
         window.testVueObj = this;
         window.draggableDiv = new PlainDraggable(elm);
-
         draggableDiv.onDragStart = function(pointerXY) {
             let connectPointReg = /connect-point/;
             let classStr = pointerXY.target.getAttribute('class');

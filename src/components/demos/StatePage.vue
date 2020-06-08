@@ -42,6 +42,37 @@ export default {
                         name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
                         inCount: 3,
                         outCount: 1
+                    }],
+                    lineAry: [{
+                        startPoint: {
+                            x: 0,
+                            y: 0
+                        },
+                        endPoint: {
+                            x: 0,
+                            y: 0
+                        },
+                        startState: {
+                            stateId: '',
+                        },
+                        endState: {
+                            stateId: '',
+                        }
+                    },{
+                        startPoint: {
+                            x: 0,
+                            y: 0
+                        },
+                        endPoint: {
+                            x: 0,
+                            y: 0
+                        },
+                        startState: {
+                            stateId: '',
+                        },
+                        endState: {
+                            stateId: '',
+                        }
                     }]
                 },
                 {
@@ -59,8 +90,9 @@ export default {
                         name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
                         inCount: 3,
                         outCount: 1
-                    }]
-                }
+                    }],
+                    lineAry: []
+                },
             ],
         }
     },
@@ -137,7 +169,7 @@ text{
     fill: #00DBFF;
 }
 .templine{
-    stroke: #ff0000;
+    stroke: rgba(0,219,255,.42);
     stroke-width: 1px;
 }
 .templine:hover{

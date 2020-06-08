@@ -10,19 +10,20 @@
             <g v-show="showTempLine">
                 <path d="" class="templine"></path>
             </g>
+            <line-svg v-for="(line, index2) in thread.lineAry" :key="index2" :line="line"></line-svg>
         <!-- </g> -->
     </svg>
 </template>
 
 <script>
-// import MyPlainDraggable from 'plain-draggable'
-// import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
 import StateDiv from './StateDiv'
+import LineSvg from './LineSvg'
 export default {
     name: 'ThreadSvg',
     props: ['thread'],
     components: {
-        StateDiv
+        StateDiv,
+        LineSvg
     },
     data(){
         return {
@@ -111,7 +112,17 @@ export default {
             templine.setAttribute('d', `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y}`);
         },
         drawConnectLine(){
-
+            this.thread.lineAry.push({
+                d: `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y}`,
+                startPoint: stateManage.startPoint,
+                endPoint: stateManage.endPoint,
+                startState: {
+                    stateId: '',
+                },
+                endState: {
+                    stateId: '',
+                }
+            });
         },
         onMouseup(e){
             if(stateManage.isConnecting = true){
@@ -120,6 +131,7 @@ export default {
                 if(regIsConnectPoint.test(target_class)){
                     //绘制连接线
                     this.drawConnectLine();
+                    this.showTempLine = false;
                 }else{
                     this.showTempLine = false;
                 }

@@ -13,6 +13,13 @@ Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.config.productionTip = false
 
 window.stateManage = {};//状态管理  后续采用vuex实现 TODO
+window.genId = (function(){
+  var _id = 0;
+  return function(){
+    return ++_id;
+  }
+})();
+
 
 /* eslint-disable no-new */
 new Vue({
