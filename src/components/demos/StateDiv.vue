@@ -46,7 +46,11 @@ export default {
     mounted(){
         var elm = this.$el;
         window.testVueObj = this;
-        window.draggableDiv = new PlainDraggable(elm);
+        window.draggableDiv = new PlainDraggable(elm, {
+            snap: {
+                step: 30
+            }
+        });
         draggableDiv.onDragStart = function(pointerXY) {
             let connectPointReg = /connect-point/;
             let classStr = pointerXY.target.getAttribute('class');

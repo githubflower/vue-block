@@ -46,6 +46,7 @@ export default {
 .connect-line{
     stroke: #aaaaaa;
     stroke-width: 1px;
+    fill: transparent;
 }
 .connect-line:hover{
     stroke:yellow;

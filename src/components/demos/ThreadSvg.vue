@@ -94,10 +94,22 @@ export default {
                     this.showTempLine = true;
                     let curSvg = e.target.closest('svg');
                     let curSvgRect = curSvg.getBoundingClientRect();
-                    stateManage.curPoint = {
-                        x: e.clientX - curSvgRect.left - 2 , //e.target.offsetLeft + e.offsetX, // e.clientX,
-                        y: e.clientY - curSvgRect.top - 2//e.target.offsetTop + e.offsetY // e.clientY
-                    };
+
+                    let target_class = e.target.getAttribute('class');
+                    let regIsConnectPoint = /connect-point/;
+                    if(regIsConnectPoint.test(target_class)){
+                        // debugger;
+                        stateManage.curPoint = {
+                            x: e.target.getBoundingClientRect().left - curSvgRect.left - 2 + (e.target.getBoundingClientRect().width / 2) , //e.target.offsetLeft + e.offsetX, // e.clientX,
+                            y: e.target.getBoundingClientRect().top - curSvgRect.top + (e.target.getBoundingClientRect().height / 2)//e.target.offsetTop + e.offsetY // e.clientY
+                        };
+                    }else{
+
+                        stateManage.curPoint = {
+                            x: e.clientX - curSvgRect.left - 2 , //e.target.offsetLeft + e.offsetX, // e.clientX,
+                            y: e.clientY - curSvgRect.top - 2//e.target.offsetTop + e.offsetY // e.clientY
+                        };
+                    }
                     console.log('curPoint: ' + JSON.stringify(stateManage.curPoint) + ' ' + e.target.offsetLeft + '---' + e.offsetX + e.pageX);
                     this.drawTempLine();
                 }else{
@@ -107,13 +119,15 @@ export default {
             }
         },
         drawTempLine(){
+            const MID_POINT_X = 50;
             let templine = this.$el.getElementsByClassName('templine')[0];
             // var templine = document.getElementsByClassName('templine')[1];
-            templine.setAttribute('d', `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y}`);
+            templine.setAttribute('d', `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} h ${MID_POINT_X} v ${stateManage.curPoint.y - stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y} m 0 0 z`);
         },
         drawConnectLine(){
+            const MID_POINT_X = 50;
             this.thread.lineAry.push({
-                d: `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y}`,
+                d: `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} h ${MID_POINT_X} v ${stateManage.curPoint.y - stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y} m 0 0 z`,
                 startPoint: stateManage.startPoint,
                 endPoint: stateManage.endPoint,
                 startState: {
@@ -202,6 +216,7 @@ text{
 .templine{
     stroke: #ff0000;
     stroke-width: 1px;
+    fill: transparent;
 }
 .templine:hover{
     stroke:yellow;
