@@ -1,8 +1,9 @@
 <template>
-    <svg xmlns="http://www.w3.org/2000/svg" :height="thread.height" :id="thread.id" class="thread-svg">
+    <svg xmlns="http://www.w3.org/2000/svg" :height="thread.height" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
         <!-- <g class="thread-wrap" v-for="(thread, i) in threadAry" :key="i"> -->
-            <foreignObject y="0" width="100%" :height="thread.height" @mousemove="onConnecting" @mouseup="onMouseup" >
-                <h4 class="title">{{ thread.name }}</h4>
+            <foreignObject y="0" width="100%" :height="thread.height" >
+            <!-- <foreignObject y="0" width="100%" :height="thread.height" @mousemove="onConnecting" @mouseup="onMouseup"> -->
+                <h4 class="title" contenteditable="true">{{ thread.name }}</h4>
                 <div class="thread-body">
                     <state-div v-for="(stateItem, index) in thread.stateAry" :key="index" :stateData="stateItem"></state-div>
                 </div>
@@ -29,42 +30,6 @@ export default {
         return {
             showTempLine: false,
             threadCount: 1,
-            threadAry: [
-                {
-                    name: '线程名称1',
-                    height: 300,
-                    stateAry: [{
-                        name: '流水线视觉定位',
-                        inCount: 1,
-                        outCount: 2
-                    },{
-                        name: '取料',
-                        inCount: 2,
-                        outCount: 2
-                    },{
-                        name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
-                        inCount: 3,
-                        outCount: 1
-                    }]
-                },
-                {
-                    name: '线程名称2',
-                    height: 500,
-                    stateAry: [{
-                        name: '流水线视觉定位',
-                        inCount: 1,
-                        outCount: 2
-                    },{
-                        name: '取料',
-                        inCount: 2,
-                        outCount: 2
-                    },{
-                        name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
-                        inCount: 3,
-                        outCount: 1
-                    }]
-                }
-            ],
         }
     },
     methods: {
@@ -151,6 +116,10 @@ export default {
                 }
                 stateManage.isConnecting = false;
             }
+        },
+
+        drop(){
+            console.log('---drop---');
         }
     },
   
@@ -177,9 +146,9 @@ export default {
 </script>
 
 <style>
-foreignObject{
+/* foreignObject {
     border: 1px solid rgba(0,219,255,.42);
-}
+} */
 h4.title {
     margin: 0;
     width: 100%;
@@ -193,7 +162,7 @@ h4.title {
     height: 265px;
 }
 svg.thread-svg{
-    margin-top: 30px;
+    margin-top: 54px;
 }
 .thread{
     width: 800px;

@@ -5,6 +5,7 @@
       class="el-menu-demo"
       mode="horizontal"
       @select="handleSelect"
+      
     >
       <el-menu-item index="1">主页</el-menu-item>
       <el-submenu index="9">
@@ -54,9 +55,22 @@ export default {
 <style  >
 .el-menu--horizontal>.el-menu-item,
 .el-menu--horizontal>.el-submenu .el-submenu__title{
-  height: 35px;
-  line-height: 35px;
+  height: 60px;
+  line-height: 60px;
   padding: 0 10px;
+}
+#Header{
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 61px;
+  z-index: 1;
+}
+li.menuitem{
+  height: 61px;
+}
+li.el-submenu{
+  height: 61px;
 }
 </style>
 

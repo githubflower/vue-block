@@ -75,7 +75,7 @@ export default {
                         }
                     }]
                 },
-                {
+                /* {
                     name: '线程名称2',
                     height: 500,
                     stateAry: [{
@@ -92,14 +92,26 @@ export default {
                         outCount: 1
                     }],
                     lineAry: []
-                },
+                }, */
             ],
         }
     },
     methods: {
         addThread(){
             console.log('---add thread---');
-            this.threadCount++;
+            this.threadAry.push({
+                name: '线程名称' + (this.threadAry.length + 1),
+                height: 300,
+                stateAry: [{
+                    name: '开始',
+                    inCount: 0,
+                    outCount: 0
+                },{
+                    name: '结束',
+                    inCount: 0,
+                    outCount: 0
+                },]
+            });
         },
         addState(){},
         generateDefaultPos(index){
@@ -128,9 +140,7 @@ export default {
 html{
     background-color: #001F3A;
 }
-foreignObject{
-    border: 1px solid rgba(0,219,255,.42);
-}
+
 
 h4.title {
     margin: 0;
@@ -145,11 +155,16 @@ h4.title {
 }
 
 .toolbox{
+    position: fixed;
+    width: 100%;
+    background-color: #ffffff;
     padding: 10px;
     border: 1px solid #ebebeb;
     border-radius: 3px;
+    z-index: 1;
 }
 .content{
+    margin-top: 61px;
     height: 800px;
 }
 .content > svg{

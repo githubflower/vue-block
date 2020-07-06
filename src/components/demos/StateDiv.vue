@@ -1,6 +1,9 @@
 <template>
-    <div class="state-div" :transform="generateStatePos(stateData)" :stateId="stateData.stateId ? stateData.stateId : genId()">
-        <p x="5" y="16">{{stateData.name}}</p>
+    <div class="state-div" :transform="generateStatePos(stateData)" :stateId="stateData.stateId ? stateData.stateId : genId()" 
+        draggable="true"
+        @dragstart="dragStart"
+        @dragend="dragEnd">
+        <p x="5" y="16" :title="stateData.name">{{stateData.name}}</p>
         <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inCount}}</div>
         <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div>
         <div class="connect-point in"></div>
@@ -41,9 +44,22 @@ export default {
         },
         onMouseup(){
             stateManage.isConnecting = false;
+        },
+        dragStart(e){
+            this._startInfo = e.target.getBoundingClientRect();
+            console.log('---dragStart---');
+        },
+        dragEnd(){
+            this._endInfo = e.target.getBoundingClientRect();
+            this.updatePosition();
+            console.log('---dragEnd---');
+        },
+        updatePosition(){
+            
         }
     },
     mounted(){
+        /*
         var elm = this.$el;
         window.testVueObj = this;
         window.draggableDiv = new PlainDraggable(elm, {
@@ -62,8 +78,8 @@ export default {
         };
         draggableDiv.onMove = function(params) {
             console.log('move');
-            window.line.position();
-            window.line2.position();
+            window.line && window.line.position();
+            window.line2 && window.line2.position();
         }
         draggableDiv.onDragEnd = function(params) {
             console.log('drag-end');
@@ -71,7 +87,8 @@ export default {
 
         // this.$nextTick(function(){
             // window.line = new LeaderLine(states[0], states[1], );
-        }
+        }*/
+
         /* draggable.snap = {
             x: {
                 step: 40 //90 + 60
@@ -86,6 +103,7 @@ export default {
 
 <style>
 .state-div{
+    position: relative;
     float: left;
     /* display: table; */
     margin-left: 50px;
