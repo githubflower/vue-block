@@ -1,6 +1,11 @@
 <template>
-    <div class="state-div" :transform="generateStatePos(stateData)" :stateId="stateData.stateId ? stateData.stateId : genId()" 
+    <div 
+        :stateId="stateData.stateId ? stateData.stateId : genId()" 
+        :class="['state-div', {'is-dragging': isDragging}]"
+        :style="generateStatePos(stateData)"
         draggable="true"
+        @mousedown="onStateMousedown"
+        @drag="onDrag"
         @dragstart="dragStart"
         @dragend="dragEnd">
         <p x="5" y="16" :title="stateData.name">{{stateData.name}}</p>
@@ -14,12 +19,18 @@
 <script>
 // import MyPlainDraggable from 'plain-draggable'
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
-
+const IS_MOVING = 1;
+const IS_CONNECTING = 2;
+const isNumber = (str)=>{
+    return typeof str === 'number';
+}
 export default {
     name: 'StateDiv',
-    props: ['stateData'],
+    props: ['stateData', 'index', 'threadIndex'],
     data(){
         return {
+            isDragging: false,
+            operate: null
         }
     },
     methods: {
@@ -27,12 +38,29 @@ export default {
             return window.genId();
         },
         generateStatePos(stateData){
-            return (stateData.x && stateData.y) ? `translate(${stateData.x}, ${stateData.y})` : 'translate(0, 0)';
+            return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
+        },
+        isConnectPoint(dom){
+            let connectPointReg = /connect-point/;
+            let classStr = dom.getAttribute('class');
+            if(connectPointReg.test(classStr)){
+                return true;
+            }
+            return false;
+        },
+        onStateMousedown(e){
+            if(this.isConnectPoint(e.target)){
+                this.operate = IS_CONNECTING;
+            }else{
+                this.operate = null;
+            }
         },
         /**
          * 鼠标在连接点按下
          */
         onConnectPointMousedown(e){
+            // this.operate = IS_CONNECTING;
+            
             window.stateManage.isConnecting = true;
             let boundingRect = e.target.getBoundingClientRect();
             let curSvg = e.target.closest('svg');
@@ -45,17 +73,106 @@ export default {
         onMouseup(){
             stateManage.isConnecting = false;
         },
-        dragStart(e){
-            this._startInfo = e.target.getBoundingClientRect();
-            console.log('---dragStart---');
-        },
-        dragEnd(){
-            this._endInfo = e.target.getBoundingClientRect();
-            this.updatePosition();
-            console.log('---dragEnd---');
-        },
-        updatePosition(){
+        onDrag(e){
+            this._endInfo = {
+                x: e.x,
+                y: e.y
+            }
             
+            this.judgeBoundary(e.target);
+            this.updatePosition(e.target);
+        },
+        dragStart(e){
+            if(this.operate === IS_CONNECTING){
+                e.preventDefault();
+                return false;
+            }
+            
+            this.isDragging = true;
+            // this._startInfo = e.target.getBoundingClientRect();
+            this._startInfo = {
+                x: e.x,
+                y: e.y
+            };
+            this._startInfo.transform = this.getStyleTransform(e.target);
+            console.log('---dragStart---',this._startInfo);
+        },
+        dragEnd(e){
+            this.isDragging = false;
+            // this._endInfo = e.target.getBoundingClientRect();
+            this._endInfo = {
+                x: e.x,
+                y: e.y
+            }
+            this.updatePosition(e.target);
+            console.log('---dragEnd---',  this._endInfo);
+        },
+        judgeBoundary(dom){
+            let targetInfo = dom.getBoundingClientRect();
+            let curSvg = dom.closest('svg');
+            let curSvgRect = curSvg.getBoundingClientRect();
+            let needResizeW = (targetInfo.right > curSvgRect.right),
+                needResizeH = (targetInfo.bottom > curSvgRect.bottom),
+                needResizeInfo = {
+                    threadIndex: this.threadIndex
+                };
+            if(needResizeH){
+                needResizeInfo.dh = targetInfo.bottom - curSvgRect.bottom;
+            }
+            if(needResizeW){
+                needResizeInfo.dw = targetInfo.right - curSvgRect.right;
+            }
+            if(needResizeW || needResizeH){
+                EventObj.$emit('resizeSvg', needResizeInfo);
+            }
+            // this.$emit('resizeSvg', needResizeInfo);
+        },
+        updatePosition(dom){
+            let dx = this._endInfo.x - this._startInfo.x,
+                dy = this._endInfo.y - this._startInfo.y,
+                reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
+                style = dom.getAttribute('style'),
+                cx = this._startInfo.transform.x + dx,
+                cy = this._startInfo.transform.y + dy;
+            // 手動更新样式
+            /* if(style){
+                style = style.replace(reg, `transform: translate(${cx}px, ${cy}px)`);
+            }else{
+                style = `transform: translate(${cx}px, ${cy}px)`;
+            }
+            dom.setAttribute('style', style); */
+
+            //通知父容器更新transform数据 （数据驱动更新样式）
+            this.$emit('updateStateData', {
+                transform: {
+                    x: cx,
+                    y: cy
+                },
+                index: this.index
+            });
+        },
+        getStyleTransform(dom){
+            let style, 
+                transform = {
+                    x: 0,
+                    y: 0
+                },
+                reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
+                ret;
+            if(dom){
+                style = dom.getAttribute('style');
+                if(style){
+                    ret = style.match(reg);
+                    console.log(ret);
+                    if(ret){
+                        transform = {
+                            x: parseInt(ret[1], 10),
+                            y: parseInt(ret[3], 10)
+                        }
+                    }
+                }
+            }
+            return transform;
         }
     },
     mounted(){
@@ -103,10 +220,12 @@ export default {
 
 <style>
 .state-div{
-    position: relative;
-    float: left;
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* float: left; */
     /* display: table; */
-    margin-left: 50px;
+    /* margin-left: 50px; */
     max-width: 150px;
     padding: 5px 20px;
     /* width: 98px; */
@@ -174,5 +293,8 @@ export default {
 }
 .connect-point.out{
     transform: translate(50%, -50%);
+}
+.is-dragging{
+  cursor: move;
 }
 </style>    

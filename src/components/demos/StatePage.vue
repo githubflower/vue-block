@@ -5,7 +5,7 @@
             <el-button type="primary" plain @click="addState">状态</el-button>
         </div>
         <div class="content">
-            <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread">
+            <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i">
             </thread-svg>
         </div>
     </div>
@@ -29,19 +29,26 @@ export default {
             threadAry: [
                 {
                     name: '线程名称1',
+                    width: 1000,
                     height: 300,
                     stateAry: [{
                         name: '流水线视觉定位',
                         inCount: 1,
-                        outCount: 2
+                        outCount: 2,
+                        x: 5,
+                        y: 0
                     },{
                         name: '取料',
                         inCount: 2,
-                        outCount: 2
+                        outCount: 2,
+                        x: 190,
+                        y: 0
                     },{
                         name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
                         inCount: 3,
-                        outCount: 1
+                        outCount: 1,
+                        x: 500,
+                        y: 350
                     }],
                     lineAry: [{
                         startPoint: {
@@ -75,24 +82,31 @@ export default {
                         }
                     }]
                 },
-                /* {
+                {
                     name: '线程名称2',
+                    width: 1000,
                     height: 500,
                     stateAry: [{
                         name: '流水线视觉定位',
                         inCount: 1,
-                        outCount: 2
+                        outCount: 2,
+                        x: 100,
+                        y: 50
                     },{
                         name: '取料',
                         inCount: 2,
-                        outCount: 2
+                        outCount: 2,
+                        x: 300,
+                        y: 50
                     },{
                         name: '状态名称很长的时候会显示省略号鼠标放上去显示详细描述',
                         inCount: 3,
-                        outCount: 1
+                        outCount: 1,
+                        x: 500,
+                        y: 450
                     }],
                     lineAry: []
-                }, */
+                },
             ],
         }
     },
@@ -101,6 +115,7 @@ export default {
             console.log('---add thread---');
             this.threadAry.push({
                 name: '线程名称' + (this.threadAry.length + 1),
+                width: 1000,
                 height: 300,
                 stateAry: [{
                     name: '开始',
@@ -122,12 +137,22 @@ export default {
             const gapX = 60;
             return `translate(${(90 + gapX) * (index - 1)}, 40)`;
         },
-    
+        resizeSvg(resizeInfo){
+            if(resizeInfo.dh){
+                this.threadAry[resizeInfo.threadIndex].height += resizeInfo.dh;
+            }
+            if(resizeInfo.dw){
+                this.threadAry[resizeInfo.threadIndex].width += resizeInfo.dw;
+            }
+        }
     },
     computed: {
         sumHeight: function(i){
             return 0;
         }
+    },
+    created(){
+        EventObj.$on('resizeSvg', this.resizeSvg, this);
     },
     mounted(){
         window.statePageVue = this;
@@ -168,7 +193,7 @@ h4.title {
     height: 800px;
 }
 .content > svg{
- width: 100%; 
+ /* width: 100%;  */
  /* height: calc(100%); */
  border: 1px solid rgba(0,219,255,.42);
  background-color: #001F3A;

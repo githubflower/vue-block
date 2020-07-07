@@ -1,11 +1,10 @@
 <template>
-    <svg xmlns="http://www.w3.org/2000/svg" :height="thread.height" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
+    <svg xmlns="http://www.w3.org/2000/svg" :width="thread.width" :height="computedH" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
         <!-- <g class="thread-wrap" v-for="(thread, i) in threadAry" :key="i"> -->
-            <foreignObject y="0" width="100%" :height="thread.height" >
-            <!-- <foreignObject y="0" width="100%" :height="thread.height" @mousemove="onConnecting" @mouseup="onMouseup"> -->
-                <h4 class="title" contenteditable="true">{{ thread.name }}</h4>
+            <foreignObject y="0" width="100%" :height="computedH" @mousemove="onConnecting" @mouseup="onMouseup">
+                <h4 class="title" contenteditable="true" :style="titleStyle">{{ thread.name }}</h4>
                 <div class="thread-body">
-                    <state-div v-for="(stateItem, index) in thread.stateAry" :key="index" :stateData="stateItem"></state-div>
+                    <state-div v-for="(stateItem, index) in thread.stateAry" :key="index" :stateData="stateItem" :index="index" :threadIndex="threadIndex" @updateStateData=updateStateData></state-div>
                 </div>
             </foreignObject>
             <g v-show="showTempLine">
@@ -21,7 +20,7 @@ import StateDiv from './StateDiv'
 import LineSvg from './LineSvg'
 export default {
     name: 'ThreadSvg',
-    props: ['thread'],
+    props: ['thread', 'threadIndex'],
     components: {
         StateDiv,
         LineSvg
@@ -30,10 +29,13 @@ export default {
         return {
             showTempLine: false,
             threadCount: 1,
+            titleHeight: 35
         }
     },
     methods: {
-      
+        titleStyle(){
+            return `height: ${this.titleHeight}px;`;
+        },
         addState(){
             this.stateAry.push({
                 name: '状态',
@@ -120,9 +122,16 @@ export default {
 
         drop(){
             console.log('---drop---');
-        }
+        },
+
+        updateStateData(receiveData){
+            this.thread.stateAry[receiveData.index].x = receiveData.transform.x;
+            this.thread.stateAry[receiveData.index].y = receiveData.transform.y;
+        },
+
+        
     },
-  
+
     mounted(){
         let el = this.$el;
         var elm = el.querySelector('#test');
@@ -141,14 +150,26 @@ export default {
         this.line = new LeaderLine(states[0], states[1], lineOption);
         this.line2 =  new LeaderLine(states[0], states[2], lineOption); */
     },
+    computed: {
+        computedH: function(){
+            let maxY = 0;
+            this.thread.stateAry.forEach(state => {
+                // 50是状态的高度 TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
+                maxY = Math.max(state.y + this.titleHeight + 60, maxY);
+            });
+            var ret = Math.max(this.thread.height, maxY)
+            console.log('ret: ', ret);
+            return ret;
+        }
+    }
    
 }
 </script>
 
 <style>
-/* foreignObject {
-    border: 1px solid rgba(0,219,255,.42);
-} */
+foreignObject {
+    border: 1px solid #00cd9a;
+}
 h4.title {
     margin: 0;
     width: 100%;
@@ -158,8 +179,9 @@ h4.title {
     background-color: rgba(0,219,255,.42);
 }
 .thread-body{
-    /* height: calc(100% -35px); */
-    height: 265px;
+    position: relative;
+    height: calc(100% - 35px);
+    border: 1px solid #baed00;
 }
 svg.thread-svg{
     margin-top: 54px;
@@ -173,7 +195,6 @@ svg.thread-svg{
 }
 .title{
     width: 800px;
-    height: 35px;
     fill: #00DBFF;
     fill-opacity: .42;
 }

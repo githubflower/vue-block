@@ -22,6 +22,7 @@ window.genId = (function(){
 
 
 /* eslint-disable no-new */
+window.EventObj = new Vue();
 new Vue({
   el: '#app',
   router,
