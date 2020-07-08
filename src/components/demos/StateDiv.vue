@@ -88,6 +88,7 @@ export default {
                 e.preventDefault();
                 return false;
             }
+            e.dataTransfer.effectAllowed = 'copyMove';
             
             this.isDragging = true;
             // this._startInfo = e.target.getBoundingClientRect();

@@ -1,6 +1,6 @@
 <template>
-    <div class="thread" :style="{width: thread.width + 'px', height: computedH + 'px' }">
-        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
+    <div class="thread" :style="{width: thread.width + 'px', height: computedH + 'px' }" @drop.prevent="drop" @dragover.prevent>
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" :id="thread.id" class="thread-svg" >
             <foreignObject y="0" width="100%" :height="computedH" @mousemove="onConnecting" @mouseup="onMouseup">
                 <h4 class="title" contenteditable="true" :style="titleStyle">{{ thread.name }}</h4>
                 <div class="thread-body">
@@ -126,8 +126,15 @@ export default {
             }
         },
 
-        drop(){
-            console.log('---drop---');
+        drop(e){
+            if(e.dataTransfer.getData('operate') === 'addState'){
+                let threadPosInfo = e.target.getBoundingClientRect();
+                EventObj.$emit('addState', {
+                    index: this.threadIndex,
+                    x: e.x - threadPosInfo.x,
+                    y: e.y - threadPosInfo.y
+                });
+            }
         },
 
         updateStateData(receiveData){

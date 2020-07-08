@@ -2,7 +2,14 @@
     <div class="main">
         <div class="toolbox">
             <el-button type="primary" plain @click="addThread">线程</el-button>
-            <el-button type="primary" plain @click="addState">状态</el-button>
+            <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
+            <span
+                draggable="true"
+                @drag="drag"
+                @dragstart="dragStart"
+                @dragend="dragEnd">
+                <el-button type="primary" plain >状态</el-button>
+            </span>
         </div>
         <div class="content">
             <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i">
@@ -132,7 +139,15 @@ export default {
                 },]
             });
         },
-        addState(){},
+        addState(data){
+            this.threadAry[data.index].stateAry.push({
+                name: '状态描述',
+                inCount: 0,
+                outCount: 0,
+                x: data.x,
+                y: data.y
+            });
+        },
         generateDefaultPos(index){
             const gap = 35;
             return `translate(50, ${(300 + gap) * (index - 1)})`;
@@ -148,6 +163,16 @@ export default {
             if(resizeInfo.dw){
                 this.threadAry[resizeInfo.threadIndex].width += resizeInfo.dw;
             }
+        },
+        drag(){},
+        dragStart(e){
+            // e.dataTransfer.items.push('aaa');
+            // e.dataTransfer.items.add('aaa');
+            e.dataTransfer.setData('operate', 'addState');
+            console.log('--------------dragstart');
+        },
+        dragEnd(){
+            console.log('dragend');
         }
     },
     computed: {
@@ -157,6 +182,7 @@ export default {
     },
     created(){
         EventObj.$on('resizeSvg', this.resizeSvg, this);
+        EventObj.$on('addState', this.addState, this);
     },
     mounted(){
         window.statePageVue = this;
