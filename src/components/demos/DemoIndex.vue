@@ -1,8 +1,5 @@
 <template>
-  <div id="formdiv">
-  	<router-view/>
-   
-  </div>
+  <router-view/>
 </template>
 
 <script>

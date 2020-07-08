@@ -1,6 +1,6 @@
 <template>
-    <svg xmlns="http://www.w3.org/2000/svg" :width="thread.width" :height="computedH" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
-        <!-- <g class="thread-wrap" v-for="(thread, i) in threadAry" :key="i"> -->
+    <div class="thread" :style="{width: thread.width + 'px', height: computedH + 'px' }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" :id="thread.id" class="thread-svg"   @drop.prevent="drop" @dragover.prevent>
             <foreignObject y="0" width="100%" :height="computedH" @mousemove="onConnecting" @mouseup="onMouseup">
                 <h4 class="title" contenteditable="true" :style="titleStyle">{{ thread.name }}</h4>
                 <div class="thread-body">
@@ -11,8 +11,12 @@
                 <path d="" class="templine"></path>
             </g>
             <line-svg v-for="(line, index2) in thread.lineAry" :key="index2" :line="line"></line-svg>
-        <!-- </g> -->
-    </svg>
+        </svg>
+        <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
+        <i class="resize-icon resizable" :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
+            @mousedown="startResize"
+        ></i>
+    </div>
 </template>
 
 <script>
@@ -29,7 +33,9 @@ export default {
         return {
             showTempLine: false,
             threadCount: 1,
-            titleHeight: 35
+            titleHeight: 35,
+            moveVerticalImg: "../../../static/imgs/move-vertical.png",
+            resizableImg: "../../../static/imgs/resizable.png",
         }
     },
     methods: {
@@ -129,7 +135,7 @@ export default {
             this.thread.stateAry[receiveData.index].y = receiveData.transform.y;
         },
 
-        
+        startResize(){},
     },
 
     mounted(){
@@ -152,14 +158,21 @@ export default {
     },
     computed: {
         computedH: function(){
+
+            this._lastHeight = this._lastHeight || this.thread.height;
             let maxY = 0;
+            let threadDivBorderWidth = 1,
+                stateDivBorderWidth = 1,
+                stateDivHeight = 50;
             this.thread.stateAry.forEach(state => {
                 // 50是状态的高度 TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
-                maxY = Math.max(state.y + this.titleHeight + 60, maxY);
+                maxY = Math.max(state.y + this.titleHeight + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
             });
-            var ret = Math.max(this.thread.height, maxY)
-            console.log('ret: ', ret);
-            return ret;
+            if(maxY > this._lastHeight){
+                this._lastHeight = maxY;
+            }
+            // var ret = Math.max(this.thread.height, maxY)
+            return this._lastHeight;
         }
     }
    
@@ -167,6 +180,12 @@ export default {
 </script>
 
 <style>
+div.thread{
+    position: relative;
+    /* margin-top: 50px; */
+    /* margin-left: 50px; */
+    margin: 25px;
+}
 foreignObject {
     border: 1px solid #00cd9a;
 }
@@ -181,18 +200,28 @@ h4.title {
 .thread-body{
     position: relative;
     height: calc(100% - 35px);
-    border: 1px solid #baed00;
+    /* border: 1px solid #baed00; */
 }
-svg.thread-svg{
-    margin-top: 54px;
+.resize-icon{
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 14px;
+    height: 14px;
 }
-.thread{
+.resize-icon.resizable{
+    right: 1px;
+    bottom: 1px;
+    left: initial;
+    cursor: nwse-resize;
+}
+/* .thread{
     width: 800px;
     height: 300px;
     stroke: #00DBFF;
     stroke-width: 1;
     fill: none;
-}
+} */
 .title{
     width: 800px;
     fill: #00DBFF;

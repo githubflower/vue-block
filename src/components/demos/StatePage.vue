@@ -120,11 +120,15 @@ export default {
                 stateAry: [{
                     name: '开始',
                     inCount: 0,
-                    outCount: 0
+                    outCount: 0,
+                    x: 50,
+                    y: 50
                 },{
                     name: '结束',
                     inCount: 0,
-                    outCount: 0
+                    outCount: 0,
+                    x: 350,
+                    y: 50
                 },]
             });
         },
@@ -161,11 +165,13 @@ export default {
 }
 </script>
 
-<style>
+<style scope>
 html{
     background-color: #001F3A;
 }
-
+.main{
+    margin-top: 61px; /*Header的高度*/
+}
 
 h4.title {
     margin: 0;
@@ -189,7 +195,7 @@ h4.title {
     z-index: 1;
 }
 .content{
-    margin-top: 61px;
+    padding-top: 54px;
     height: 800px;
 }
 .content > svg{

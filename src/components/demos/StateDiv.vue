@@ -6,6 +6,7 @@
         draggable="true"
         @mousedown="onStateMousedown"
         @drag="onDrag"
+        @dragleave="onDragLeave"
         @dragstart="dragStart"
         @dragend="dragEnd">
         <p x="5" y="16" :title="stateData.name">{{stateData.name}}</p>
@@ -76,7 +77,7 @@ export default {
         onDrag(e){
             this._endInfo = {
                 x: e.x,
-                y: e.y
+                y: e.pageY
             }
             
             this.judgeBoundary(e.target);
@@ -92,7 +93,7 @@ export default {
             // this._startInfo = e.target.getBoundingClientRect();
             this._startInfo = {
                 x: e.x,
-                y: e.y
+                y: e.pageY
             };
             this._startInfo.transform = this.getStyleTransform(e.target);
             console.log('---dragStart---',this._startInfo);
@@ -102,10 +103,21 @@ export default {
             // this._endInfo = e.target.getBoundingClientRect();
             this._endInfo = {
                 x: e.x,
-                y: e.y
+                y: e.pageY
             }
             this.updatePosition(e.target);
             console.log('---dragEnd---',  this._endInfo);
+        },
+        onDragLeave(e){
+            console.log('onDragLeave --- ' + e.x + ' --- ' + e.y)
+            console.log('onDragLeave --- ' + e.x + ' --- ' + e.pageY)
+            this._endInfo = {
+                x: e.x,
+                y: e.pageY
+            }
+            
+            this.judgeBoundary(e.target);
+            this.updatePosition(e.target);
         },
         judgeBoundary(dom){
             let targetInfo = dom.getBoundingClientRect();
@@ -231,6 +243,7 @@ export default {
     /* width: 98px; */
     height: 40px;
     border: 1px solid #aaaaaa;
+    /* background-color: #ccdd00; */
     border-radius: 5px;
     color: #aaaaaa;
 }
