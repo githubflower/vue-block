@@ -1,5 +1,5 @@
 <template>
-    <div class="main">
+    <div class="main" @mousemove="onMouseMove">
         <div class="toolbox">
             <el-button type="primary" plain @click="addThread">线程</el-button>
             <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
@@ -32,7 +32,7 @@ export default {
     data(){
         return {
             showTempLine: false,
-            threadCount: 1,
+            operate: 'default',
             threadAry: [
                 {
                     name: '线程名称1',
@@ -169,10 +169,34 @@ export default {
             // e.dataTransfer.items.push('aaa');
             // e.dataTransfer.items.add('aaa');
             e.dataTransfer.setData('operate', 'addState');
-            console.log('--------------dragstart');
         },
         dragEnd(){
             console.log('dragend');
+        },
+        onMouseMove(e){
+            if(this.operate === 'resize-thread'){ // default, resize-thread, 
+                let dx = e.pageX - this.operateData.startPosition.x,
+                    dy = e.pageY - this.operateData.startPosition.y,
+                    minH = this.getMinHeightOfThread(this.operateData.index);
+                this.threadAry[this.operateData.index].width = this.operateData.originW + dx;
+                this.threadAry[this.operateData.index].height = Math.max(minH, this.operateData.originH + dy);
+            }
+        },
+        operateChange(data){
+            this.operateData = data;
+            this.operate = data.operate;
+        },
+        getMinHeightOfThread(index){
+            let maxY = 0,
+                threadDivBorderWidth = 1,
+                stateDivBorderWidth = 1,
+                stateDivHeight = 50;// 50是状态的高度
+            this.threadAry[index].stateAry.forEach(state => {
+                // TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
+                // maxY = Math.max(state.y + this.titleHeight + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
+                maxY = Math.max(state.y + 35 + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
+            }); 
+            return maxY;
         }
     },
     computed: {
@@ -183,6 +207,7 @@ export default {
     created(){
         EventObj.$on('resizeSvg', this.resizeSvg, this);
         EventObj.$on('addState', this.addState, this);
+        EventObj.$on('operateChange', this.operateChange, this);
     },
     mounted(){
         window.statePageVue = this;
@@ -222,7 +247,6 @@ h4.title {
 }
 .content{
     padding-top: 54px;
-    height: 800px;
 }
 .content > svg{
  /* width: 100%;  */

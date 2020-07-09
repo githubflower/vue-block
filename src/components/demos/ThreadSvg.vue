@@ -1,7 +1,10 @@
 <template>
-    <div class="thread" :style="{width: thread.width + 'px', height: computedH + 'px' }" @drop.prevent="drop" @dragover.prevent>
+    <!-- <div class="thread" :style="{width: thread.width + 'px', height: thread.height + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize"  -->
+    <div class="thread" :style="{width: thread.width + 'px', height: computedH + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize" 
+        @mousemove="onResize2"
+        >
         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" :id="thread.id" class="thread-svg" >
-            <foreignObject y="0" width="100%" :height="computedH" @mousemove="onConnecting" @mouseup="onMouseup">
+            <foreignObject y="0" width="100%" height="100%" @mousemove="onConnecting" @mouseup="onMouseup">
                 <h4 class="title" contenteditable="true" :style="titleStyle">{{ thread.name }}</h4>
                 <div class="thread-body">
                     <state-div v-for="(stateItem, index) in thread.stateAry" :key="index" :stateData="stateItem" :index="index" :threadIndex="threadIndex" @updateStateData=updateStateData></state-div>
@@ -15,7 +18,9 @@
         <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
         <i class="resize-icon resizable" :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
             @mousedown="startResize"
+            @mouseup="endResize"
         ></i>
+        <div v-if="showVirtualBox" class="virtual-box"></div>
     </div>
 </template>
 
@@ -31,6 +36,7 @@ export default {
     },
     data(){
         return {
+            showVirtualBox: false,
             showTempLine: false,
             threadCount: 1,
             titleHeight: 35,
@@ -39,6 +45,12 @@ export default {
         }
     },
     methods: {
+        onResize1(){
+            console.log('onResize---1---' + +new Date());
+        },
+        onResize2(){
+            console.log('onResize---2---' + +new Date());
+        },
         titleStyle(){
             return `height: ${this.titleHeight}px;`;
         },
@@ -112,6 +124,7 @@ export default {
             });
         },
         onMouseup(e){
+            console.log('---------118');
             if(stateManage.isConnecting = true){
                 let target_class = e.target.getAttribute('class');
                 let regIsConnectPoint = /connect-point/;
@@ -142,7 +155,26 @@ export default {
             this.thread.stateAry[receiveData.index].y = receiveData.transform.y;
         },
 
-        startResize(){},
+        startResize(e){
+            this.showVirtualBox = true;
+            EventObj.$emit('operateChange', {
+                operate: 'resize-thread',
+                index: this.threadIndex,
+                startPosition: {
+                    x: e.pageX,
+                    y: e.pageY
+                },
+                originW: this.$el.offsetWidth,
+                originH: this.$el.offsetHeight
+            });
+        },
+        endResize(e){
+            this.showVirtualBox = false;
+            EventObj.$emit('operateChange', {
+                operate: 'default'
+            })
+            this._lastHeight = this.thread.height;
+        }
     },
 
     mounted(){
@@ -165,21 +197,24 @@ export default {
     },
     computed: {
         computedH: function(){
-
-            this._lastHeight = this._lastHeight || this.thread.height;
             let maxY = 0;
             let threadDivBorderWidth = 1,
                 stateDivBorderWidth = 1,
-                stateDivHeight = 50;
+                stateDivHeight = 50;// 50是状态的高度
+            if(this.showVirtualBox){
+                return Math.max(maxY, this.thread.height);
+            }
+            this._lastHeight = this._lastHeight || this.thread.height;
             this.thread.stateAry.forEach(state => {
-                // 50是状态的高度 TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
+                // TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
                 maxY = Math.max(state.y + this.titleHeight + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
             });
             if(maxY > this._lastHeight){
                 this._lastHeight = maxY;
             }
-            // var ret = Math.max(this.thread.height, maxY)
+            this.thread.height = this._lastHeight;
             return this._lastHeight;
+            // return Math.max(this._lastHeight, this.thread.height);
         }
     }
    
@@ -222,6 +257,9 @@ h4.title {
     left: initial;
     cursor: nwse-resize;
 }
+.resize-icon.resizable:hover{
+    cursor: nwse-resize;
+}
 /* .thread{
     width: 800px;
     height: 300px;
@@ -247,5 +285,12 @@ text{
 .templine:hover{
     stroke:yellow;
 }
-
+.virtual-box{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px dashed #ffffff;
+}
 </style>    
