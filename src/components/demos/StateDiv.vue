@@ -8,8 +8,14 @@
         @drag="onDrag"
         @dragleave="onDragLeave"
         @dragstart="dragStart"
-        @dragend="dragEnd">
-        <p x="5" y="16" :title="stateData.name">{{stateData.name}}</p>
+        @dragend="dragEnd"
+        @contextmenu="contextmenu"
+        @dblclick="rename"
+        >
+        <el-input v-if="showInput" v-model="stateData.name"
+            @keyup.enter.native="hideInput"
+        ></el-input>
+        <p v-else :title="stateData.name">{{stateData.name}}</p>
         <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inCount}}</div>
         <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div>
         <div class="connect-point in"></div>
@@ -30,6 +36,7 @@ export default {
     props: ['stateData', 'index', 'threadIndex'],
     data(){
         return {
+            showInput: false,
             isDragging: false,
             operate: null
         }
@@ -186,6 +193,15 @@ export default {
                 }
             }
             return transform;
+        },
+        contextmenu(){
+
+        },
+        rename(){
+            this.showInput = true;
+        },
+        hideInput(){
+            this.showInput = false;
         }
     },
     mounted(){
