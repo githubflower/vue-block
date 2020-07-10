@@ -1,6 +1,9 @@
 <template>
     <g>
-        <path :d="line.d" class="connect-line"></path>
+        <path 
+            :lineId="line.lineId ? line.lineId : genId()"
+            :d="line.d" 
+            class="connect-line"></path>
     </g>
 </template>
 
@@ -26,7 +29,10 @@ export default {
         },
         generateByState(){
 
-        }
+        },
+        genId(){
+            return window.genId('line');
+        },
         
     },
   

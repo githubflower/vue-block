@@ -1,6 +1,7 @@
 <template>
+        <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
     <div 
-        :stateId="stateData.stateId ? stateData.stateId : genId()" 
+        :stateId="stateId" 
         :class="['state-div', {'is-dragging': isDragging}]"
         :style="generateStatePos(stateData)"
         draggable="true"
@@ -12,8 +13,13 @@
         @contextmenu="contextmenu"
         @dblclick="rename"
         >
-        <el-input v-if="showInput" v-model="stateData.name"
+        <el-input 
+            v-if="showInput" 
+            class="state-name-input"
+            v-model="stateData.name"
+            style="position: relative; top: 4px;"
             @keyup.enter.native="hideInput"
+            @blur="hideInput"
         ></el-input>
         <p v-else :title="stateData.name">{{stateData.name}}</p>
         <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inCount}}</div>
@@ -38,12 +44,13 @@ export default {
         return {
             showInput: false,
             isDragging: false,
-            operate: null
+            operate: null,
+            stateId: null,
         }
     },
     methods: {
         genId(){
-            return window.genId();
+            return window.genId('state');
         },
         generateStatePos(stateData){
             return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
@@ -73,6 +80,20 @@ export default {
             let boundingRect = e.target.getBoundingClientRect();
             let curSvg = e.target.closest('svg');
             let curSvgRect = curSvg.getBoundingClientRect();
+            let data = {
+                threadIndex: this.threadIndex,
+                stateIndex: this.index,
+                startState: {
+                    stateId: this.stateId
+                },
+                startPoint: {
+                    x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
+                    y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
+                }
+            };
+            console.log(JSON.stringify(data));
+            EventObj.$emit('updateTempLineData', data);
+
             window.stateManage.startPoint = {
                 x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
                 y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
@@ -199,10 +220,18 @@ export default {
         },
         rename(){
             this.showInput = true;
+            // this.$el.child('.state-name-input')
+            this.$nextTick(function(){
+                // this.$el.firstChild.focus();
+                 this.$el.firstChild.firstElementChild.focus()
+            })
         },
         hideInput(){
             this.showInput = false;
         }
+    },
+    created(){
+        this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
     },
     mounted(){
         /*
@@ -255,9 +284,9 @@ export default {
     /* float: left; */
     /* display: table; */
     /* margin-left: 50px; */
-    max-width: 150px;
+    /* max-width: 150px; */
     padding: 5px 20px;
-    /* width: 98px; */
+    width: 98px;
     height: 40px;
     border: 1px solid #aaaaaa;
     /* background-color: #ccdd00; */
@@ -273,6 +302,7 @@ export default {
     position: relative;
     top: 50%;
     transform: translateY(-50%);
+    text-align: center;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     text-overflow: ellipsis;

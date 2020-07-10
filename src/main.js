@@ -15,8 +15,8 @@ Vue.config.productionTip = false
 window.stateManage = {};//状态管理  后续采用vuex实现 TODO
 window.genId = (function(){
   var _id = 0;
-  return function(){
-    return ++_id;
+  return function(type){
+    return type + '-' + ++_id;
   }
 })();
 

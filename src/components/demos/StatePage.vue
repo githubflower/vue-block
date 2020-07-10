@@ -10,6 +10,8 @@
                 @dragend="dragEnd">
                 <el-button type="primary" plain >状态</el-button>
             </span>
+            <el-button type="primary" plain @click="save">保存</el-button>
+            <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
         </div>
         <div class="content">
             <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i">
@@ -32,6 +34,7 @@ export default {
     data(){
         return {
             showTempLine: false,
+            tempLineData: null,
             operate: 'default',
             threadAry: [
                 {
@@ -39,6 +42,7 @@ export default {
                     width: 1000,
                     height: 300,
                     stateAry: [{
+                        stateId: 'custom-state-id',
                         name: '流水线视觉定位',
                         inCount: 1,
                         outCount: 2,
@@ -58,6 +62,8 @@ export default {
                         y: 350
                     }],
                     lineAry: [{
+                        lineId: 'custom-line-id',
+                        d: 'M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z',
                         startPoint: {
                             x: 0,
                             y: 0
@@ -197,6 +203,38 @@ export default {
                 maxY = Math.max(state.y + 35 + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
             }); 
             return maxY;
+        },
+        /**
+         * 将图面数据保存到localstorage
+         */
+        save(){
+            window.localStorage.setItem('stateData', JSON.stringify(this.threadAry));
+            console.log('save success!');
+        },
+        loadFromLocal(){
+            let data = window.localStorage.getItem('stateData');
+            this.threadAry = JSON.parse(data);
+            if(data){
+                console.log('load success!');
+            }
+        },
+        updateThreadAry(data){
+            this.threadAry[data.threadIndex].lineAry.push(data.lineData);
+        },
+        // 用于绘制连线的临时数据
+        updateTempLineData(data){
+            /* {
+                threadIndex: this.threadIndex,
+                stateIndex: this.index,
+                startState: {
+                    stateId: this.stateId
+                },
+                startPoint: {
+                    x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
+                    y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
+                }
+            }; */
+            this.tempLineData = data;
         }
     },
     computed: {
@@ -204,10 +242,14 @@ export default {
             return 0;
         }
     },
+ 
     created(){
+        // this.loadFromLocal();
         EventObj.$on('resizeSvg', this.resizeSvg, this);
         EventObj.$on('addState', this.addState, this);
         EventObj.$on('operateChange', this.operateChange, this);
+        EventObj.$on('updateThreadAry', this.updateThreadAry, this);
+        EventObj.$on('updateTempLineData', this.updateTempLineData, this);
     },
     mounted(){
         window.statePageVue = this;

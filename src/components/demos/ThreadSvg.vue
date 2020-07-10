@@ -20,7 +20,7 @@
             @mousedown="startResize"
             @mouseup="endResize"
         ></i>
-        <div v-if="showVirtualBox" class="virtual-box"></div>
+        <!-- <div v-if="showVirtualBox" class="virtual-box"></div> -->
     </div>
 </template>
 
@@ -45,11 +45,8 @@ export default {
         }
     },
     methods: {
-        onResize1(){
-            console.log('onResize---1---' + +new Date());
-        },
         onResize2(){
-            console.log('onResize---2---' + +new Date());
+            // console.log('onResize---2---' + +new Date());
         },
         titleStyle(){
             return `height: ${this.titleHeight}px;`;
@@ -70,7 +67,6 @@ export default {
             return `translate(${(90 + gapX) * (index - 1)}, 40)`;
         },
         onConnecting(e){
-            console.log(e.button, e.buttons);
             if(stateManage.isConnecting){
                 //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
                 if(e.buttons === 1){
@@ -95,7 +91,6 @@ export default {
                             y: e.clientY - curSvgRect.top - 2//e.target.offsetTop + e.offsetY // e.clientY
                         };
                     }
-                    console.log('curPoint: ' + JSON.stringify(stateManage.curPoint) + ' ' + e.target.offsetLeft + '---' + e.offsetX + e.pageX);
                     this.drawTempLine();
                 }else{
                     stateManage.isConnecting = false;
@@ -111,7 +106,8 @@ export default {
         },
         drawConnectLine(){
             const MID_POINT_X = 50;
-            this.thread.lineAry.push({
+            // this.getStartState()
+           /*  this.thread.lineAry.push({
                 d: `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} h ${MID_POINT_X} v ${stateManage.curPoint.y - stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y} m 0 0 z`,
                 startPoint: stateManage.startPoint,
                 endPoint: stateManage.endPoint,
@@ -121,10 +117,27 @@ export default {
                 endState: {
                     stateId: '',
                 }
-            });
+            }); */
+            EventObj.$emit('updateThreadAry', {
+                threadIndex: this.threadIndex,
+                lineData: {
+                    d: `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} h ${MID_POINT_X} v ${stateManage.curPoint.y - stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y} m 0 0 z`,
+                    startPoint: stateManage.startPoint,
+                    endPoint: stateManage.endPoint,
+                    startState: {
+                        stateId: '',
+                    },
+                    endState: {
+                        stateId: '',
+                    }
+                }
+            })
         },
+        /**
+         * 画连接线时找出起始的状态块
+         */
+        getStartState(){},
         onMouseup(e){
-            console.log('---------118');
             if(stateManage.isConnecting = true){
                 let target_class = e.target.getAttribute('class');
                 let regIsConnectPoint = /connect-point/;
@@ -230,6 +243,7 @@ div.thread{
 }
 foreignObject {
     border: 1px solid #00cd9a;
+    border-radius: 4px;
 }
 h4.title {
     margin: 0;
