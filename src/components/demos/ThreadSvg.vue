@@ -73,24 +73,7 @@ export default {
                     //绘制临时的连接线
                     stateManage.isConnecting = true;
                     this.showTempLine = true;
-                    let curSvg = e.target.closest('svg');
-                    let curSvgRect = curSvg.getBoundingClientRect();
-
-                    let target_class = e.target.getAttribute('class');
-                    let regIsConnectPoint = /connect-point/;
-                    if(regIsConnectPoint.test(target_class)){
-                        // debugger;
-                        stateManage.curPoint = {
-                            x: e.target.getBoundingClientRect().left - curSvgRect.left - 2 + (e.target.getBoundingClientRect().width / 2) , //e.target.offsetLeft + e.offsetX, // e.clientX,
-                            y: e.target.getBoundingClientRect().top - curSvgRect.top + (e.target.getBoundingClientRect().height / 2)//e.target.offsetTop + e.offsetY // e.clientY
-                        };
-                    }else{
-
-                        stateManage.curPoint = {
-                            x: e.clientX - curSvgRect.left - 2 , //e.target.offsetLeft + e.offsetX, // e.clientX,
-                            y: e.clientY - curSvgRect.top - 2//e.target.offsetTop + e.offsetY // e.clientY
-                        };
-                    }
+                    stateManage.curPoint = this.getEndPoint(e);
                     this.drawTempLine();
                 }else{
                     stateManage.isConnecting = false;
@@ -104,7 +87,7 @@ export default {
             // var templine = document.getElementsByClassName('templine')[1];
             templine.setAttribute('d', `M ${stateManage.startPoint.x} ${stateManage.startPoint.y} h ${MID_POINT_X} v ${stateManage.curPoint.y - stateManage.startPoint.y} L ${stateManage.curPoint.x} ${stateManage.curPoint.y} m 0 0 z`);
         },
-        drawConnectLine(){
+        drawConnectLine(e){
             const MID_POINT_X = 50;
             // this.getStartState()
            /*  this.thread.lineAry.push({
@@ -118,6 +101,11 @@ export default {
                     stateId: '',
                 }
             }); */
+            EventObj.$emit('updateTempLineData', {
+                endPoint: {
+                    x: 0
+                }
+            })
             EventObj.$emit('updateThreadAry', {
                 threadIndex: this.threadIndex,
                 lineData: {
@@ -137,13 +125,41 @@ export default {
          * 画连接线时找出起始的状态块
          */
         getStartState(){},
+        getEndState(e){
+            let ret = null;
+            if(e.target.closest('.state-div')){
+                ret = e.target.closest('.state-div').getAttribute('stateid');
+            }
+            return ret;
+        },
+        getEndPoint(e){
+            let curSvg = e.target.closest('svg');
+            let curSvgRect = curSvg.getBoundingClientRect();
+            let target_class = e.target.getAttribute('class');
+            let regIsConnectPoint = /connect-point/;
+            let point;
+            if(regIsConnectPoint.test(target_class)){
+                point = {
+                    x: e.target.getBoundingClientRect().left - curSvgRect.left - 2 + (e.target.getBoundingClientRect().width / 2) , //e.target.offsetLeft + e.offsetX, // e.clientX,
+                    y: e.target.getBoundingClientRect().top - curSvgRect.top + (e.target.getBoundingClientRect().height / 2)//e.target.offsetTop + e.offsetY // e.clientY
+                };
+            }else{
+                point = {
+                    x: e.clientX - curSvgRect.left - 2 , //e.target.offsetLeft + e.offsetX, // e.clientX,
+                    y: e.clientY - curSvgRect.top - 2//e.target.offsetTop + e.offsetY // e.clientY
+                };
+            }
+            return point;
+        },
         onMouseup(e){
             if(stateManage.isConnecting = true){
                 let target_class = e.target.getAttribute('class');
                 let regIsConnectPoint = /connect-point/;
+                let endState = this.getEndState(e);
+                //TODO 触发EventObj更新lineObj
                 if(regIsConnectPoint.test(target_class)){
                     //绘制连接线
-                    this.drawConnectLine();
+                    this.drawConnectLine(e);
                     this.showTempLine = false;
                 }else{
                     this.showTempLine = false;
