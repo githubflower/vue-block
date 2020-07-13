@@ -3,20 +3,23 @@
         <path 
             :lineId="line.lineId ? line.lineId : genId()"
             :d="line.d" 
-            class="connect-line"></path>
+            :class="genClass()"></path>
     </g>
 </template>
 
 <script>
 export default {
     name: 'LineSvg',
-    props: ['line'],
+    props: ['line', 'lineClass'],
     data(){
         return {
            
         }
     },
     methods: {
+        genClass(type){
+            return this.lineClass ? this.lineClass : 'connect-line';
+        },
         generatePath(line){
             if(line && line.d){
                 return line.d;

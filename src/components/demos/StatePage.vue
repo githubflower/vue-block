@@ -218,8 +218,34 @@ export default {
                 console.log('load success!');
             }
         },
-        updateThreadAry(data){
+        addLine2svg(data){
+            //新增连线
             this.threadAry[data.threadIndex].lineAry.push(data.lineData);
+            //将连线数据添加到首尾2个状态块
+            this.addLine2startState();
+            this.addLine2endState();
+        },
+        addLine2startState(data){
+            if(data.startState){
+                let outputAry = this.threadAry[data.threadIndex].stateAry[data.startState.stateIndex].outputAry;
+                if(!outputAry){
+                    outputAry = [];
+                }
+                outputAry.push({
+                    lineId: data.lineData.lineId //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
+                });
+            }
+        },
+        addLine2endState(data){
+            if(data.endState){
+                let inputAry = this.threadAry[data.threadIndex].stateAry[data.endState.stateIndex].inputAry;
+                if(!inputAry){
+                    inputAry = [];
+                }
+                inputAry.push({
+                    lineId: data.lineData.lineId
+                });
+            }
         },
         // 用于绘制连线的临时数据
         updateTempLineData(data){
@@ -248,7 +274,7 @@ export default {
         EventObj.$on('resizeSvg', this.resizeSvg, this);
         EventObj.$on('addState', this.addState, this);
         EventObj.$on('operateChange', this.operateChange, this);
-        EventObj.$on('updateThreadAry', this.updateThreadAry, this);
+        EventObj.$on('addLine2svg', this.addLine2svg, this);
         EventObj.$on('updateTempLineData', this.updateTempLineData, this);
     },
     mounted(){

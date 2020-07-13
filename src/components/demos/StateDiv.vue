@@ -82,9 +82,9 @@ export default {
             let curSvgRect = curSvg.getBoundingClientRect();
             let data = {
                 threadIndex: this.threadIndex,
-                stateIndex: this.index,
                 startState: {
-                    stateId: this.stateId
+                    stateId: this.stateId,
+                    stateIndex: this.index
                 },
                 startPoint: {
                     x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
@@ -92,7 +92,7 @@ export default {
                 }
             };
             console.log(JSON.stringify(data));
-            EventObj.$emit('updateTempLineData', data);
+            this.$emit('updateTempLineData', data);
 
             window.stateManage.startPoint = {
                 x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
