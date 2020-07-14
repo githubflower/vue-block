@@ -2,6 +2,7 @@
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
     <div 
         :stateId="stateId" 
+        :index="index"
         :class="['state-div', {'is-dragging': isDragging}]"
         :style="generateStatePos(stateData)"
         draggable="true"
@@ -285,8 +286,8 @@ export default {
     /* display: table; */
     /* margin-left: 50px; */
     /* max-width: 150px; */
-    padding: 5px 20px;
-    width: 98px;
+    padding: 0px 20px;
+    width: 76px;
     height: 40px;
     border: 1px solid #aaaaaa;
     /* background-color: #ccdd00; */

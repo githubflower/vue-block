@@ -1,5 +1,7 @@
 <template>
-    <g>
+    <g
+        @contextmenu.prevent="onContextMenu"
+    >
         <path 
             :lineId="line.lineId ? line.lineId : genId()"
             :d="line.d" 
@@ -10,7 +12,7 @@
 <script>
 export default {
     name: 'LineSvg',
-    props: ['line', 'lineClass'],
+    props: ['line', 'threadIndex', 'lineClass'],
     data(){
         return {
            
@@ -36,7 +38,16 @@ export default {
         genId(){
             return window.genId('line');
         },
-        
+        onContextMenu(e){
+            EventObj.$emit('updateContextMenu', {
+                lineId: this.line.lineId,
+                threadIndex: this.threadIndex,
+                position: {
+                    x: e.x,
+                    y: e.y
+                }
+            });
+        }
     },
   
     mounted(){

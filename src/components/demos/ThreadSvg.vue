@@ -39,7 +39,7 @@
                 <path d="" class="templine"></path>
       </g>-->
       <line-svg v-show="showTempLine" :lineClass="tempLineClass" :line="tempLineData" />
-      <line-svg v-for="(line, index2) in thread.lineAry" :key="index2" :line="line" />
+      <line-svg v-for="(line, index2) in thread.lineAry" :key="index2" :line="line" :threadIndex="threadIndex"/>
     </svg>
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
     <i
@@ -55,7 +55,7 @@
 <script>
 import StateDiv from "./StateDiv";
 import LineSvg from "./LineSvg";
-
+const MID_POINT_X = 50;
 const deepCopy = (obj)=>{
   if(typeof obj !== 'object'){
       return obj;
@@ -128,16 +128,16 @@ export default {
         outCount: 0
       });
     },
-    generateDefaultPos(index) {
+    /* generateDefaultPos(index) {
       const gap = 35;
       return `translate(50, ${(300 + gap) * (index - 1)})`;
     },
     generateStatePos(index) {
       const gapX = 60;
       return `translate(${(90 + gapX) * (index - 1)}, 40)`;
-    },
+    }, */
     onConnecting(e) {
-      const MID_POINT_X = 50;
+      
       if (stateManage.isConnecting) {
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
         if (e.buttons === 1) {
@@ -150,10 +150,15 @@ export default {
             endPoint: endPoint,
             d: `M ${this.tempLineData.startPoint.x} ${
               this.tempLineData.startPoint.y
+            } h ${MID_POINT_X} V ${endPoint.y} L ${endPoint.x} ${
+              endPoint.y
+            } m 0 0 z`
+           /*  d: `M ${this.tempLineData.startPoint.x} ${
+              this.tempLineData.startPoint.y
             } h ${MID_POINT_X} v ${endPoint.y -
               this.tempLineData.startPoint.y} L ${endPoint.x} ${
               endPoint.y
-            } m 0 0 z`
+            } m 0 0 z` */
           });
         } else {
           stateManage.isConnecting = false;
@@ -165,7 +170,6 @@ export default {
       Object.keys(lineData).forEach(key => {
         this.tempLineData[key] = lineData[key];
       });
-      console.log(this.tempLineData);
       // debugger;
     },
     drawConnectLine(e) {
@@ -214,7 +218,7 @@ export default {
           stateIndex;
       if (e.target.closest(".state-div")) {
         stateId = e.target.closest(".state-div").getAttribute("stateid");
-        stateIndex = e.target.closest(".state-div").getAttribute("index");
+        stateIndex = parseInt(e.target.closest(".state-div").getAttribute("index"), 10);
       }
       return {
         stateId: stateId,
@@ -294,6 +298,7 @@ export default {
       let lineAry,
         curLine;
       let state = this.thread.stateAry[stateData.index];
+      debugger;
       if(state.inputAry){
         lineAry = this.thread.lineAry;
         state.inputAry.forEach(inputLine => {
@@ -308,9 +313,27 @@ export default {
     },
     /**
      * 根据状态块的transform数据更新其endPoint, 然后更新用于画线的数据d   todo
+     * 连线方案：判断当前的鼠标位置，目标状态，如果存在这样1个状态a，它的纵坐标和startState，endState相等，且a的横坐标在startState，endState中间，则需要绕着a画折线
+     * 连线分多种复杂场景，这部分后面逐渐完善
      */
     updateLineData(curLine, stateData){
-
+      let testY = 57;
+      /* `M ${this.tempLineData.startPoint.x} ${
+              this.tempLineData.startPoint.y
+            } h ${MID_POINT_X} V ${endPoint.y} L ${endPoint.x} ${
+              endPoint.y
+            } m 0 0 z` */
+            let endPoint = stateData.transform;
+            let d = `M ${curLine.startPoint.x} ${
+              curLine.startPoint.y
+            } h ${MID_POINT_X} v ${endPoint.y + testY - curLine.startPoint.y} L ${endPoint.x} ${
+              endPoint.y + testY
+            } m 0 0 z`;
+            curLine.endPoint = endPoint;
+            console.log('1---'+ curLine.d);
+            curLine.d = d;
+            console.log('2---'+ curLine.d);
+            debugger;
     },
     startResize(e) {
       this.showVirtualBox = true;
@@ -357,7 +380,7 @@ export default {
       let maxY = 0;
       let threadDivBorderWidth = 1,
         stateDivBorderWidth = 1,
-        stateDivHeight = 50; // 50是状态的高度
+        stateDivHeight = 40; // 50是状态的高度
       if (this.showVirtualBox) {
         return Math.max(maxY, this.thread.height);
       }
