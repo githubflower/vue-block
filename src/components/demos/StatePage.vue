@@ -261,6 +261,9 @@ export default {
         ].outputAry;
         if (!outputAry) {
           outputAry = [];
+          this.threadAry[data.threadIndex].stateAry[
+            data.lineData.startState.stateIndex
+          ].outputAry = outputAry;
         }
         outputAry.push({
           lineId: data.lineData.lineId //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
@@ -268,7 +271,6 @@ export default {
       }
     },
     addLine2endState(data) {
-      debugger;
       if (
         data.lineData.endState &&
         data.lineData.endState.stateIndex !== null

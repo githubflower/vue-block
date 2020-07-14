@@ -310,6 +310,18 @@ export default {
           this.updateLineData(curLine, stateData);
         })
       }
+
+      if(state.outputAry){
+        lineAry = this.thread.lineAry;
+        state.outputAry.forEach(outputLine => {
+          // inputLine --> state中保存的lineId以及对这个触发事件的描述等信息，没有真正的用于画连线的数据
+          curLine = lineAry.find(line => {
+            //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
+            return line.lineId === outputLine.lineId;
+          })
+          this.updateOutputLineData(curLine, stateData);
+        })
+      }
     },
     /**
      * 根据状态块的transform数据更新其endPoint, 然后更新用于画线的数据d   todo
@@ -317,23 +329,40 @@ export default {
      * 连线分多种复杂场景，这部分后面逐渐完善
      */
     updateLineData(curLine, stateData){
+      //todo
       let testY = 57;
       /* `M ${this.tempLineData.startPoint.x} ${
               this.tempLineData.startPoint.y
             } h ${MID_POINT_X} V ${endPoint.y} L ${endPoint.x} ${
               endPoint.y
             } m 0 0 z` */
-            let endPoint = stateData.transform;
+            let endPoint = {
+              x: stateData.transform.x,
+              y: stateData.transform.y + testY
+            };
             let d = `M ${curLine.startPoint.x} ${
               curLine.startPoint.y
-            } h ${MID_POINT_X} v ${endPoint.y + testY - curLine.startPoint.y} L ${endPoint.x} ${
-              endPoint.y + testY
+            } h ${MID_POINT_X} v ${endPoint.y - curLine.startPoint.y} L ${endPoint.x} ${
+              endPoint.y
             } m 0 0 z`;
             curLine.endPoint = endPoint;
             console.log('1---'+ curLine.d);
             curLine.d = d;
             console.log('2---'+ curLine.d);
             debugger;
+    },
+    updateOutputLineData(curLine, stateData){
+      let startPoint = {
+        x: stateData.transform.x + 116,
+        y: stateData.transform.y + 57
+      };
+      let d = `M ${startPoint.x} ${
+              startPoint.y
+            } h ${MID_POINT_X} v ${ curLine.endPoint.y - startPoint.y} L ${curLine.endPoint.x} ${
+              curLine.endPoint.y
+            } m 0 0 z`;
+            curLine.startPoint = startPoint;
+            curLine.d = d;
     },
     startResize(e) {
       this.showVirtualBox = true;
