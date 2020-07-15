@@ -29,7 +29,7 @@
 <script>
 export default {
   name: "LineContextMenu",
-  props: ['lineId', 'threadIndex'],
+  props: ['lineId', 'threadIndex', 'lineData', 'mustShowMenu'],
   data() {
     return {
       showMenu: true,
@@ -74,8 +74,16 @@ export default {
         this.showForm = false;
     }
   },
+  watch: {
+      'mustShowMenu': function(v){
+          if(v){
+              this.showMenu = true;
+              this.form.desc = this.lineData && this.lineData.desc;
+          }
+      }
+  },
   created() {
-    window.aa = this;
+    this.form.desc = this.lineData && this.lineData.desc;
   }
 };
 </script>

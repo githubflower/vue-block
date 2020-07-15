@@ -12,7 +12,7 @@
         @dragstart="dragStart"
         @dragend="dragEnd"
         @contextmenu="contextmenu"
-        @dblclick="rename"
+        
         >
         <el-input 
             v-if="showInput" 
@@ -22,9 +22,28 @@
             @keyup.enter.native="hideInput"
             @blur="hideInput"
         ></el-input>
-        <p v-else :title="stateData.name">{{stateData.name}}</p>
-        <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inCount}}</div>
-        <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div>
+        <p v-else :title="stateData.name"
+            @dblclick="rename"
+        >{{stateData.name}}</p>
+        <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
+        <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
+        <div v-show="stateData.inputAry && stateData.inputAry.length" class="in event-count" 
+            @click="showInputAry = !showInputAry"
+        >{{stateData.inputAry.length}}
+            <ul class="input-list" v-show="showInputAry">
+                <li v-for="(item, index) in stateData.inputAry" :key="index">{{ getDesc(item.lineId) }}</li>
+            </ul>
+        </div>
+        <div v-show="stateData.outputAry && stateData.outputAry.length" class="out event-count"
+            @click="showOutputAry = !showOutputAry"
+        >{{stateData.outputAry.length}}
+            <ul class="output-list" v-show="showOutputAry">
+                <li v-for="(item, index) in stateData.outputAry" :key="index"
+                    @mouseenter="activeLine(item.lineId)"
+                    @mouseleave="disActiveLine(item.lineId)"
+                >{{ getDesc(item.lineId) }}</li>
+            </ul>
+        </div>
         <div class="connect-point in"></div>
         <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
     </div>
@@ -47,6 +66,8 @@ export default {
             isDragging: false,
             operate: null,
             stateId: null,
+            showInputAry: false,
+            showOutputAry: false,
         }
     },
     methods: {
@@ -229,7 +250,30 @@ export default {
         },
         hideInput(){
             this.showInput = false;
-        }
+        },
+        /**
+         * 根据lineId获取这个连线的描述信息
+         */
+        getDesc(lineId){
+            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+                return item.lineId === lineId;
+            }) || {};
+            return line.desc;
+        },
+        activeLine(lineId){
+            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+                return item.lineId === lineId;
+            }) || {};
+
+            line.active = true;
+        },
+        disActiveLine(lineId){
+            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+                return item.lineId === lineId;
+            }) || {};
+
+            line.active = false;
+        },
     },
     created(){
         this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
@@ -357,5 +401,29 @@ export default {
 }
 .is-dragging{
   cursor: move;
+}
+
+.input-list,
+.output-list{
+    list-style: none;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: #ffffff;
+    color: #000000;
+    z-index: 1;
+}
+.output-list{
+    left: 20px;
+    right: initial;
+}
+
+.input-list > li,
+.output-list > li{
+    width: 120px;
+}
+.input-list > li:hover,
+.output-list > li:hover{
+    background-color: #e6f7ff;
 }
 </style>    

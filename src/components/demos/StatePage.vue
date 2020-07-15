@@ -15,7 +15,9 @@
       <line-context-menu
         ref="lineContextMenu"
         v-show="lineContextMenuData.show"
+        :mustShowMenu="lineContextMenuData.show"
         :lineId="lineContextMenuData.lineId"
+        :lineData="lineContextMenuData.lineData"
         :threadIndex="lineContextMenuData.threadIndex"
         :style="{left: lineContextMenuData.position.x + 'px', top: lineContextMenuData.position.y + 'px'}"
         @selectItem="onSelect"
@@ -52,22 +54,22 @@ export default {
             {
               stateId: "custom-state-id",
               name: "流水线视觉定位",
-              inCount: 1,
-              outCount: 2,
+              inputAry: [],
+              outputAry: [],
               x: 5,
               y: 0
             },
             {
               name: "取料",
-              inCount: 2,
-              outCount: 2,
+              inputAry: [],
+              outputAry: [],
               x: 190,
               y: 0
             },
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              inCount: 3,
-              outCount: 1,
+              inputAry: [],
+              outputAry: [],
               x: 500,
               y: 350
             }
@@ -102,22 +104,22 @@ export default {
           stateAry: [
             {
               name: "流水线视觉定位",
-              inCount: 1,
-              outCount: 2,
+              inputAry: [],
+              outputAry: [],
               x: 100,
               y: 50
             },
             {
               name: "取料",
-              inCount: 2,
-              outCount: 2,
+              inputAry: [],
+              outputAry: [],
               x: 300,
               y: 50
             },
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              inCount: 3,
-              outCount: 1,
+              inputAry: [],
+              outputAry: [],
               x: 500,
               y: 450
             }
@@ -129,6 +131,7 @@ export default {
       lineContextMenuData: {
         show: false,
         lineId: null,
+        lineData: null,
         threadIndex: null,
         position: {
           x: 0,
@@ -165,8 +168,8 @@ export default {
     addState(data) {
       this.threadAry[data.index].stateAry.push({
         name: "状态描述",
-        inCount: 0,
-        outCount: 0,
+        inputAry: [],
+        outputAry: [],
         x: data.x,
         y: data.y
       });
@@ -322,6 +325,7 @@ export default {
       this.lineContextMenuData.position.x = data.position.x;
       this.lineContextMenuData.position.y = data.position.y;
       this.lineContextMenuData.lineId = data.lineId;
+      this.lineContextMenuData.lineData = data.lineData;
       this.lineContextMenuData.threadIndex = data.threadIndex;
     },
     hideLineContextMenu(){
@@ -332,7 +336,7 @@ export default {
             return lineItem.lineId === data.lineId;
         });
         line.desc = data.desc;
-        alert('ok');
+        this.lineContextMenuData.show = false;
     }
   },
   computed: {

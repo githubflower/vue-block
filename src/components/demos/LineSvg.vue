@@ -1,11 +1,26 @@
 <template>
     <g
         @contextmenu.prevent="onContextMenu"
+        @click="activeLine"
+        @mouseenter="activeLine"
+        @mouseleave="disActiveLine"
+        :class="{active: isActive}"
     >
         <path 
-            :lineId="line.lineId ? line.lineId : genId()"
+            :id="line.lineId"
+            :lineId="line.lineId"
             :d="line.d" 
             :class="genClass()"></path>
+        <text
+            v-if="line.desc"
+            x="10"
+            y="0"
+            style="fill: red;"
+        >
+            <textPath
+                :xlink:href="'#' + line.lineId"
+            >{{line.desc}}</textPath>
+        </text>
     </g>
 </template>
 
@@ -15,7 +30,7 @@ export default {
     props: ['line', 'threadIndex', 'lineClass'],
     data(){
         return {
-           
+            isActive: false,
         }
     },
     methods: {
@@ -42,16 +57,37 @@ export default {
             EventObj.$emit('updateContextMenu', {
                 lineId: this.line.lineId,
                 threadIndex: this.threadIndex,
+                lineData: this.line,
                 position: {
                     x: e.x,
                     y: e.y
                 }
             });
+        },
+        activeLine(){
+            this.isActive = true;
+        },
+        disActiveLine(){
+            this.isActive = false;
         }
     },
-  
+    created(){
+        this.$set(this.line, 'active', false);
+        if(!this.line.lineId){
+            this.line.lineId = this.genId();
+        }
+    },
     mounted(){
         
+    },
+    watch: {
+        'line.active': function(v){
+            if(v){
+                this.isActive = true;
+            }else{
+                this.isActive = false;
+            }
+        }
     },
     computed: {
         linePath: function(){
@@ -71,5 +107,13 @@ export default {
 .connect-line:hover{
     stroke:yellow;
 }
-
+.active .connect-line{
+    stroke:yellow;
+}
+text{
+    display: none;
+}
+.active text{
+    display: block;
+}
 </style>    

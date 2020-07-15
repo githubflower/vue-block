@@ -177,6 +177,7 @@ export default {
       let lineData = this.copy(this.tempLineData);
       lineData.endState = endState;
       lineData.lineId = window.genId('line');
+      lineData.desc = '';
       EventObj.$emit('addLine2svg', {
           threadIndex: this.threadIndex,
           lineData: lineData
