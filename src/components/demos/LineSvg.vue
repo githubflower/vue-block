@@ -59,8 +59,8 @@ export default {
                 threadIndex: this.threadIndex,
                 lineData: this.line,
                 position: {
-                    x: e.x,
-                    y: e.y
+                    x: e.pageX,
+                    y: e.pageY
                 }
             });
         },
@@ -101,7 +101,7 @@ export default {
 <style>
 .connect-line{
     stroke: #aaaaaa;
-    stroke-width: 1px;
+    stroke-width: 5px;
     fill: transparent;
 }
 .connect-line:hover{

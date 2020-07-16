@@ -150,7 +150,7 @@ export default {
             endPoint: endPoint,
             d: `M ${this.tempLineData.startPoint.x} ${
               this.tempLineData.startPoint.y
-            } h ${MID_POINT_X} V ${endPoint.y} L ${endPoint.x} ${
+            } h ${MID_POINT_X} m 0 0 V ${endPoint.y} m 0 0 L ${endPoint.x} ${
               endPoint.y
             } m 0 0 z`
            /*  d: `M ${this.tempLineData.startPoint.x} ${
@@ -343,7 +343,7 @@ export default {
             };
             let d = `M ${curLine.startPoint.x} ${
               curLine.startPoint.y
-            } h ${MID_POINT_X} v ${endPoint.y - curLine.startPoint.y} L ${endPoint.x} ${
+            } h ${MID_POINT_X} m 0 0  v ${endPoint.y - curLine.startPoint.y}  m 0 0 L ${endPoint.x} ${
               endPoint.y
             } m 0 0 z`;
             curLine.endPoint = endPoint;
@@ -359,7 +359,7 @@ export default {
       };
       let d = `M ${startPoint.x} ${
               startPoint.y
-            } h ${MID_POINT_X} v ${ curLine.endPoint.y - startPoint.y} L ${curLine.endPoint.x} ${
+            } h ${MID_POINT_X}  m 0 0 v ${ curLine.endPoint.y - startPoint.y} m 0 0  L ${curLine.endPoint.x} ${
               curLine.endPoint.y
             } m 0 0 z`;
             curLine.startPoint = startPoint;

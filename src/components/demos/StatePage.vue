@@ -8,6 +8,10 @@
       </span>
       <el-button type="primary" plain @click="save">保存</el-button>
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
+      <el-button type="primary" plain @click="exportFile" title="将当前图面数据以文件形式导出">导出</el-button>
+      <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
+      <input type="file" name="importFile" id="importFile" />
+      
     </div>
     <div class="content"
         @click="hideLineContextMenu()"
@@ -33,6 +37,7 @@
 import ThreadSvg from "./ThreadSvg";
 import StateDiv from "./StateDiv";
 import LineContextMenu from "./LineContextMenu";
+import Tools from "@/Tools.js"
 export default {
   name: "StatePage",
   components: {
@@ -61,6 +66,7 @@ export default {
             },
             {
               name: "取料",
+              stateId: 'state-q1',
               inputAry: [],
               outputAry: [],
               x: 190,
@@ -68,6 +74,7 @@ export default {
             },
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
+              stateId: 'state-q2',
               inputAry: [],
               outputAry: [],
               x: 500,
@@ -97,7 +104,7 @@ export default {
                     } */
           ]
         },
-        {
+      /*   {
           name: "线程名称2",
           width: 1000,
           height: 500,
@@ -125,7 +132,7 @@ export default {
             }
           ],
           lineAry: []
-        }
+        } */
       ],
       
       lineContextMenuData: {
@@ -137,7 +144,9 @@ export default {
           x: 0,
           y: 0
         }
-      }
+      },
+
+      fileList: []
     };
   },
   methods: {
@@ -150,15 +159,17 @@ export default {
         stateAry: [
           {
             name: "开始",
-            inCount: 0,
-            outCount: 0,
+            stateId: 'state-start',
+            inputAry: [],
+            outputAry: [],
             x: 50,
             y: 50
           },
           {
             name: "结束",
-            inCount: 0,
-            outCount: 0,
+            stateId: 'state-end',
+            inputAry: [],
+            outputAry: [],
             x: 350,
             y: 50
           }
@@ -168,6 +179,7 @@ export default {
     addState(data) {
       this.threadAry[data.index].stateAry.push({
         name: "状态描述",
+        stateId: window.genId('state'),
         inputAry: [],
         outputAry: [],
         x: data.x,
@@ -337,6 +349,53 @@ export default {
         });
         line.desc = data.desc;
         this.lineContextMenuData.show = false;
+    },
+    deleteLine(data){
+        let lineAry = this.threadAry[data.threadIndex].lineAry,
+            lineItem,
+            line,
+            i;
+        for(i=0; i<lineAry.length; i++){
+            lineItem = lineAry[i];
+            if(lineItem.lineId === data.lineId){
+                line = lineAry.splice(i, 1)[0];
+                break;
+            }
+        }
+        //更新这条线的始末状态的outputAry inputAry信息
+        let stateAry = this.threadAry[data.threadIndex].stateAry;
+        let startState = stateAry.find(item => {
+            return item.stateId === line.startState.stateId;
+        });
+        let outputAry = startState.outputAry;
+        outputAry.forEach((item, index) => {
+            if(item.lineId === line.lineId){
+                outputAry.splice(index, 1);
+                return false;
+            }
+        })
+
+        let endState = stateAry.find(item => {
+            return item.stateId === line.endState.stateId;
+        });
+        let inputAry = endState.inputAry;
+        inputAry.forEach((item, index) => {
+            if(item.lineId === line.lineId){
+                inputAry.splice(index, 1);
+                return false;
+            }
+        })
+    },
+    exportFile(){
+        Tools.downloadFlie();
+    },
+    importFile(){},
+
+    handleExceed(){
+        debugger;
+    },
+    onUpload(rs, file, fileList){
+        debugger;
     }
   },
   computed: {
@@ -353,10 +412,21 @@ export default {
     EventObj.$on("addLine2svg", this.addLine2svg, this);
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
     EventObj.$on("updateLineData", this.updateLineData, this);
+    EventObj.$on("deleteLine", this.deleteLine, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
   },
   mounted() {
     window.statePageVue = this;
+
+    var importFileBtn = document.getElementById('importFile');
+    importFileBtn.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      var reader = new FileReader();
+      reader.onload = (fe) => {
+        window.statePageVue.threadAry = JSON.parse(fe.target.result);
+      };
+      reader.readAsText(file);
+    })
   }
 };
 </script>

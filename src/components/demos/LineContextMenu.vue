@@ -58,10 +58,16 @@ export default {
           this.showForm = true;
           break;
         case "delete":
+            this.showMenu = false;
+            EventObj.$emit('deleteLine', {
+                lineId: this.lineId,
+                threadIndex: this.threadIndex,
+            });
           break;
         default:
         // pass through
       }
+      
       //   this.$emit('selectItem', this.menuData[index])
     },
     onSubmit() {
