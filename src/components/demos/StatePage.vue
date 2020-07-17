@@ -9,6 +9,7 @@
       <el-button type="primary" plain @click="save">保存</el-button>
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
       <el-button type="primary" plain @click="exportFile" title="将当前图面数据以文件形式导出">导出</el-button>
+      <el-button type="primary" plain @click="json2xml" title="将当前图面数据以文件形式导出">生成block.xml</el-button>
       <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
       <input type="file" name="importFile" id="importFile" />
       
@@ -27,6 +28,9 @@
         @selectItem="onSelect"
       ></line-context-menu>
       <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
+    
+        
+    
     </div>
   </div>
 </template>
@@ -396,6 +400,89 @@ export default {
     },
     onUpload(rs, file, fileList){
         debugger;
+    },
+    json2xml(){
+        const NAME_SPACE = 'https://developers.google.com/blockly/xml';
+        const createEl = tagName => {
+            return document.createElementNS(NAME_SPACE, tagName);
+        }
+        /**
+         * 1.找到线程中有开始标记的根状态
+         * 2.遍历根状态的output，生成特殊的if-else if 结构，注意：默认不采用else
+         * 
+         */
+        let blocklyPageData;
+        let statePageData = this.threadAry;
+
+        let state2dom = (rootState, threadData)=>{
+            let rootEl = createEl('block');
+
+            rootEl.setAttribute('id', rootState.id);
+            // rootEl.setAttribute('type', rootState.type || 'state_run');
+            rootEl.setAttribute('type', rootState.type || 'run_state');
+
+            // allFieldsToDom_
+            let field2dom = (field) => {
+                let container = createEl('field');
+                container.setAttribute('name', field.name);
+                container.textContent = field.value;
+                return container;
+            }
+            let fieldDom = field2dom({
+                name: 'NAME',
+                value: rootState.desc
+            })
+            rootEl.appendChild(fieldDom);
+
+            let nextDom = createEl('next');
+
+            let outputDom = createEl('block');
+            outputDom.setAttribute('type', 'controls_if');
+
+            let outputStateDom;
+            rootState.outputAry.forEach((outputItem, index) => {
+                outputStateDom = createEl('statement');
+                outputStateDom.setAttribute('name', `DO${index}`);
+                outputStateDom.setAttribute('id', `DO${outputItem.lineId}`);
+                //outputAry里面只存放了lineId 所以我们需要做以下事情：
+                //1 根据lineId找到对应的line数据
+                //2 根据line里面的endState的stateId找到对应的state数据
+                let line = threadData.lineAry.find(item => {
+                    return item.lineId === outputItem.lineId;
+                })
+                if(line){
+                    let state = threadData.stateAry.find(item => {
+                        return item.stateId === line.endState.stateId;
+                    })
+                    if(state){
+                        outputStateDom.appendChild(state2dom(state, threadData));
+                    }else{
+                        console.error('data error -^- ');
+                    }
+                }
+                
+            })
+            if(outputStateDom){
+                outputDom.appendChild(outputStateDom);
+            }
+
+            nextDom.appendChild(outputDom);
+            
+            rootEl.appendChild(nextDom);
+            return rootEl;
+        }
+
+        let blocklyXml = createEl('xml');
+        statePageData.forEach(thread => {
+            let firstState = thread.stateAry.shift();
+            blocklyXml.appendChild(state2dom(firstState, thread))
+        })
+        
+        // this.xmlData = blocklyXml;
+        console.log(blocklyXml);
+        window.aa = blocklyXml;
+        debugger;
+        copy(aa.innerHTML)
     }
   },
   computed: {
