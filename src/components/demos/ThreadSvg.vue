@@ -299,7 +299,6 @@ export default {
       let lineAry,
         curLine;
       let state = this.thread.stateAry[stateData.index];
-      debugger;
       if(state.inputAry){
         lineAry = this.thread.lineAry;
         state.inputAry.forEach(inputLine => {

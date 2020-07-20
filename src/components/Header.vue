@@ -27,6 +27,7 @@
       </el-menu-item>
     </el-menu>
     <img :src="logoPath"/>
+    
   </div>
 </template>
 

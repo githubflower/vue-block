@@ -54,6 +54,7 @@
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
+// const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
 const isNumber = (str)=>{
     return typeof str === 'number';
 }
@@ -64,7 +65,7 @@ export default {
         return {
             showInput: false,
             isDragging: false,
-            operate: null,
+            operate: null,// IS_MOVING    IS_CONNECTING   
             stateId: null,
             showInputAry: false,
             showOutputAry: false,
@@ -158,8 +159,14 @@ export default {
             }
             this.updatePosition(e.target);
             console.log('---dragEnd---',  this._endInfo);
+            this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
+
         },
         onDragLeave(e){
+            //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
+            if(!this._startInfo){
+                return;
+            }
             console.log('onDragLeave --- ' + e.x + ' --- ' + e.y)
             console.log('onDragLeave --- ' + e.x + ' --- ' + e.pageY)
             this._endInfo = {

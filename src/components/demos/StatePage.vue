@@ -12,11 +12,13 @@
       <el-button type="primary" plain @click="json2xml" title="将当前图面数据以文件形式导出">生成block.xml</el-button>
       <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
       <input type="file" name="importFile" id="importFile" />
-      
+      <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
+      <el-button-group>
+        <el-button type="primary" size="medium" @click="activeName = 'state'">State Diagram</el-button>
+        <el-button type="primary" size="medium" @click="activeName = 'blockly'">Blockly</el-button>
+      </el-button-group>
     </div>
-    <div class="content"
-        @click="hideLineContextMenu()"
-    >
+    <div v-show="activeName === 'state'" class="content" @click="hideLineContextMenu()">
       <line-context-menu
         ref="lineContextMenu"
         v-show="lineContextMenuData.show"
@@ -28,10 +30,8 @@
         @selectItem="onSelect"
       ></line-context-menu>
       <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
-    
-        
-    
     </div>
+    <iframe v-show="activeName === 'blockly'" src="./static/blockly/demos/code/index.html" frameborder="0" width="100%" :height="iframeHeight" style="position:absolute;top:60px;left:0px;"></iframe>
   </div>
 </template>
 
@@ -41,7 +41,7 @@
 import ThreadSvg from "./ThreadSvg";
 import StateDiv from "./StateDiv";
 import LineContextMenu from "./LineContextMenu";
-import Tools from "@/Tools.js"
+import Tools from "@/Tools.js";
 export default {
   name: "StatePage",
   components: {
@@ -51,6 +51,8 @@ export default {
   },
   data() {
     return {
+      iframeHeight: 0,
+      activeName: "blockly",
       showTempLine: false,
       tempLineData: null,
       operate: "default",
@@ -70,7 +72,7 @@ export default {
             },
             {
               name: "取料",
-              stateId: 'state-q1',
+              stateId: "state-q1",
               inputAry: [],
               outputAry: [],
               x: 190,
@@ -78,7 +80,7 @@ export default {
             },
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              stateId: 'state-q2',
+              stateId: "state-q2",
               inputAry: [],
               outputAry: [],
               x: 500,
@@ -107,8 +109,8 @@ export default {
                         }
                     } */
           ]
-        },
-      /*   {
+        }
+        /*   {
           name: "线程名称2",
           width: 1000,
           height: 500,
@@ -138,7 +140,7 @@ export default {
           lineAry: []
         } */
       ],
-      
+
       lineContextMenuData: {
         show: false,
         lineId: null,
@@ -163,7 +165,7 @@ export default {
         stateAry: [
           {
             name: "开始",
-            stateId: 'state-start',
+            stateId: "state-start",
             inputAry: [],
             outputAry: [],
             x: 50,
@@ -171,7 +173,7 @@ export default {
           },
           {
             name: "结束",
-            stateId: 'state-end',
+            stateId: "state-end",
             inputAry: [],
             outputAry: [],
             x: 350,
@@ -183,7 +185,7 @@ export default {
     addState(data) {
       this.threadAry[data.index].stateAry.push({
         name: "状态描述",
-        stateId: window.genId('state'),
+        stateId: window.genId("state"),
         inputAry: [],
         outputAry: [],
         x: data.x,
@@ -344,145 +346,156 @@ export default {
       this.lineContextMenuData.lineData = data.lineData;
       this.lineContextMenuData.threadIndex = data.threadIndex;
     },
-    hideLineContextMenu(){
-        // this.lineContextMenuData.show = false;
+    hideLineContextMenu() {
+      // this.lineContextMenuData.show = false;
     },
-    updateLineData(data){
-        let line = this.threadAry[data.threadIndex].lineAry.find(lineItem => {
-            return lineItem.lineId === data.lineId;
-        });
-        line.desc = data.desc;
-        this.lineContextMenuData.show = false;
+    updateLineData(data) {
+      let line = this.threadAry[data.threadIndex].lineAry.find(lineItem => {
+        return lineItem.lineId === data.lineId;
+      });
+      line.desc = data.desc;
+      this.lineContextMenuData.show = false;
     },
-    deleteLine(data){
-        let lineAry = this.threadAry[data.threadIndex].lineAry,
-            lineItem,
-            line,
-            i;
-        for(i=0; i<lineAry.length; i++){
-            lineItem = lineAry[i];
-            if(lineItem.lineId === data.lineId){
-                line = lineAry.splice(i, 1)[0];
-                break;
-            }
+    deleteLine(data) {
+      let lineAry = this.threadAry[data.threadIndex].lineAry,
+        lineItem,
+        line,
+        i;
+      for (i = 0; i < lineAry.length; i++) {
+        lineItem = lineAry[i];
+        if (lineItem.lineId === data.lineId) {
+          line = lineAry.splice(i, 1)[0];
+          break;
         }
-        //更新这条线的始末状态的outputAry inputAry信息
-        let stateAry = this.threadAry[data.threadIndex].stateAry;
-        let startState = stateAry.find(item => {
-            return item.stateId === line.startState.stateId;
-        });
-        let outputAry = startState.outputAry;
-        outputAry.forEach((item, index) => {
-            if(item.lineId === line.lineId){
-                outputAry.splice(index, 1);
-                return false;
-            }
-        })
-
-        let endState = stateAry.find(item => {
-            return item.stateId === line.endState.stateId;
-        });
-        let inputAry = endState.inputAry;
-        inputAry.forEach((item, index) => {
-            if(item.lineId === line.lineId){
-                inputAry.splice(index, 1);
-                return false;
-            }
-        })
-    },
-    exportFile(){
-        Tools.downloadFlie();
-    },
-    importFile(){},
-
-    handleExceed(){
-        debugger;
-    },
-    onUpload(rs, file, fileList){
-        debugger;
-    },
-    json2xml(){
-        const NAME_SPACE = 'https://developers.google.com/blockly/xml';
-        const createEl = tagName => {
-            return document.createElementNS(NAME_SPACE, tagName);
+      }
+      //更新这条线的始末状态的outputAry inputAry信息
+      let stateAry = this.threadAry[data.threadIndex].stateAry;
+      let startState = stateAry.find(item => {
+        return item.stateId === line.startState.stateId;
+      });
+      let outputAry = startState.outputAry;
+      outputAry.forEach((item, index) => {
+        if (item.lineId === line.lineId) {
+          outputAry.splice(index, 1);
+          return false;
         }
-        /**
-         * 1.找到线程中有开始标记的根状态
-         * 2.遍历根状态的output，生成特殊的if-else if 结构，注意：默认不采用else
-         * 
-         */
-        let blocklyPageData;
-        let statePageData = this.threadAry;
+      });
 
-        let state2dom = (rootState, threadData)=>{
-            let rootEl = createEl('block');
+      let endState = stateAry.find(item => {
+        return item.stateId === line.endState.stateId;
+      });
+      let inputAry = endState.inputAry;
+      inputAry.forEach((item, index) => {
+        if (item.lineId === line.lineId) {
+          inputAry.splice(index, 1);
+          return false;
+        }
+      });
+    },
+    exportFile() {
+      Tools.downloadFlie();
+    },
+    importFile() {},
 
-            rootEl.setAttribute('id', rootState.id);
-            // rootEl.setAttribute('type', rootState.type || 'state_run');
-            rootEl.setAttribute('type', rootState.type || 'run_state');
+    handleExceed() {
+      debugger;
+    },
+    onUpload(rs, file, fileList) {
+      debugger;
+    },
+    json2xml() {
+      const NAME_SPACE = "https://developers.google.com/blockly/xml";
+      const createEl = tagName => {
+        return document.createElementNS(NAME_SPACE, tagName);
+      };
+      /**
+       * 1.找到线程中有开始标记的根状态
+       * 2.遍历根状态的output，生成特殊的if-else if 结构，注意：默认不采用else
+       *
+       */
+      let blocklyPageData;
+      let statePageData = this.threadAry;
 
-            // allFieldsToDom_
-            let field2dom = (field) => {
-                let container = createEl('field');
-                container.setAttribute('name', field.name);
-                container.textContent = field.value;
-                return container;
-            }
-            let fieldDom = field2dom({
-                name: 'NAME',
-                value: rootState.desc
-            })
-            rootEl.appendChild(fieldDom);
+      let state2dom = (rootState, threadData) => {
+        let rootEl = createEl("block");
 
-            let nextDom = createEl('next');
+        rootEl.setAttribute("id", rootState.stateId);
+        // rootEl.setAttribute('type', rootState.type || 'state_run');
+        rootEl.setAttribute("type", rootState.type || "run_state");
 
-            let outputDom = createEl('block');
-            outputDom.setAttribute('type', 'controls_if');
+        // allFieldsToDom_
+        let field2dom = field => {
+          let container = createEl("field");
+          container.setAttribute("name", field.name);
+          container.textContent = field.value;
+          return container;
+        };
+        debugger;
+        let fieldDom = field2dom({
+          name: "NAME",
+          value: rootState.name
+        });
+        rootEl.appendChild(fieldDom);
 
+        let nextDom = createEl("next");
+
+        let outputDom = createEl("block");
+        outputDom.setAttribute("type", "controls_if");
+
+        if (rootState.outputAry.length) {
+          if (rootState.outputAry.length > 1) {
+            let mutation = createEl("mutation");
+            mutation.setAttribute("elseif", rootState.outputAry.length - 1);
+            outputDom.appendChild(mutation);
+          }
+          rootState.outputAry.forEach((outputItem, index) => {
             let outputStateDom;
-            rootState.outputAry.forEach((outputItem, index) => {
-                outputStateDom = createEl('statement');
-                outputStateDom.setAttribute('name', `DO${index}`);
-                outputStateDom.setAttribute('id', `DO${outputItem.lineId}`);
-                //outputAry里面只存放了lineId 所以我们需要做以下事情：
-                //1 根据lineId找到对应的line数据
-                //2 根据line里面的endState的stateId找到对应的state数据
-                let line = threadData.lineAry.find(item => {
-                    return item.lineId === outputItem.lineId;
-                })
-                if(line){
-                    let state = threadData.stateAry.find(item => {
-                        return item.stateId === line.endState.stateId;
-                    })
-                    if(state){
-                        outputStateDom.appendChild(state2dom(state, threadData));
-                    }else{
-                        console.error('data error -^- ');
-                    }
-                }
-                
-            })
-            if(outputStateDom){
-                outputDom.appendChild(outputStateDom);
+            outputStateDom = createEl("statement");
+            outputStateDom.setAttribute("name", `DO${index}`);
+            outputStateDom.setAttribute("id", `${outputItem.lineId}`);
+            //outputAry里面只存放了lineId 所以我们需要做以下事情：
+            //1 根据lineId找到对应的line数据
+            //2 根据line里面的endState的stateId找到对应的state数据
+            let line = threadData.lineAry.find(item => {
+              return item.lineId === outputItem.lineId;
+            });
+            if (line) {
+              let state = threadData.stateAry.find(item => {
+                return item.stateId === line.endState.stateId;
+              });
+              if (state) {
+                outputStateDom.appendChild(state2dom(state, threadData));
+              } else {
+                console.error("data error -^- ");
+              }
             }
-
-            nextDom.appendChild(outputDom);
-            
-            rootEl.appendChild(nextDom);
-            return rootEl;
+            if (outputStateDom) {
+              outputDom.appendChild(outputStateDom);
+            }
+          });
+          nextDom.appendChild(outputDom);
+          rootEl.appendChild(nextDom);
         }
+        return rootEl;
+      };
 
-        let blocklyXml = createEl('xml');
-        statePageData.forEach(thread => {
-            let firstState = thread.stateAry.shift();
-            blocklyXml.appendChild(state2dom(firstState, thread))
-        })
-        
-        // this.xmlData = blocklyXml;
-        console.log(blocklyXml);
-        window.aa = blocklyXml;
-        debugger;
-        copy(aa.innerHTML)
+      let blocklyXml = createEl("xml");
+      blocklyXml.setAttribute('xmlns', "https://developers.google.com/blockly/xml");
+      statePageData.forEach(thread => {
+        let firstState = thread.stateAry[0];
+        blocklyXml.appendChild(state2dom(firstState, thread));
+      });
+window.stateData =  blocklyXml.outerHTML;
+      let hiddenInput = document.createElement("input");
+      hiddenInput.setAttribute("type", "text");
+      hiddenInput.setAttribute("value", blocklyXml.outerHTML);
+      hiddenInput.setAttribute("style", "height: 0; overflow: hidden;");
+      document.body.appendChild(hiddenInput);
+      hiddenInput.focus();
+      hiddenInput.select();
+      document.execCommand("copy");
+      document.body.removeChild(hiddenInput);
+      
     }
   },
   computed: {
@@ -505,15 +518,17 @@ export default {
   mounted() {
     window.statePageVue = this;
 
-    var importFileBtn = document.getElementById('importFile');
-    importFileBtn.addEventListener('change', function(e){
+    var importFileBtn = document.getElementById("importFile");
+    importFileBtn.addEventListener("change", function(e) {
       var file = e.target.files[0];
       var reader = new FileReader();
-      reader.onload = (fe) => {
+      reader.onload = fe => {
         window.statePageVue.threadAry = JSON.parse(fe.target.result);
       };
       reader.readAsText(file);
-    })
+    });
+
+    this.iframeHeight = window.innerHeight - 65 ;//header与toolbox的高度
   }
 };
 </script>
