@@ -14,11 +14,11 @@
       <input type="file" name="importFile" id="importFile" />
       <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
       <el-button-group>
-        <el-button type="primary" size="medium" @click="activeName = 'state'">State Diagram</el-button>
-        <el-button type="primary" size="medium" @click="activeName = 'blockly'">Blockly</el-button>
+        <el-button type="primary" size="medium" @click="activeStatePage">State Diagram</el-button>
+        <el-button type="primary" size="medium" @click="activeBlockly">Blockly</el-button>
       </el-button-group>
     </div>
-    <div v-show="activeName === 'state'" class="content" @click="hideLineContextMenu()">
+    <div v-show="activeName === 'statePage'" class="content" @click="hideLineContextMenu()">
       <line-context-menu
         ref="lineContextMenu"
         v-show="lineContextMenuData.show"
@@ -31,7 +31,7 @@
       ></line-context-menu>
       <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
     </div>
-    <iframe v-show="activeName === 'blockly'" src="./static/blockly/demos/code/index.html" frameborder="0" width="100%" :height="iframeHeight" style="position:absolute;top:60px;left:0px;"></iframe>
+    <iframe v-show="activeName === 'blocklyPage'" src="./static/blockly/demos/code/index.html" frameborder="0" width="100%" :height="iframeHeight" style="position:absolute;top:60px;left:0px;"></iframe>
   </div>
 </template>
 
@@ -52,7 +52,7 @@ export default {
   data() {
     return {
       iframeHeight: 0,
-      activeName: "blockly",
+      activeName: "blocklyPage",  //'statePage'
       showTempLine: false,
       tempLineData: null,
       operate: "default",
@@ -496,6 +496,23 @@ window.stateData =  blocklyXml.outerHTML;
       document.execCommand("copy");
       document.body.removeChild(hiddenInput);
       
+    },
+
+    activeStatePage(){
+      if(this.activeName === 'statePage'){
+        return ;
+      }
+      this.activeName = 'statePage';
+    },
+
+    activeBlockly(){
+      if(this.activeName === 'blocklyPage'){
+        return ;
+      }
+      this.activeName = 'blocklyPage';
+      let iframeNode = document.querySelector('iframe');
+      // iframeNode.contentWindow.postMessage('updateFromLocalStorage', '*');
+      iframeNode.contentWindow.postMessage(window.stateData, '*');
     }
   },
   computed: {
