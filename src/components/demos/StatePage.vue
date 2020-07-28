@@ -430,7 +430,6 @@ export default {
           container.textContent = field.value;
           return container;
         };
-        debugger;
         let fieldDom = field2dom({
           name: "NAME",
           value: rootState.name
@@ -485,7 +484,7 @@ export default {
         let firstState = thread.stateAry[0];
         blocklyXml.appendChild(state2dom(firstState, thread));
       });
-window.stateData =  blocklyXml.outerHTML;
+window.stateDataXml =  blocklyXml.outerHTML;
       let hiddenInput = document.createElement("input");
       hiddenInput.setAttribute("type", "text");
       hiddenInput.setAttribute("value", blocklyXml.outerHTML);
@@ -512,7 +511,7 @@ window.stateData =  blocklyXml.outerHTML;
       this.activeName = 'blocklyPage';
       let iframeNode = document.querySelector('iframe');
       // iframeNode.contentWindow.postMessage('updateFromLocalStorage', '*');
-      iframeNode.contentWindow.postMessage(window.stateData, '*');
+      iframeNode.contentWindow.postMessage(window.stateDataXml, '*');
     }
   },
   computed: {
