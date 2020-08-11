@@ -5,6 +5,7 @@
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
       <span draggable="true" @drag="drag" @dragstart="dragStart" @dragend="dragEnd">
         <el-button type="primary" plain>状态</el-button>
+        <!-- <el-button type="primary" plain>循环</el-button> -->
       </span>
       <el-button type="primary" plain @click="save">保存</el-button>
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
@@ -31,7 +32,14 @@
       ></line-context-menu>
       <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
     </div>
-    <iframe v-show="activeName === 'blocklyPage'" src="./static/blockly/demos/code/index.html" frameborder="0" width="100%" :height="iframeHeight" style="position:absolute;top:60px;left:0px;"></iframe>
+    <iframe
+      v-show="activeName === 'blocklyPage'"
+      src="./static/blockly/demos/code/index.html"
+      frameborder="0"
+      width="100%"
+      :height="iframeHeight"
+      style="position:absolute;top:60px;left:0px;"
+    ></iframe>
   </div>
 </template>
 
@@ -52,7 +60,7 @@ export default {
   data() {
     return {
       iframeHeight: 0,
-      activeName: "blocklyPage",  //'statePage'
+      activeName: "blocklyPage", //'statePage'
       showTempLine: false,
       tempLineData: null,
       operate: "default",
@@ -88,26 +96,26 @@ export default {
             }
           ],
           lineAry: [
-            /* {
-                        lineId: 'custom-line-id',
-                        d: 'M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z',
-                        startPoint: {
-                            x: 0,
-                            y: 0
-                        },
-                        endPoint: {
-                            x: 0,
-                            y: 0
-                        },
-                        startState: {
-                            stateId: '',
-                            stateIndex: 0
-                        },
-                        endState: {
-                            stateId: '',
-                            stateIndex: 1
-                        }
-                    } */
+            {
+              lineId: "custom-line-id",
+              d: "M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z",
+              startPoint: {
+                x: 0,
+                y: 0
+              },
+              endPoint: {
+                x: 0,
+                y: 0
+              },
+              startState: {
+                stateId: "",
+                stateIndex: 0
+              },
+              endState: {
+                stateId: "",
+                stateIndex: 1
+              }
+            }
           ]
         }
         /*   {
@@ -479,12 +487,15 @@ export default {
       };
 
       let blocklyXml = createEl("xml");
-      blocklyXml.setAttribute('xmlns', "https://developers.google.com/blockly/xml");
+      blocklyXml.setAttribute(
+        "xmlns",
+        "https://developers.google.com/blockly/xml"
+      );
       statePageData.forEach(thread => {
         let firstState = thread.stateAry[0];
         blocklyXml.appendChild(state2dom(firstState, thread));
       });
-window.stateDataXml =  blocklyXml.outerHTML;
+      window.stateDataXml = blocklyXml.outerHTML;
       let hiddenInput = document.createElement("input");
       hiddenInput.setAttribute("type", "text");
       hiddenInput.setAttribute("value", blocklyXml.outerHTML);
@@ -494,24 +505,23 @@ window.stateDataXml =  blocklyXml.outerHTML;
       hiddenInput.select();
       document.execCommand("copy");
       document.body.removeChild(hiddenInput);
-      
     },
 
-    activeStatePage(){
-      if(this.activeName === 'statePage'){
-        return ;
+    activeStatePage() {
+      if (this.activeName === "statePage") {
+        return;
       }
-      this.activeName = 'statePage';
+      this.activeName = "statePage";
     },
 
-    activeBlockly(){
-      if(this.activeName === 'blocklyPage'){
-        return ;
+    activeBlockly() {
+      if (this.activeName === "blocklyPage") {
+        return;
       }
-      this.activeName = 'blocklyPage';
-      let iframeNode = document.querySelector('iframe');
+      this.activeName = "blocklyPage";
+      let iframeNode = document.querySelector("iframe");
       // iframeNode.contentWindow.postMessage('updateFromLocalStorage', '*');
-      iframeNode.contentWindow.postMessage(window.stateDataXml, '*');
+      iframeNode.contentWindow.postMessage(window.stateDataXml, "*");
     }
   },
   computed: {
@@ -544,7 +554,7 @@ window.stateDataXml =  blocklyXml.outerHTML;
       reader.readAsText(file);
     });
 
-    this.iframeHeight = window.innerHeight - 65 ;//header与toolbox的高度
+    this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度
   }
 };
 </script>
