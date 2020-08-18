@@ -12,8 +12,9 @@
         @dragstart="dragStart"
         @dragend="dragEnd"
         @contextmenu="contextmenu"
-        
+        @drop="onDrop"
         >
+        <span class="icon" :style="{backgroundImage: `url( ${loopIcon})`}"></span>
         <el-input 
             v-if="showInput" 
             class="state-name-input"
@@ -63,6 +64,8 @@ export default {
     props: ['stateData', 'index', 'threadIndex'],
     data(){
         return {
+            // loopIcon: require('../../../static/imgs/logo2.png'),
+            loopIcon: '../../../static/imgs/loop-blue.png',
             showInput: false,
             isDragging: false,
             operate: null,// IS_MOVING    IS_CONNECTING   
@@ -161,6 +164,10 @@ export default {
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
+        },
+        onDrop(e){
+            //当拖拽其他状态放入到循环块里面时，通知statePage修改children的值
+            
         },
         onDragLeave(e){
             //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
@@ -328,7 +335,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .state-div{
     position: absolute;
     top: 0;
@@ -338,22 +345,31 @@ export default {
     /* margin-left: 50px; */
     /* max-width: 150px; */
     padding: 0px 20px;
-    width: 76px;
-    height: 40px;
+    min-width: 192px; /* 76+76+40 */
+    height: 120px;
     border: 1px solid #aaaaaa;
     /* background-color: #ccdd00; */
     border-radius: 5px;
     color: #aaaaaa;
 }
 .state-div:hover{
-    color: #ffffff;
-    border-color: #ffffff;
+    color: #ce5050;
+    border-color:#ce5050;
+}
+span.icon{
+    position: absolute;
+    display:inline-block;
+    background-size: cover;
+    width: 24px;
+    height: 24px;
+    top: 0px;
+    left: 5px;
 }
 .state-div > p{
     display: -webkit-box;
     position: relative;
-    top: 50%;
-    transform: translateY(-50%);
+    /* top: 50%; */
+    /* transform: translateY(-50%); */
     text-align: center;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;

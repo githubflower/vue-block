@@ -1,5 +1,6 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
+<div>
     <div 
         :stateId="stateId" 
         :index="index"
@@ -47,6 +48,7 @@
         <div class="connect-point in"></div>
         <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
     </div>
+</div>
 </template>
 
 <script>
@@ -328,7 +330,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .state-div{
     position: absolute;
     top: 0;

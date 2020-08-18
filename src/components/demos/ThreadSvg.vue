@@ -15,6 +15,7 @@
       :id="thread.id"
       class="thread-svg"
     >
+      <g>
       <foreignObject
         y="0"
         width="100%"
@@ -35,6 +36,7 @@
           />
         </div>
       </foreignObject>
+      </g>
       <!--  <g v-show="showTempLine">
                 <path d="" class="templine"></path>
       </g>-->
