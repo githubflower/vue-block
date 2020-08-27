@@ -1,13 +1,34 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
-        <!-- :stateId="stateId"  -->
-    <div 
-        
+<div>
+    <div v-if="stateData.stateType === 'loopBlock'"
+        @mousedown="onStateMousedown"
+        @drag="onDrag"
+        @dragleave="onDragLeave"
+        @dragstart="dragStart"
+        @dragend="dragEnd"
+        @contextmenu="contextmenu"
+    >
+        <loop-div v-if="stateData.stateType === 'loopBlock'"
+            :stateData="stateData"
+            :index="index"
+            :threadIndex="threadIndex"
+        ></loop-div>
+    </div>
+    <div v-else
+        :stateId="stateId" 
         :index="index"
         :class="['state-div', {'is-dragging': isDragging}]"
-       
+        :style="generateStatePos(stateData)"
+        draggable="true"
+        @mousedown="onStateMousedown"
+        @drag="onDrag"
+        @dragleave="onDragLeave"
+        @dragstart="dragStart"
+        @dragend="dragEnd"
+        @contextmenu="contextmenu"
+        
         >
-        <span class="icon" :style="{backgroundImage: `url( ${loopIcon})`}"></span>
         <el-input 
             v-if="showInput" 
             class="state-name-input"
@@ -40,14 +61,14 @@
         </div>
         <div class="connect-point in"></div>
         <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
-       
-     
     </div>
+</div>
 </template>
 
 <script>
 // import MyPlainDraggable from 'plain-draggable'
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
+import LoopDiv from './LoopDiv'
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
@@ -55,20 +76,19 @@ const isNumber = (str)=>{
     return typeof str === 'number';
 }
 export default {
-    name: 'LoopDiv',
+    name: 'StateDiv',
     props: ['stateData', 'index', 'threadIndex'],
-  
+    components: {
+        LoopDiv
+    },
     data(){
         return {
-            // loopIcon: require('../../../static/imgs/logo2.png'),
-            loopIcon: '../../../static/imgs/loop-blue.png',
             showInput: false,
             isDragging: false,
             operate: null,// IS_MOVING    IS_CONNECTING   
             stateId: null,
             showInputAry: false,
             showOutputAry: false,
-            
         }
     },
     methods: {
@@ -160,10 +180,6 @@ export default {
             this.updatePosition(e.target);
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
-
-        },
-        onDrop(e){
-            //当拖拽其他状态放入到循环块里面时，通知statePage修改children的值
 
         },
         onDragLeave(e){
@@ -285,7 +301,6 @@ export default {
 
             line.active = false;
         },
-        
     },
     created(){
         this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
@@ -335,31 +350,30 @@ export default {
 
 <style scoped>
 .state-div{
-    min-width: 192px; /* 76+76+40 */
-    height: 120px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* float: left; */
+    /* display: table; */
+    /* margin-left: 50px; */
+    /* max-width: 150px; */
+    padding: 0px 20px;
+    width: 76px;
+    height: 40px;
     border: 1px solid #aaaaaa;
     /* background-color: #ccdd00; */
     border-radius: 5px;
     color: #aaaaaa;
 }
 .state-div:hover{
-    color: #ce5050;
-    border-color:#ce5050;
-}
-span.icon{
-    position: absolute;
-    display:inline-block;
-    background-size: cover;
-    width: 24px;
-    height: 24px;
-    top: 0px;
-    left: 5px;
+    color: #ffffff;
+    border-color: #ffffff;
 }
 .state-div > p{
     display: -webkit-box;
     position: relative;
-    /* top: 50%; */
-    /* transform: translateY(-50%); */
+    top: 50%;
+    transform: translateY(-50%);
     text-align: center;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;

@@ -1,53 +1,55 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
-        <!-- :stateId="stateId"  -->
-    <div 
-        
+    <div
+        :stateId="stateId" 
         :index="index"
-        :class="['state-div', {'is-dragging': isDragging}]"
-       
-        >
-        <span class="icon" :style="{backgroundImage: `url( ${loopIcon})`}"></span>
-        <el-input 
-            v-if="showInput" 
-            class="state-name-input"
-            v-model="stateData.name"
-            style="position: relative; top: 4px;"
-            @keyup.enter.native="hideInput"
-            @blur="hideInput"
-        ></el-input>
-        <p v-else :title="stateData.name"
-            @dblclick="rename"
-        >{{stateData.name}}</p>
-        <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
-        <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
-        <div v-show="stateData.inputAry && stateData.inputAry.length" class="in event-count" 
-            @click="showInputAry = !showInputAry"
-        >{{stateData.inputAry.length}}
-            <ul class="input-list" v-show="showInputAry">
-                <li v-for="(item, index) in stateData.inputAry" :key="index">{{ getDesc(item.lineId) }}</li>
-            </ul>
-        </div>
-        <div v-show="stateData.outputAry && stateData.outputAry.length" class="out event-count"
-            @click="showOutputAry = !showOutputAry"
-        >{{stateData.outputAry.length}}
-            <ul class="output-list" v-show="showOutputAry">
-                <li v-for="(item, index) in stateData.outputAry" :key="index"
-                    @mouseenter="activeLine(item.lineId)"
-                    @mouseleave="disActiveLine(item.lineId)"
-                >{{ getDesc(item.lineId) }}</li>
-            </ul>
-        </div>
-        <div class="connect-point in"></div>
-        <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
-       
-     
+        :class="['state-wrap', {'is-dragging': isDragging}]"
+        :style="generateStatePos(stateData)"
+        draggable="true"
+        @mousedown="onStateMousedown"
+        @drag="onDrag"
+        @dragleave="onDragLeave"
+        @dragstart="dragStart"
+        @dragend="dragEnd"
+        @contextmenu="contextmenu"
+    >
+        <loop-div v-if="stateData.stateType === 'loopDiv'"
+            :stateData="stateData"
+            :index="index"
+            :threadIndex="threadIndex"
+            @updateStateData="updateStateData"
+            @updateTempLineData="updateTempLineData"
+        ></loop-div>
+        <state-div v-else
+            :stateData="stateData"
+            :index="index"
+            :threadIndex="threadIndex"
+            @updateStateData="updateStateData"
+            @updateTempLineData="updateTempLineData"
+        ></state-div>
+        <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
+            :stateData="item"
+            :index="cIndex"
+            :threadIndex="threadIndex"
+            @updateStateData="updateStateData"
+            @updateTempLineData="updateTempLineData"
+            style="position: absolute; top: 30px; left: 10px;"
+        ></component>
+         <i v-if="stateData.stateType === 'loopDiv' || stateData.mode === 'nest'"
+        class="resize-icon resizable"
+        :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
+        @mousedown="startResize"
+        @mouseup="endResize"
+        ></i>
     </div>
+
 </template>
 
 <script>
 // import MyPlainDraggable from 'plain-draggable'
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
+import LoopDiv from './LoopDiv'
+import StateDiv from './StateDiv'
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
@@ -55,23 +57,27 @@ const isNumber = (str)=>{
     return typeof str === 'number';
 }
 export default {
-    name: 'LoopDiv',
+    name: 'StateWrap',
     props: ['stateData', 'index', 'threadIndex'],
-  
+    components: {
+        LoopDiv,
+        StateDiv
+    },
     data(){
         return {
-            // loopIcon: require('../../../static/imgs/logo2.png'),
-            loopIcon: '../../../static/imgs/loop-blue.png',
             showInput: false,
             isDragging: false,
             operate: null,// IS_MOVING    IS_CONNECTING   
             stateId: null,
             showInputAry: false,
             showOutputAry: false,
-            
+            resizableImg: "../../../static/imgs/resizable.png",
         }
     },
     methods: {
+        getCompType(stateType){
+            return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
+        },
         genId(){
             return window.genId('state');
         },
@@ -160,10 +166,6 @@ export default {
             this.updatePosition(e.target);
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
-
-        },
-        onDrop(e){
-            //当拖拽其他状态放入到循环块里面时，通知statePage修改children的值
 
         },
         onDragLeave(e){
@@ -285,7 +287,32 @@ export default {
 
             line.active = false;
         },
-        
+        updateTempLineData(data){
+            this.$emit('updateTempLineData', data);
+        },
+        updateStateData(data){
+            this.$emit('updateStateData', data);
+        },
+        startResize(e) {
+            this.showVirtualBox = true;
+            EventObj.$emit("operateChange", {
+                operate: "resize-thread",
+                index: this.threadIndex,
+                startPosition: {
+                x: e.pageX,
+                y: e.pageY
+                },
+                originW: this.$el.offsetWidth,
+                originH: this.$el.offsetHeight
+            });
+        },
+        endResize(e) {
+            this.showVirtualBox = false;
+            EventObj.$emit("operateChange", {
+                operate: "default"
+            });
+            this._lastHeight = this.thread.height;
+        }
     },
     created(){
         this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
@@ -334,32 +361,18 @@ export default {
 </script>
 
 <style scoped>
-.state-div{
-    min-width: 192px; /* 76+76+40 */
-    height: 120px;
-    border: 1px solid #aaaaaa;
-    /* background-color: #ccdd00; */
-    border-radius: 5px;
-    color: #aaaaaa;
-}
-.state-div:hover{
-    color: #ce5050;
-    border-color:#ce5050;
-}
-span.icon{
+.state-wrap{
     position: absolute;
-    display:inline-block;
-    background-size: cover;
-    width: 24px;
-    height: 24px;
-    top: 0px;
-    left: 5px;
+    top: 0;
+    left: 0;
+    display: inline-block;
 }
-.state-div > p{
+
+.state-wrap > p{
     display: -webkit-box;
     position: relative;
-    /* top: 50%; */
-    /* transform: translateY(-50%); */
+    top: 50%;
+    transform: translateY(-50%);
     text-align: center;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -402,7 +415,7 @@ span.icon{
     border: 2px solid #ff0000 !important;
     cursor: default;
 }
-.state-div:hover .connect-point{
+.state-wrap:hover .connect-point{
     border: 2px solid blue;
     cursor: default;
 }

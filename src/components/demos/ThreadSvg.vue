@@ -2,7 +2,7 @@
   <!-- <div class="thread" :style="{width: thread.width + 'px', height: thread.height + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize"  -->
   <div
     class="thread"
-    :style="{width: thread.width + 'px', height: computedH + 'px' }"
+    :style="{width: thread.width + 'px', height: computedH + 'px', backgroundImage: `url( ${bgImg})` }"
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResize"
@@ -25,7 +25,7 @@
       >
         <h4 class="title" contenteditable="true" :style="titleStyle">{{ thread.name }}</h4>
         <div class="thread-body">
-          <state-div
+          <state-wrap
             v-for="(stateItem, index) in thread.stateAry"
             :key="index"
             :stateData="stateItem"
@@ -55,7 +55,7 @@
 </template>
 
 <script>
-import StateDiv from "./StateDiv";
+import StateWrap from "./StateWrap";
 import LineSvg from "./LineSvg";
 const MID_POINT_X = 50;
 const deepCopy = (obj)=>{
@@ -89,11 +89,12 @@ export default {
   name: "ThreadSvg",
   props: ["thread", "threadIndex"],
   components: {
-    StateDiv,
+    StateWrap,
     LineSvg
   },
   data() {
     return {
+      bgImg: '../../../../static/imgs/grid3-50x50.png',
       showVirtualBox: false,
       showTempLine: false,
       tempLineClass: "templine",
@@ -169,6 +170,7 @@ export default {
       }
     },
     updateTempLineData(lineData) {
+      debugger;
       Object.keys(lineData).forEach(key => {
         this.tempLineData[key] = lineData[key];
       });
@@ -279,10 +281,12 @@ export default {
     drop(e) {
       if (e.dataTransfer.getData("operate") === "addState") {
         let threadPosInfo = e.target.getBoundingClientRect();
+        debugger;
         EventObj.$emit("addState", {
           index: this.threadIndex,
           x: e.x - threadPosInfo.x,
-          y: e.y - threadPosInfo.y
+          y: e.y - threadPosInfo.y,
+          stateType: e.dataTransfer.getData("stateType")
         });
       }
     },

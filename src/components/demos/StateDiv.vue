@@ -1,18 +1,11 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
-<div>
-    <div 
-        :stateId="stateId" 
+    <!-- :stateId="stateId"  -->
+    <div
+        
         :index="index"
         :class="['state-div', {'is-dragging': isDragging}]"
-        :style="generateStatePos(stateData)"
-        draggable="true"
-        @mousedown="onStateMousedown"
-        @drag="onDrag"
-        @dragleave="onDragLeave"
-        @dragstart="dragStart"
-        @dragend="dragEnd"
-        @contextmenu="contextmenu"
+      
         
         >
         <el-input 
@@ -48,7 +41,7 @@
         <div class="connect-point in"></div>
         <div class="connect-point out" @mousedown="onConnectPointMousedown" @mouseup="onMouseup"></div>
     </div>
-</div>
+
 </template>
 
 <script>
@@ -102,6 +95,7 @@ export default {
             // this.operate = IS_CONNECTING;
             
             window.stateManage.isConnecting = true;
+            debugger;
             let boundingRect = e.target.getBoundingClientRect();
             let curSvg = e.target.closest('svg');
             let curSvgRect = curSvg.getBoundingClientRect();
@@ -332,14 +326,6 @@ export default {
 
 <style scoped>
 .state-div{
-    position: absolute;
-    top: 0;
-    left: 0;
-    /* float: left; */
-    /* display: table; */
-    /* margin-left: 50px; */
-    /* max-width: 150px; */
-    padding: 0px 20px;
     width: 76px;
     height: 40px;
     border: 1px solid #aaaaaa;

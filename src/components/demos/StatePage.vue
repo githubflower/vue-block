@@ -4,8 +4,10 @@
       <el-button type="primary" plain @click="addThread">线程</el-button>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
       <span draggable="true" @drag="drag" @dragstart="dragStart" @dragend="dragEnd">
-        <el-button type="primary" plain>状态</el-button>
-        <!-- <el-button type="primary" plain>循环</el-button> -->
+        <el-button type="primary" plain stateType="stateDiv">状态</el-button>
+      </span>
+      <span draggable="true" @drag="drag" @dragstart="dragStart" @dragend="dragEnd">
+        <el-button type="primary" plain stateType="loopDiv">循环</el-button>
       </span>
       <el-button type="primary" plain @click="save">保存</el-button>
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
@@ -60,7 +62,8 @@ export default {
   data() {
     return {
       iframeHeight: 0,
-      activeName: "blocklyPage", //'statePage'
+      // activeName: "blocklyPage", //'statePage'
+      activeName: "statePage", //'statePage'
       showTempLine: false,
       tempLineData: null,
       operate: "default",
@@ -96,7 +99,7 @@ export default {
             }
           ],
           lineAry: [
-            {
+           /*  {
               lineId: "custom-line-id",
               d: "M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z",
               startPoint: {
@@ -115,7 +118,7 @@ export default {
                 stateId: "",
                 stateIndex: 1
               }
-            }
+            } */
           ]
         }
         /*   {
@@ -191,13 +194,24 @@ export default {
       });
     },
     addState(data) {
+      console.log('stateType:', data.stateType);
       this.threadAry[data.index].stateAry.push({
         name: "状态描述",
+        stateType: data.stateType,
         stateId: window.genId("state"),
         inputAry: [],
         outputAry: [],
         x: data.x,
-        y: data.y
+        y: data.y,
+        children: data.stateType === 'loopDiv' ? [{
+          name: "child1",
+          stateId: "state-child1",
+          // stateType: "loopBlock",
+          inputAry: [],
+          outputAry: [],
+          x: 50,
+          y: 50
+        }] : []
       });
     },
     /* generateDefaultPos(index){
@@ -220,7 +234,10 @@ export default {
     dragStart(e) {
       // e.dataTransfer.items.push('aaa');
       // e.dataTransfer.items.add('aaa');
+      let stateType = e.target.firstElementChild.getAttribute('stateType');
+      
       e.dataTransfer.setData("operate", "addState");
+      e.dataTransfer.setData("stateType", stateType);
     },
     dragEnd() {
       console.log("dragend");
