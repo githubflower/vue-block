@@ -6,7 +6,7 @@
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResize"
-    @mousemove="onResize2"
+    @mousemove="onMousemove"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -33,6 +33,8 @@
             :threadIndex="threadIndex"
             @updateStateData="updateStateData"
             @updateTempLineData="updateTempLineData"
+            @updateMoveData="updateMoveData"
+            @stopMoving="stopMoving"
           />
         </div>
       </foreignObject>
@@ -114,11 +116,43 @@ export default {
       threadCount: 1,
       titleHeight: 35,
       moveVerticalImg: "../../../static/imgs/move-vertical.png",
-      resizableImg: "../../../static/imgs/resizable.png"
+      resizableImg: "../../../static/imgs/resizable.png",
+      moveData: {
+        startPoint: {
+          x: 0,
+          y: 0
+        },
+        endPoint: {}
+      }, //在线程框内鼠标移动相关的数据
     };
   },
   methods: {
-    onResize2() {
+    updateMoveData(data){
+      if(!this._isResizingState){
+        this._isResizingState = true;
+      }
+      Object.keys(data).forEach(key => {
+        this.moveData[key] = data[key];
+      });
+    },
+    //停止对状态框的拖拽
+    stopMoving(){
+      this._isResizingState = false;
+    },
+    //监测线程框内的鼠标移动，设置状态的resize
+    onMousemove(e) {
+      if(!this._isResizingState){
+        return;
+      }
+      this.updateMoveData({
+        endPoint: {
+          x: e.pageX,
+          y: e.pageY
+        }
+      });
+      let moveData = this.moveData;
+      this.thread.stateAry[this.moveData.stateIndex].width = this.thread.stateAry[this.moveData.stateIndex].width + (moveData.endPoint.x - moveData.startPoint.x) + 'px';
+      this.thread.stateAry[this.moveData.stateIndex].height = this.thread.stateAry[this.moveData.stateIndex].height + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
       // console.log('onResize---2---' + +new Date());
     },
     titleStyle() {
@@ -170,7 +204,6 @@ export default {
       }
     },
     updateTempLineData(lineData) {
-      debugger;
       Object.keys(lineData).forEach(key => {
         this.tempLineData[key] = lineData[key];
       });
@@ -389,7 +422,8 @@ export default {
         operate: "default"
       });
       this._lastHeight = this.thread.height;
-    }
+    },
+    
   },
 
   mounted() {

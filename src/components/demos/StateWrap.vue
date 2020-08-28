@@ -4,9 +4,10 @@
         :stateId="stateId" 
         :index="index"
         :class="['state-wrap', {'is-dragging': isDragging}]"
-        :style="generateStatePos(stateData)"
+        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData)}"
         draggable="true"
         @mousedown="onStateMousedown"
+        @mouseup="onStateMouseup"
         @drag="onDrag"
         @dragleave="onDragLeave"
         @dragstart="dragStart"
@@ -27,19 +28,31 @@
             @updateStateData="updateStateData"
             @updateTempLineData="updateTempLineData"
         ></state-div>
-        <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
+        <!-- <div> -->
+            <state-wrap
+                class="child"
+                v-for="(item, cIndex) in stateData.children" :key="cIndex" 
+                :stateData="item"
+                :index="cIndex"
+                :threadIndex="threadIndex"
+                @updateStateData="updateStateData"
+                @updateTempLineData="updateTempLineData"
+               
+            ></state-wrap>
+        <!-- </div> -->
+        <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
             :stateData="item"
             :index="cIndex"
             :threadIndex="threadIndex"
             @updateStateData="updateStateData"
             @updateTempLineData="updateTempLineData"
             style="position: absolute; top: 30px; left: 10px;"
-        ></component>
+        ></component> -->
          <i v-if="stateData.stateType === 'loopDiv' || stateData.mode === 'nest'"
         class="resize-icon resizable"
         :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
-        @mousedown="startResize"
-        @mouseup="endResize"
+        @mousedown="onResizeIconMousedown"
+        @mouseup="onResizeIconMouseup"
         ></i>
     </div>
 
@@ -76,13 +89,23 @@ export default {
     },
     methods: {
         getCompType(stateType){
-            return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
+            return 'StateWrap';
+            // return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
         },
         genId(){
             return window.genId('state');
         },
-        generateStatePos(stateData){
+        /* generateStatePos(stateData){
             return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
+        }, */
+        generateStatePos(stateData){
+            return (isNumber(stateData.x) && isNumber(stateData.y)) ? `translate(${stateData.x}px, ${stateData.y}px)` : 'translate(0, 0)';
+        },
+        getWidth(stateData){
+            return stateData.width ? stateData.width : (stateData.stateType === 'loopDiv' ? '192px': '76px');
+        },
+        getHeight(stateData){
+            return stateData.height ? stateData.height : (stateData.stateType === 'loopDiv' ? '120px': '40px');
         },
         isConnectPoint(dom){
             let connectPointReg = /connect-point/;
@@ -99,6 +122,10 @@ export default {
                 this.operate = null;
             }
         },
+        /* onStateMouseup(){
+            this._isResizing = false;
+            
+        }, */
         /**
          * 鼠标在连接点按下
          */
@@ -132,6 +159,9 @@ export default {
             stateManage.isConnecting = false;
         },
         onDrag(e){
+            if(this._isResizing){
+                return false;
+            }
             this._endInfo = {
                 x: e.x,
                 y: e.pageY
@@ -141,6 +171,17 @@ export default {
             this.updatePosition(e.target);
         },
         dragStart(e){
+            if(this._isResizing){
+                return false;
+            }
+           /*  if(e.target){
+                let childReg = /child/;
+                let resizeIconReg = /resize\-icon/;
+                    debugger;
+                if(resizeIconReg.test(e.target.getAttribute('class'))){
+                    return false;
+                }
+            } */
             if(this.operate === IS_CONNECTING){
                 e.preventDefault();
                 return false;
@@ -157,6 +198,9 @@ export default {
             console.log('---dragStart---',this._startInfo);
         },
         dragEnd(e){
+            if(this._isResizing){
+                return false;
+            }
             this.isDragging = false;
             // this._endInfo = e.target.getBoundingClientRect();
             this._endInfo = {
@@ -173,8 +217,7 @@ export default {
             if(!this._startInfo){
                 return;
             }
-            console.log('onDragLeave --- ' + e.x + ' --- ' + e.y)
-            console.log('onDragLeave --- ' + e.x + ' --- ' + e.pageY)
+          
             this._endInfo = {
                 x: e.x,
                 y: e.pageY
@@ -293,25 +336,24 @@ export default {
         updateStateData(data){
             this.$emit('updateStateData', data);
         },
-        startResize(e) {
-            this.showVirtualBox = true;
-            EventObj.$emit("operateChange", {
-                operate: "resize-thread",
-                index: this.threadIndex,
-                startPosition: {
-                x: e.pageX,
-                y: e.pageY
+        onResizeIconMousedown(e) {
+            this._isResizing = true;
+            this.$emit("updateMoveData", {
+                operate: "resize-state",
+                stateIndex: this.index,
+                startPoint: {
+                    x: e.pageX,
+                    y: e.pageY
                 },
                 originW: this.$el.offsetWidth,
                 originH: this.$el.offsetHeight
             });
         },
-        endResize(e) {
-            this.showVirtualBox = false;
-            EventObj.$emit("operateChange", {
-                operate: "default"
-            });
-            this._lastHeight = this.thread.height;
+        onResizeIconMouseup(e) {
+            console.log('this._isResizing = false;');
+            this._isResizing = false;
+            this.$emit("stopMoving");
+            // this._lastHeight = this.thread.height;
         }
     },
     created(){

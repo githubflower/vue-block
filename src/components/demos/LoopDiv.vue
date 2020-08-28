@@ -335,8 +335,11 @@ export default {
 
 <style scoped>
 .state-div{
-    min-width: 192px; /* 76+76+40 */
-    height: 120px;
+     /* 76+76+40 */
+    /* min-width: 192px; */
+    /* height: 120px; */
+    width: 100%;
+    height: 100%;
     border: 1px solid #aaaaaa;
     /* background-color: #ccdd00; */
     border-radius: 5px;
