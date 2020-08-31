@@ -118,6 +118,7 @@ export default {
       moveVerticalImg: "../../../static/imgs/move-vertical.png",
       resizableImg: "../../../static/imgs/resizable.png",
       moveData: {
+        stateIndex: 0,
         startPoint: {
           x: 0,
           y: 0
@@ -141,6 +142,7 @@ export default {
     },
     //监测线程框内的鼠标移动，设置状态的resize
     onMousemove(e) {
+      console.log('this._isResizingState: ' + this._isResizingState);
       if(!this._isResizingState){
         return;
       }
@@ -151,8 +153,22 @@ export default {
         }
       });
       let moveData = this.moveData;
-      this.thread.stateAry[this.moveData.stateIndex].width = this.thread.stateAry[this.moveData.stateIndex].width + (moveData.endPoint.x - moveData.startPoint.x) + 'px';
-      this.thread.stateAry[this.moveData.stateIndex].height = this.thread.stateAry[this.moveData.stateIndex].height + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
+      console.log('dw: ' + `${moveData.endPoint.x - moveData.startPoint.x}`);
+      console.log('stateIndex: ' + this.moveData.stateIndex);
+      let threadData = statePageVue.threadAry[0];
+      // threadData = this.thread;
+      // this.$set(this.thread.stateAry[this.moveData.stateIndex], 'width', this.thread.stateAry[this.moveData.stateIndex].width + (moveData.endPoint.x - moveData.startPoint.x))
+      function translatePX2Num(str){
+        if(/px/.test(str)){
+          str = str.replace('px', '');
+        }
+        return +str;
+      }
+      if(!this._testWidth){
+        this._testWidth = translatePX2Num(threadData.stateAry[this.moveData.stateIndex].width);
+      }
+      threadData.stateAry[this.moveData.stateIndex].width = this._testWidth + (moveData.endPoint.x - moveData.startPoint.x) + 'px';
+      threadData.stateAry[this.moveData.stateIndex].height = translatePX2Num(threadData.stateAry[this.moveData.stateIndex].height) + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
       // console.log('onResize---2---' + +new Date());
     },
     titleStyle() {

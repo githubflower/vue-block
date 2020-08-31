@@ -5,13 +5,14 @@
         :index="index"
         :class="['state-wrap', {'is-dragging': isDragging}]"
         :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData)}"
-        draggable="true"
+        :draggable="draggable"
+        
         @mousedown="onStateMousedown"
         @mouseup="onStateMouseup"
-        @drag="onDrag"
+        @drag.stop="onDrag"
         @dragleave="onDragLeave"
-        @dragstart="dragStart"
-        @dragend="dragEnd"
+        @dragstart.stop="dragStart"
+        @dragend.stop="dragEnd"
         @contextmenu="contextmenu"
     >
         <loop-div v-if="stateData.stateType === 'loopDiv'"
@@ -51,8 +52,8 @@
          <i v-if="stateData.stateType === 'loopDiv' || stateData.mode === 'nest'"
         class="resize-icon resizable"
         :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
-        @mousedown="onResizeIconMousedown"
-        @mouseup="onResizeIconMouseup"
+        @mousedown.stop="onResizeIconMousedown"
+        @mouseup.stop="onResizeIconMouseup"
         ></i>
     </div>
 
@@ -78,6 +79,7 @@ export default {
     },
     data(){
         return {
+            draggable: true,
             showInput: false,
             isDragging: false,
             operate: null,// IS_MOVING    IS_CONNECTING   
@@ -122,10 +124,10 @@ export default {
                 this.operate = null;
             }
         },
-        /* onStateMouseup(){
+        onStateMouseup(){
             this._isResizing = false;
             
-        }, */
+        },
         /**
          * 鼠标在连接点按下
          */
@@ -199,6 +201,7 @@ export default {
         },
         dragEnd(e){
             if(this._isResizing){
+                this._isResizing = false;
                 return false;
             }
             this.isDragging = false;
@@ -337,6 +340,8 @@ export default {
             this.$emit('updateStateData', data);
         },
         onResizeIconMousedown(e) {
+            this.draggable = false;
+            console.log('this._isResizing = true;');
             this._isResizing = true;
             this.$emit("updateMoveData", {
                 operate: "resize-state",
@@ -350,6 +355,7 @@ export default {
             });
         },
         onResizeIconMouseup(e) {
+            this.draggable = true;
             console.log('this._isResizing = false;');
             this._isResizing = false;
             this.$emit("stopMoving");

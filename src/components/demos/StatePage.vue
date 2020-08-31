@@ -196,6 +196,8 @@ export default {
     addState(data) {
       console.log('stateType:', data.stateType);
       this.threadAry[data.index].stateAry.push({
+        width: '300px',
+        // height: 150,
         name: "状态描述",
         stateType: data.stateType,
         stateId: window.genId("state"),
