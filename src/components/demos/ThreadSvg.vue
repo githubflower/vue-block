@@ -96,7 +96,8 @@ export default {
   },
   data() {
     return {
-      bgImg: '../../../../static/imgs/grid3-50x50.png',
+      // bgImg: '../../../../static/imgs/grid3-50x50.png',
+      bgImg: '../../../../static/imgs/tmp3.png',
       showVirtualBox: false,
       showTempLine: false,
       tempLineClass: "templine",
@@ -139,6 +140,8 @@ export default {
     //停止对状态框的拖拽
     stopMoving(){
       this._isResizingState = false;
+      this._testWidth = null;
+      this._testHeight = null;
     },
     //监测线程框内的鼠标移动，设置状态的resize
     onMousemove(e) {
@@ -154,6 +157,7 @@ export default {
       });
       let moveData = this.moveData;
       console.log('dw: ' + `${moveData.endPoint.x - moveData.startPoint.x}`);
+      console.log('dh: ' + `${moveData.endPoint.y - moveData.startPoint.y}`);
       console.log('stateIndex: ' + this.moveData.stateIndex);
       let threadData = statePageVue.threadAry[0];
       // threadData = this.thread;
@@ -167,8 +171,11 @@ export default {
       if(!this._testWidth){
         this._testWidth = translatePX2Num(threadData.stateAry[this.moveData.stateIndex].width);
       }
+      if(!this._testHeight){
+        this._testHeight = translatePX2Num(threadData.stateAry[this.moveData.stateIndex].height);
+      }
       threadData.stateAry[this.moveData.stateIndex].width = this._testWidth + (moveData.endPoint.x - moveData.startPoint.x) + 'px';
-      threadData.stateAry[this.moveData.stateIndex].height = translatePX2Num(threadData.stateAry[this.moveData.stateIndex].height) + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
+      threadData.stateAry[this.moveData.stateIndex].height = this._testHeight + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
       // console.log('onResize---2---' + +new Date());
     },
     titleStyle() {
@@ -330,7 +337,6 @@ export default {
     drop(e) {
       if (e.dataTransfer.getData("operate") === "addState") {
         let threadPosInfo = e.target.getBoundingClientRect();
-        debugger;
         EventObj.$emit("addState", {
           index: this.threadIndex,
           x: e.x - threadPosInfo.x,
@@ -341,11 +347,22 @@ export default {
     },
 
     updateStateData(stateData) {
-      //todo 后续这个数据应更新到外层的threadAry     this.thread相当于只是临时的显示数据
-      this.thread.stateAry[stateData.index].x = stateData.transform.x;
-      this.thread.stateAry[stateData.index].y = stateData.transform.y;
-
-      this.updateLines(stateData);
+      // if(typeof stateData.data !== 'undefined'){
+        let update = (obj, data) => {
+          if(typeof data.data !== 'undefined'){
+            update(obj[data.index].children, data.data);
+          }else{
+            obj[data.index].x = data.transform.x;
+            obj[data.index].y = data.transform.y;
+          }
+        }
+        update(this.thread.stateAry, stateData);
+      // }else{
+        //todo 后续这个数据应更新到外层的threadAry     this.thread相当于只是临时的显示数据
+        // this.thread.stateAry[stateData.index].x = stateData.transform.x;
+        // this.thread.stateAry[stateData.index].y = stateData.transform.y;
+        // this.updateLines(stateData);
+      // }
     },
     /**
      * 更新某个状态块的所有输入连线和输出连线
@@ -404,7 +421,6 @@ export default {
             console.log('1---'+ curLine.d);
             curLine.d = d;
             console.log('2---'+ curLine.d);
-            debugger;
     },
     updateOutputLineData(curLine, stateData){
       let startPoint = {

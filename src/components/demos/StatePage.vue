@@ -81,21 +81,21 @@ export default {
               x: 5,
               y: 0
             },
-            {
+           /*  {
               name: "取料",
               stateId: "state-q1",
               inputAry: [],
               outputAry: [],
               x: 190,
               y: 0
-            },
+            }, */
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
               stateId: "state-q2",
               inputAry: [],
               outputAry: [],
-              x: 500,
-              y: 350
+              x: 300,
+              y: 0
             }
           ],
           lineAry: [
@@ -196,8 +196,8 @@ export default {
     addState(data) {
       console.log('stateType:', data.stateType);
       this.threadAry[data.index].stateAry.push({
-        width: '300px',
-        // height: 150,
+        width: data.stateType === 'loopDiv' ? '300px' : '120px',
+        height: data.stateType === 'loopDiv' ? '120px' : '40px',
         name: "状态描述",
         stateType: data.stateType,
         stateId: window.genId("state"),

@@ -19,14 +19,15 @@
             :stateData="stateData"
             :index="index"
             :threadIndex="threadIndex"
-            @updateStateData="updateStateData"
+            
             @updateTempLineData="updateTempLineData"
         ></loop-div>
+        <!-- @updateStateData="updateStateData" -->
         <state-div v-else
             :stateData="stateData"
             :index="index"
             :threadIndex="threadIndex"
-            @updateStateData="updateStateData"
+            
             @updateTempLineData="updateTempLineData"
         ></state-div>
         <!-- <div> -->
@@ -337,7 +338,10 @@ export default {
             this.$emit('updateTempLineData', data);
         },
         updateStateData(data){
-            this.$emit('updateStateData', data);
+            this.$emit('updateStateData', {
+                data: data,
+                index: this.index  //cIndex: 子状态的索引
+            });
         },
         onResizeIconMousedown(e) {
             this.draggable = false;
@@ -414,7 +418,8 @@ export default {
     top: 0;
     left: 0;
     display: inline-block;
-}
+    background-color: rgba(50, 50, 50, 0.62);
+};
 
 .state-wrap > p{
     display: -webkit-box;
