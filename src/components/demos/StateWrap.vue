@@ -13,6 +13,7 @@
         @dragleave="onDragLeave"
         @dragstart.stop="dragStart"
         @dragend.stop="dragEnd"
+        @drop="onDrop"
         @contextmenu="contextmenu"
     >
         <loop-div v-if="stateData.stateType === 'loopDiv'"
@@ -55,6 +56,7 @@
         :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
         @mousedown.stop="onResizeIconMousedown"
         @mouseup.stop="onResizeIconMouseup"
+        @mouseleave.stop="onResizeIconMouseup"
         ></i>
     </div>
 
@@ -364,6 +366,17 @@ export default {
             this._isResizing = false;
             this.$emit("stopMoving");
             // this._lastHeight = this.thread.height;
+        },
+        onDrop(e){
+            this.stateData.children.push({
+                name: "child2",
+                stateId: "state-child2",
+                // stateType: "loopBlock",
+                inputAry: [],
+                outputAry: [],
+                x: 150,
+                y: 50
+            });
         }
     },
     created(){
