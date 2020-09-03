@@ -201,6 +201,7 @@ export default {
             };
             this._startInfo.transform = this.getStyleTransform(e.target);
             console.log('---dragStart---',this._startInfo);
+            e.dataTransfer.setData('theDragStateData', JSON.stringify(this.stateData));
         },
         dragEnd(e){
             if(this._isResizing){
@@ -217,6 +218,13 @@ export default {
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
+        },
+        onDrop(e){
+            let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
+            if(this.stateData.stateId !== theDragStateData.stateId){
+                this.stateData.children.push(theDragStateData);
+            }
+            
         },
         onDragLeave(e){
             //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
@@ -367,17 +375,7 @@ export default {
             this.$emit("stopMoving");
             // this._lastHeight = this.thread.height;
         },
-        onDrop(e){
-            this.stateData.children.push({
-                name: "child2",
-                stateId: "state-child2",
-                // stateType: "loopBlock",
-                inputAry: [],
-                outputAry: [],
-                x: 150,
-                y: 50
-            });
-        }
+        
     },
     created(){
         this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();

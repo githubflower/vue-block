@@ -70,8 +70,8 @@ export default {
       threadAry: [
         {
           name: "线程名称1",
-          width: 1000,
-          height: 300,
+          width: 1200,
+          height: 500,
           stateAry: [
             {
               stateId: "custom-state-id",
