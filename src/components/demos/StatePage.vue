@@ -541,6 +541,9 @@ export default {
       let iframeNode = document.querySelector("iframe");
       // iframeNode.contentWindow.postMessage('updateFromLocalStorage', '*');
       iframeNode.contentWindow.postMessage(window.stateDataXml, "*");
+    },
+    saveDragData(data){
+      this._dragData = data;
     }
   },
   computed: {
@@ -559,6 +562,7 @@ export default {
     EventObj.$on("updateLineData", this.updateLineData, this);
     EventObj.$on("deleteLine", this.deleteLine, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
+    EventObj.$on("saveDragData", this.saveDragData, this);
   },
   mounted() {
     window.statePageVue = this;

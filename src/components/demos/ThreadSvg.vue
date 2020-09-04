@@ -349,6 +349,7 @@ export default {
     updateStateData(stateData) {
       // if(typeof stateData.data !== 'undefined'){
         let update = (obj, data) => {
+          //组件嵌套的情况，会将数据依次往上传递，传递的过程中会包一层data
           if(typeof data.data !== 'undefined'){
             update(obj[data.index].children, data.data);
           }else{

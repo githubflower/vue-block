@@ -67,6 +67,7 @@
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
 import LoopDiv from './LoopDiv'
 import StateDiv from './StateDiv'
+import StatePageVue from './StatePage.vue';
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
@@ -199,6 +200,10 @@ export default {
                 x: e.x,
                 y: e.pageY
             };
+            this._mousedownPoint = {
+                x: this.$el.getBoundingClientRect().left,
+                y: this.$el.getBoundingClientRect().top
+            };
             this._startInfo.transform = this.getStyleTransform(e.target);
             console.log('---dragStart---',this._startInfo);
             e.dataTransfer.setData('theDragStateData', JSON.stringify(this.stateData));
@@ -218,12 +223,39 @@ export default {
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
+            let indexAry = [];
+            while(this.$parent && (this.$parent.name !== 'StatePage')){
+                indexAry.push(this.index);
+                alert('229   dragEnd');
+            }
+            EventObj.$emit('saveDragData', {
+                mousedownPoint: {
+                    x: this._mousedownPoint.x,
+                    y: this._mousedownPoint.y
+                },
+                indexAry: indexAry
+            });
         },
         onDrop(e){
             let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
-            if(this.stateData.stateId !== theDragStateData.stateId){
-                this.stateData.children.push(theDragStateData);
+            if(this.stateData.stateId === theDragStateData.stateId){
+                return false;
             }
+            
+            //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
+            let x = e.pageX - this.$el.getBoundingClientRect().left;
+            let y = e.pageY - this.$el.getBoundingClientRect().top;
+            theDragStateData.x = x - statePageVue._dragData.x;
+            theDragStateData.y = y - statePageVue._dragData.y;
+
+            this.stateData.children.push(theDragStateData);
+
+            let dragTargetParent = statePageVue.threadAry;
+            while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
+                dragTargetParent = dragTargetParent[statePageVue._dragData.indexAry.pop()]
+                alert('256  onDrop');
+            }
+            dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
             
         },
         onDragLeave(e){
