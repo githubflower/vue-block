@@ -265,8 +265,7 @@ console.log('indexAry.length:' + indexAry.length);
                 return inFlag;
             }
             let inFlag = isTargetInParent(this.$el, e);
-            return;
-            if(inFlag){
+            if(!inFlag){
                 return;
             }
             
@@ -287,7 +286,7 @@ console.log('indexAry.length:' + indexAry.length);
                 console.log('256  onDrop');
             }
             dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
-            
+            e.stopPropagation();
         },
         onDragLeave(e){
             //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
