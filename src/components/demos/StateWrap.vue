@@ -369,8 +369,26 @@ console.log('indexAry.length:' + indexAry.length);
             }
             return transform;
         },
-        contextmenu(){
+        contextmenu(e){
+            let indexAry = [];
+            indexAry.push(this.index);
+            let parent = this.$parent;
+            while (parent && (parent.$options.name !== 'StatePage')){
+                if(parent.$options.name === 'ThreadSvg'){
+                    indexAry.push(parent.threadIndex);    
+                }else{
+                    indexAry.push(parent.index);
+                }
+                parent = parent.$parent;
+            };
 
+            EventObj.$emit('deleteState', {
+                mousedownPoint: {
+                    x: e.pageX,
+                    y: e.pageY
+                },
+                indexAry: indexAry
+            });
         },
         rename(){
             this.showInput = true;

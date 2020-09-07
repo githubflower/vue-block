@@ -216,6 +216,15 @@ export default {
         }] : []
       });
     },
+    deleteState(data){
+      let tI = data.indexAry.pop();//线程索引
+      let target = this.threadAry[tI].stateAry;
+      while(data.indexAry.length > 1){
+        let i = data.indexAry.pop();
+        target = target[i].children;
+      }
+      target.splice(data.indexAry.pop(), 1);
+    },
     /* generateDefaultPos(index){
             const gap = 35;
             return `translate(50, ${(300 + gap) * (index - 1)})`;
@@ -557,6 +566,7 @@ export default {
     // this.loadFromLocal();
     EventObj.$on("resizeSvg", this.resizeSvg, this);
     EventObj.$on("addState", this.addState, this);
+    EventObj.$on("deleteState", this.deleteState, this);
     EventObj.$on("operateChange", this.operateChange, this);
     EventObj.$on("addLine2svg", this.addLine2svg, this);
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
