@@ -543,6 +543,7 @@ export default {
       iframeNode.contentWindow.postMessage(window.stateDataXml, "*");
     },
     saveDragData(data){
+      console.log('saveDragData: ' + JSON.stringify(data));
       this._dragData = data;
     }
   },

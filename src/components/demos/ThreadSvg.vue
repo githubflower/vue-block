@@ -343,7 +343,34 @@ export default {
           y: e.y - threadPosInfo.y,
           stateType: e.dataTransfer.getData("stateType")
         });
+      }else{
+        console.log('---thread ---drop');
+        let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
+      
+        
+        //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
+        let x = e.pageX - this.$el.getBoundingClientRect().left;
+        let y = e.pageY - this.$el.getBoundingClientRect().top;
+        theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
+        theDragStateData.y = y/*  - statePageVue._dragData.mousedownPoint.y */;
+  
+        
+  
+        let tI = statePageVue._dragData.indexAry.pop();//线程索引
+        statePageVue.threadAry[tI].stateAry.push(theDragStateData);
+        statePageVue.threadAry[tI].stateAry.splice(0, 0);
+        let dragTargetParent = statePageVue.threadAry[tI].stateAry;
+        while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
+            let i = statePageVue._dragData.indexAry.pop();
+            dragTargetParent = dragTargetParent[i].children;
+            console.log(dragTargetParent);
+            console.log('256  onDrop');
+        }
+        dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
+
       }
+
+
     },
 
     updateStateData(stateData) {

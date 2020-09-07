@@ -207,6 +207,29 @@ export default {
             this._startInfo.transform = this.getStyleTransform(e.target);
             console.log('---dragStart---',this._startInfo);
             e.dataTransfer.setData('theDragStateData', JSON.stringify(this.stateData));
+
+            let indexAry = [];
+            indexAry.push(this.index);
+            let parent = this.$parent;
+            while (parent && (parent.$options.name !== 'StatePage')){
+                if(parent.$options.name === 'ThreadSvg'){
+                    indexAry.push(parent.threadIndex);    
+                }else{
+                    indexAry.push(parent.index);
+                }
+                parent = parent.$parent;
+                console.log('229   dragStart');
+            };
+console.log('indexAry:' + indexAry.toString());
+console.log('indexAry.length:' + indexAry.length);
+            console.log('trigger');
+            EventObj.$emit('saveDragData', {
+                mousedownPoint: {
+                    x: this._mousedownPoint.x,
+                    y: this._mousedownPoint.y
+                },
+                indexAry: indexAry
+            });
         },
         dragEnd(e){
             if(this._isResizing){
@@ -223,37 +246,45 @@ export default {
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
-            let indexAry = [];
-            while(this.$parent && (this.$parent.name !== 'StatePage')){
-                indexAry.push(this.index);
-                alert('229   dragEnd');
-            }
-            EventObj.$emit('saveDragData', {
-                mousedownPoint: {
-                    x: this._mousedownPoint.x,
-                    y: this._mousedownPoint.y
-                },
-                indexAry: indexAry
-            });
+            
         },
         onDrop(e){
+            console.log('---drop');
             let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
             if(this.stateData.stateId === theDragStateData.stateId){
                 return false;
+            }
+
+            //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
+            let isTargetInParent = (el, e)=>{
+                let inFlag = true;
+                let info = el.getBoundingClientRect();
+                if(e.pageX < info.x || e.pageX > (info.x + info.width) || e.pageY < info.y || e.pageY > (info.y + info.height)){
+                    inFlag = false;
+                }
+                return inFlag;
+            }
+            let inFlag = isTargetInParent(this.$el, e);
+            return;
+            if(inFlag){
+                return;
             }
             
             //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
             let x = e.pageX - this.$el.getBoundingClientRect().left;
             let y = e.pageY - this.$el.getBoundingClientRect().top;
-            theDragStateData.x = x - statePageVue._dragData.x;
-            theDragStateData.y = y - statePageVue._dragData.y;
+            theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
+            theDragStateData.y = y/*  - statePageVue._dragData.mousedownPoint.y */;
 
             this.stateData.children.push(theDragStateData);
 
-            let dragTargetParent = statePageVue.threadAry;
+            let tI = statePageVue._dragData.indexAry.pop();//线程索引
+            let dragTargetParent = statePageVue.threadAry[tI].stateAry;
             while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
-                dragTargetParent = dragTargetParent[statePageVue._dragData.indexAry.pop()]
-                alert('256  onDrop');
+                let i = statePageVue._dragData.indexAry.pop();
+                dragTargetParent = dragTargetParent[i].children;
+                console.log(dragTargetParent);
+                console.log('256  onDrop');
             }
             dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
             
