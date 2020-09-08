@@ -32,6 +32,7 @@
         :style="{left: lineContextMenuData.position.x + 'px', top: lineContextMenuData.position.y + 'px'}"
         @selectItem="onSelect"
       ></line-context-menu>
+      <state-context-menu v-show="showDeleteStateMenu" @deleteStateFn="deleteStateFn" :xy="contextmenuXY"></state-context-menu>
       <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
     </div>
     <iframe
@@ -51,13 +52,15 @@
 import ThreadSvg from "./ThreadSvg";
 import StateDiv from "./StateDiv";
 import LineContextMenu from "./LineContextMenu";
+import StateContextMenu from "./StateContextMenu";
 import Tools from "@/Tools.js";
 export default {
   name: "StatePage",
   components: {
     ThreadSvg,
     StateDiv,
-    LineContextMenu
+    LineContextMenu,
+    StateContextMenu
   },
   data() {
     return {
@@ -65,19 +68,25 @@ export default {
       // activeName: "blocklyPage", //'statePage'
       activeName: "statePage", //'statePage'
       showTempLine: false,
+      showDeleteStateMenu: false,
+      contextmenuXY: {
+        x: 0,
+        y: 0
+      },
       tempLineData: null,
       operate: "default",
       threadAry: [
         {
-          name: "线程名称1",
+          name: "线程1",
           width: 1200,
           height: 500,
           stateAry: [
             {
               stateId: "custom-state-id",
-              name: "流水线视觉定位",
+              name: "默认状态名称1",
               inputAry: [],
               outputAry: [],
+              children: [],
               x: 5,
               y: 0
             },
@@ -94,6 +103,7 @@ export default {
               stateId: "state-q2",
               inputAry: [],
               outputAry: [],
+              children: [],
               x: 300,
               y: 0
             }
@@ -179,6 +189,7 @@ export default {
             stateId: "state-start",
             inputAry: [],
             outputAry: [],
+            
             x: 50,
             y: 50
           },
@@ -196,7 +207,7 @@ export default {
     addState(data) {
       console.log('stateType:', data.stateType);
       this.threadAry[data.index].stateAry.push({
-        width: data.stateType === 'loopDiv' ? '300px' : '120px',
+        width: data.stateType === 'loopDiv' ? '300px' : '76px',
         height: data.stateType === 'loopDiv' ? '120px' : '40px',
         name: "状态描述",
         stateType: data.stateType,
@@ -217,6 +228,13 @@ export default {
       });
     },
     deleteState(data){
+      this.contextmenuXY.x = data.mousedownPoint.x;
+      this.contextmenuXY.y = data.mousedownPoint.y;
+      this.showDeleteStateMenu = true;
+      this._deleteStateData = data;
+    },
+    deleteStateFn(){
+      let data = this._deleteStateData;
       let tI = data.indexAry.pop();//线程索引
       let target = this.threadAry[tI].stateAry;
       while(data.indexAry.length > 1){
@@ -224,6 +242,7 @@ export default {
         target = target[i].children;
       }
       target.splice(data.indexAry.pop(), 1);
+      this.showDeleteStateMenu = false;
     },
     /* generateDefaultPos(index){
             const gap = 35;

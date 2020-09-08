@@ -145,7 +145,6 @@ export default {
     },
     //监测线程框内的鼠标移动，设置状态的resize
     onMousemove(e) {
-      console.log('this._isResizingState: ' + this._isResizingState);
       if(!this._isResizingState){
         return;
       }
@@ -344,9 +343,24 @@ export default {
           stateType: e.dataTransfer.getData("stateType")
         });
       }else{
-        console.log('---thread ---drop');
         let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
-      
+        let isStateIdInThread = (id, thread)=>{
+          let flag = false;
+          thread.stateAry.forEach(item => {
+            if(item.stateId === id){
+              flag = true;
+              return false;
+            }
+          })
+          return flag;
+        }
+        // debugger;
+        let stateInThreadFlag = isStateIdInThread(theDragStateData.stateId, this.thread);
+        if(stateInThreadFlag){
+          return false;
+        }
+
+        console.log('---thread ---drop');
         
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
         let x = e.pageX - this.$el.getBoundingClientRect().left;
@@ -374,7 +388,7 @@ export default {
     },
 
     updateStateData(stateData) {
-      // if(typeof stateData.data !== 'undefined'){
+      if(typeof stateData.data !== 'undefined'){
         let update = (obj, data) => {
           //组件嵌套的情况，会将数据依次往上传递，传递的过程中会包一层data
           if(typeof data.data !== 'undefined'){
@@ -385,12 +399,12 @@ export default {
           }
         }
         update(this.thread.stateAry, stateData);
-      // }else{
-        //todo 后续这个数据应更新到外层的threadAry     this.thread相当于只是临时的显示数据
-        // this.thread.stateAry[stateData.index].x = stateData.transform.x;
-        // this.thread.stateAry[stateData.index].y = stateData.transform.y;
-        // this.updateLines(stateData);
-      // }
+      }else{
+        // todo 后续这个数据应更新到外层的threadAry     this.thread相当于只是临时的显示数据
+        this.thread.stateAry[stateData.index].x = stateData.transform.x;
+        this.thread.stateAry[stateData.index].y = stateData.transform.y;
+        this.updateLines(stateData);
+      }
     },
     /**
      * 更新某个状态块的所有输入连线和输出连线
@@ -452,7 +466,7 @@ export default {
     },
     updateOutputLineData(curLine, stateData){
       let startPoint = {
-        x: stateData.transform.x + 116,
+        x: stateData.transform.x + 76,
         y: stateData.transform.y + 57
       };
       let d = `M ${startPoint.x} ${

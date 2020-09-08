@@ -101,7 +101,7 @@ export default {
 <style>
 .connect-line{
     stroke: #aaaaaa;
-    stroke-width: 5px;
+    stroke-width: 2px;
     fill: transparent;
 }
 .connect-line:hover{

@@ -14,7 +14,7 @@
         @dragstart.stop="dragStart"
         @dragend.stop="dragEnd"
         @drop="onDrop"
-        @contextmenu="contextmenu"
+        @contextmenu.prevent="contextmenu"
     >
         <loop-div v-if="stateData.stateType === 'loopDiv'"
             :stateData="stateData"
@@ -254,6 +254,27 @@ console.log('indexAry.length:' + indexAry.length);
             if(this.stateData.stateId === theDragStateData.stateId){
                 return false;
             }
+            
+            //如果拖拽的块本身就是这个drop监听事件块的子节点则直接返回
+            let isStateIdInChildren = (id, children)=>{
+                let flag = false;
+                if(children && children.length){
+
+                    children.forEach(item => {
+                        if(item.stateId === id){
+                            flag = true;
+                            return false;
+                        }
+                    })
+                }
+                return flag;
+            }
+            // debugger;
+            let stateInChildrenFlag = isStateIdInChildren(theDragStateData.stateId, this.stateData.children);
+            if(stateInChildrenFlag){
+                return false;
+            }
+
 
             //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
             let isTargetInParent = (el, e)=>{
