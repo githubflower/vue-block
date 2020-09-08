@@ -2,7 +2,7 @@
   <!-- <div class="thread" :style="{width: thread.width + 'px', height: thread.height + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize"  -->
   <div
     class="thread"
-    :style="{width: thread.width + 'px', height: computedH + 'px', backgroundImage: `url( ${bgImg})` }"
+    :style="{width: thread.width + 'px', height: computedH + 'px'}"
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResize"

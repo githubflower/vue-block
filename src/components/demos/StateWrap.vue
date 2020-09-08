@@ -4,7 +4,7 @@
         :stateId="stateId" 
         :index="index"
         :class="['state-wrap', {'is-dragging': isDragging}]"
-        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData)}"
+        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}"
         :draggable="draggable"
         
         @mousedown="onStateMousedown"
@@ -14,6 +14,7 @@
         @dragstart.stop="dragStart"
         @dragend.stop="dragEnd"
         @drop="onDrop"
+        @dragenter="onDragenter"
         @contextmenu.prevent="contextmenu"
     >
         <loop-div v-if="stateData.stateType === 'loopDiv'"
@@ -83,6 +84,8 @@ export default {
     },
     data(){
         return {
+            zIndex: 0,
+            colors: ['#A30014', '#52D3F0', '#BFBF00', '#70B603', '#00BFBF'],
             draggable: true,
             showInput: false,
             isDragging: false,
@@ -129,6 +132,7 @@ export default {
             }
         },
         onStateMouseup(){
+            console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
             this._isResizing = false;
             
         },
@@ -193,6 +197,8 @@ export default {
                 return false;
             }
             e.dataTransfer.effectAllowed = 'copyMove';
+
+            
             
             this.isDragging = true;
             // this._startInfo = e.target.getBoundingClientRect();
@@ -246,9 +252,13 @@ console.log('indexAry.length:' + indexAry.length);
             console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
-            
+            this.zIndex = 0;
+        },
+        onDragenter(e){
+            console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);            
         },
         onDrop(e){
+            this.zIndex = -1;
             console.log('---drop');
             let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
             if(this.stateData.stateId === theDragStateData.stateId){
