@@ -14,6 +14,7 @@
         @dragstart.stop="dragStart"
         @dragend.stop="dragEnd"
         @drop="onDrop"
+        @dragover.prevent
         @dragenter="onDragenter"
         @contextmenu.prevent="contextmenu"
     >
@@ -84,7 +85,7 @@ export default {
     },
     data(){
         return {
-            zIndex: 0,
+            zIndex: 1,
             colors: ['#A30014', '#52D3F0', '#BFBF00', '#70B603', '#00BFBF'],
             draggable: true,
             showInput: false,
@@ -132,7 +133,7 @@ export default {
             }
         },
         onStateMouseup(){
-            console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
+            // console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
             this._isResizing = false;
             
         },
@@ -157,7 +158,6 @@ export default {
                     y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
                 }
             };
-            console.log(JSON.stringify(data));
             this.$emit('updateTempLineData', data);
 
             window.stateManage.startPoint = {
@@ -224,11 +224,7 @@ export default {
                     indexAry.push(parent.index);
                 }
                 parent = parent.$parent;
-                console.log('229   dragStart');
             };
-console.log('indexAry:' + indexAry.toString());
-console.log('indexAry.length:' + indexAry.length);
-            console.log('trigger');
             EventObj.$emit('saveDragData', {
                 mousedownPoint: {
                     x: this._mousedownPoint.x,
@@ -236,6 +232,7 @@ console.log('indexAry.length:' + indexAry.length);
                 },
                 indexAry: indexAry
             });
+            this.zIndex = 0;
         },
         dragEnd(e){
             if(this._isResizing){
@@ -249,17 +246,14 @@ console.log('indexAry.length:' + indexAry.length);
                 y: e.pageY
             }
             this.updatePosition(e.target);
-            console.log('---dragEnd---',  this._endInfo);
             this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
-            this.zIndex = 0;
+            this.zIndex = 1;
         },
         onDragenter(e){
-            console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);            
+            // console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);            
         },
         onDrop(e){
-            this.zIndex = -1;
-            console.log('---drop');
             let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
             if(this.stateData.stateId === theDragStateData.stateId){
                 return false;
@@ -279,13 +273,6 @@ console.log('indexAry.length:' + indexAry.length);
                 }
                 return flag;
             }
-            // debugger;
-            let stateInChildrenFlag = isStateIdInChildren(theDragStateData.stateId, this.stateData.children);
-            if(stateInChildrenFlag){
-                return false;
-            }
-
-
             //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
             let isTargetInParent = (el, e)=>{
                 let inFlag = true;
@@ -295,6 +282,19 @@ console.log('indexAry.length:' + indexAry.length);
                 }
                 return inFlag;
             }
+
+            // debugger;
+            let stateInChildrenFlag = isStateIdInChildren(theDragStateData.stateId, this.stateData.children);
+            if(stateInChildrenFlag){
+                let inFlag = isTargetInParent(this.$el, e);
+                if(inFlag){
+                    //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
+                    e.stopPropagation();
+                }    
+                return false;
+            }
+
+
             let inFlag = isTargetInParent(this.$el, e);
             if(!inFlag){
                 return;
@@ -303,20 +303,21 @@ console.log('indexAry.length:' + indexAry.length);
             //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
             let x = e.pageX - this.$el.getBoundingClientRect().left;
             let y = e.pageY - this.$el.getBoundingClientRect().top;
+          
             theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
             theDragStateData.y = y/*  - statePageVue._dragData.mousedownPoint.y */;
 
             this.stateData.children.push(theDragStateData);
-
             let tI = statePageVue._dragData.indexAry.pop();//线程索引
             let dragTargetParent = statePageVue.threadAry[tI].stateAry;
             while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
                 let i = statePageVue._dragData.indexAry.pop();
                 dragTargetParent = dragTargetParent[i].children;
-                console.log(dragTargetParent);
-                console.log('256  onDrop');
             }
-            dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
+            setTimeout(()=>{
+                //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
+                dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
+            }, 10)
             e.stopPropagation();
         },
         onDragLeave(e){
@@ -389,7 +390,6 @@ console.log('indexAry.length:' + indexAry.length);
                 style = dom.getAttribute('style');
                 if(style){
                     ret = style.match(reg);
-                    console.log(ret);
                     if(ret){
                         transform = {
                             x: parseInt(ret[1], 10),
@@ -466,7 +466,6 @@ console.log('indexAry.length:' + indexAry.length);
         },
         onResizeIconMousedown(e) {
             this.draggable = false;
-            console.log('this._isResizing = true;');
             this._isResizing = true;
             this.$emit("updateMoveData", {
                 operate: "resize-state",
@@ -481,7 +480,6 @@ console.log('indexAry.length:' + indexAry.length);
         },
         onResizeIconMouseup(e) {
             this.draggable = true;
-            console.log('this._isResizing = false;');
             this._isResizing = false;
             this.$emit("stopMoving");
             // this._lastHeight = this.thread.height;

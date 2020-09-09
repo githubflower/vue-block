@@ -155,9 +155,6 @@ export default {
         }
       });
       let moveData = this.moveData;
-      console.log('dw: ' + `${moveData.endPoint.x - moveData.startPoint.x}`);
-      console.log('dh: ' + `${moveData.endPoint.y - moveData.startPoint.y}`);
-      console.log('stateIndex: ' + this.moveData.stateIndex);
       let threadData = statePageVue.threadAry[0];
       // threadData = this.thread;
       // this.$set(this.thread.stateAry[this.moveData.stateIndex], 'width', this.thread.stateAry[this.moveData.stateIndex].width + (moveData.endPoint.x - moveData.startPoint.x))
@@ -175,7 +172,6 @@ export default {
       }
       threadData.stateAry[this.moveData.stateIndex].width = this._testWidth + (moveData.endPoint.x - moveData.startPoint.x) + 'px';
       threadData.stateAry[this.moveData.stateIndex].height = this._testHeight + (moveData.endPoint.y - moveData.startPoint.y) + 'px';
-      // console.log('onResize---2---' + +new Date());
     },
     titleStyle() {
       return `height: ${this.titleHeight}px;`;
@@ -360,7 +356,6 @@ export default {
           return false;
         }
 
-        console.log('---thread ---drop');
         
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
         let x = e.pageX - this.$el.getBoundingClientRect().left;
@@ -372,15 +367,16 @@ export default {
   
         let tI = statePageVue._dragData.indexAry.pop();//线程索引
         statePageVue.threadAry[tI].stateAry.push(theDragStateData);
-        statePageVue.threadAry[tI].stateAry.splice(0, 0);
+          
         let dragTargetParent = statePageVue.threadAry[tI].stateAry;
         while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
-            let i = statePageVue._dragData.indexAry.pop();
+          let i = statePageVue._dragData.indexAry.pop();
             dragTargetParent = dragTargetParent[i].children;
-            console.log(dragTargetParent);
-            console.log('256  onDrop');
         }
+                        setTimeout(()=>{
         dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
+                
+                        }, 10)
 
       }
 
@@ -460,9 +456,7 @@ export default {
               endPoint.y
             } m 0 0 z`;
             curLine.endPoint = endPoint;
-            console.log('1---'+ curLine.d);
             curLine.d = d;
-            console.log('2---'+ curLine.d);
     },
     updateOutputLineData(curLine, stateData){
       let startPoint = {

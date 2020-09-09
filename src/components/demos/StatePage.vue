@@ -64,6 +64,8 @@ export default {
   },
   data() {
     return {
+      statenameIndex: 0,
+      _statenameIndex: 0, //todo  为什么这里不能用_开头命名？
       iframeHeight: 0,
       // activeName: "blocklyPage", //'statePage'
       activeName: "statePage", //'statePage'
@@ -90,23 +92,54 @@ export default {
               x: 5,
               y: 0
             },
-           /*  {
-              name: "取料",
-              stateId: "state-q1",
-              inputAry: [],
-              outputAry: [],
-              x: 190,
-              y: 0
-            }, */
+           
             {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
               stateId: "state-q2",
               inputAry: [],
               outputAry: [],
               children: [],
-              x: 300,
+              x: 100,
               y: 0
-            }
+            },
+            {
+              width: '600px',
+              height: '320px',
+              name: "状态描述99",
+              stateType: 'loopDiv',
+              stateId: window.genId("state"),
+              inputAry: [],
+              outputAry: [],
+              x: 200,
+              y: 100,
+              children: [{
+                name: "child1",
+                stateId: "state-child1",
+                // stateType: "loopBlock",
+                inputAry: [],
+                outputAry: [],
+                x: 50,
+                y: 50
+              }]
+            },
+            {
+              name: "取料",
+              stateId: "state-q1",
+              inputAry: [],
+              outputAry: [],
+              children: [],
+              x: 600,
+              y: 0
+            },
+            {
+              name: "取料2",
+              stateId: "state-q3",
+              inputAry: [],
+              outputAry: [],
+              children: [],
+              x: 700,
+              y: 0
+            },
           ],
           lineAry: [
            /*  {
@@ -178,7 +211,6 @@ export default {
   },
   methods: {
     addThread() {
-      console.log("---add thread---");
       this.threadAry.push({
         name: "线程名称" + (this.threadAry.length + 1),
         width: 1000,
@@ -205,11 +237,10 @@ export default {
       });
     },
     addState(data) {
-      console.log('stateType:', data.stateType);
       this.threadAry[data.index].stateAry.push({
         width: data.stateType === 'loopDiv' ? '300px' : '76px',
         height: data.stateType === 'loopDiv' ? '120px' : '40px',
-        name: "状态描述",
+        name: "状态描述" + (this.statenameIndex++),
         stateType: data.stateType,
         stateId: window.genId("state"),
         inputAry: [],
@@ -270,7 +301,7 @@ export default {
       e.dataTransfer.setData("stateType", stateType);
     },
     dragEnd() {
-      console.log("dragend");
+      // console.log("dragend");
     },
     onMouseMove(e) {
       if (this.operate === "resize-thread") {
@@ -314,13 +345,12 @@ export default {
      */
     save() {
       window.localStorage.setItem("stateData", JSON.stringify(this.threadAry));
-      console.log("save success!");
     },
     loadFromLocal() {
       let data = window.localStorage.getItem("stateData");
       this.threadAry = JSON.parse(data);
       if (data) {
-        console.log("load success!");
+        // console.log("load success!");
       }
     },
     addLine2svg(data) {
@@ -571,7 +601,6 @@ export default {
       iframeNode.contentWindow.postMessage(window.stateDataXml, "*");
     },
     saveDragData(data){
-      console.log('saveDragData: ' + JSON.stringify(data));
       this._dragData = data;
     }
   },

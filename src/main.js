@@ -15,7 +15,7 @@ window.stateManage = {};//状态管理  后续采用vuex实现 TODO
 window.genId = (function(){
   var _id = 0;
   return function(type){
-    return type + '-' + +new Date();//+ ++_id
+    return type + '-' + _id++
   }
 })();
 
