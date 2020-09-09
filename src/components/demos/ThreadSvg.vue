@@ -271,10 +271,12 @@ export default {
      */
     getEndState(e) {
       let stateId = null,
+          clazz = '.state-wrap',
           stateIndex;
-      if (e.target.closest(".state-div")) {
-        stateId = e.target.closest(".state-div").getAttribute("stateid");
-        stateIndex = parseInt(e.target.closest(".state-div").getAttribute("index"), 10);
+          // debugger;
+      if (e.target.closest(clazz)) {
+        stateId = e.target.closest(clazz).getAttribute("stateid");
+        stateIndex = parseInt(e.target.closest(clazz).getAttribute("index"), 10);
       }
       return {
         stateId: stateId,

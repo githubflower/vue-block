@@ -101,7 +101,7 @@ export default {
             let data = {
                 threadIndex: this.threadIndex,
                 startState: {
-                    stateId: this.stateId,
+                    stateId: this.stateData.stateId,
                     stateIndex: this.index
                 },
                 startPoint: {
