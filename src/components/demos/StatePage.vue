@@ -13,6 +13,7 @@
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
       <el-button type="primary" plain @click="exportFile" title="将当前图面数据以文件形式导出">导出</el-button>
       <el-button type="primary" plain @click="json2xml" title="将当前图面数据以文件形式导出">生成block.xml</el-button>
+      <el-button type="primary" plain @click="genFromBlockly2QBlock" title="根据Blockly生成QBlock">根据Blockly生成QBlock</el-button>
       <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
       <input type="file" name="importFile" id="importFile" />
       <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
@@ -67,8 +68,8 @@ export default {
       statenameIndex: 0,
       _statenameIndex: 0, //todo  为什么这里不能用_开头命名？
       iframeHeight: 0,
-      // activeName: "blocklyPage", //'statePage'
-      activeName: "statePage", //'statePage'
+      activeName: "blocklyPage", //'statePage'
+      // activeName: "statePage", //'statePage'
       showTempLine: false,
       showDeleteStateMenu: false,
       contextmenuXY: {
@@ -85,6 +86,7 @@ export default {
           stateAry: [
             {
               stateId: "custom-state-id",
+              stateType: "stateDiv",
               name: "默认状态名称1",
               inputAry: [],
               outputAry: [],
@@ -93,15 +95,16 @@ export default {
               y: 0
             },
            
-            {
+         /*    {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              stateId: "state-q2",
+              stateId: "state-long",
+              stateType: "stateDiv",
               inputAry: [],
               outputAry: [],
               children: [],
               x: 100,
               y: 0
-            },
+            }, */
             {
               width: '600px',
               height: '320px',
@@ -115,16 +118,17 @@ export default {
               children: [{
                 name: "child1",
                 stateId: "state-child1",
-                // stateType: "loopBlock",
+                stateType: "stateDiv",
                 inputAry: [],
                 outputAry: [],
                 x: 50,
                 y: 50
               }]
             },
-            {
+           /*  {
               name: "取料",
-              stateId: "state-q1",
+              stateId: "state-ql-1",
+              stateType: "stateDiv",
               inputAry: [],
               outputAry: [],
               children: [],
@@ -133,13 +137,14 @@ export default {
             },
             {
               name: "取料2",
-              stateId: "state-q3",
+              stateId: "state-ql-2",
+              stateType: "stateDiv",
               inputAry: [],
               outputAry: [],
               children: [],
               x: 700,
               y: 0
-            },
+            }, */
           ],
           lineAry: [
            /*  {
@@ -353,6 +358,12 @@ export default {
         // console.log("load success!");
       }
     },
+    genFromBlockly2QBlock(){
+      //todo
+      let blocklyPage = document.getElementsByTagName('iframe')[0];
+      let data = [blocklyPage.contentWindow.aa];
+      this.threadAry = data;
+    },
     addLine2svg(data) {
       //新增连线
       this.threadAry[data.threadIndex].lineAry.push(data.lineData);
@@ -500,13 +511,19 @@ export default {
        */
       let blocklyPageData;
       let statePageData = this.threadAry;
-
+      const genBlockType = (type)=>{
+        let ret = 'run_state';
+        if(type === 'loopDiv'){
+          ret = 'controls_whileUntil';
+        }
+        return ret;
+      }
       let state2dom = (rootState, threadData) => {
         let rootEl = createEl("block");
-
+console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.stateType);
         rootEl.setAttribute("id", rootState.stateId);
         // rootEl.setAttribute('type', rootState.type || 'state_run');
-        rootEl.setAttribute("type", rootState.type || "run_state");
+        rootEl.setAttribute("type", genBlockType(rootState.stateType));
 
         // allFieldsToDom_
         let field2dom = field => {

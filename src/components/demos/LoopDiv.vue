@@ -266,20 +266,20 @@ export default {
          * 根据lineId获取这个连线的描述信息
          */
         getDesc(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+            let line = statePageVue.threadAry[this.threadIndex].lineAry.find(item => {
                 return item.lineId === lineId;
             }) || {};
             return line.desc;
         },
         activeLine(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+            let line = statePageVue.threadAry[this.threadIndex].lineAry.find(item => {
                 return item.lineId === lineId;
             }) || {};
 
             line.active = true;
         },
         disActiveLine(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
+            let line = statePageVue.threadAry[this.threadIndex].lineAry.find(item => {
                 return item.lineId === lineId;
             }) || {};
 

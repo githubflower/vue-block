@@ -1,7 +1,7 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
     <div
-        :stateId="stateId" 
+        :stateId="stateData.stateId" 
         :index="index"
         :class="['state-wrap', {'is-dragging': isDragging}]"
         :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}"
@@ -486,9 +486,9 @@ export default {
         },
         
     },
-    created(){
-        this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
-    },
+    // created(){
+    //     this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
+    // },
     mounted(){
         /*
         var elm = this.$el;
