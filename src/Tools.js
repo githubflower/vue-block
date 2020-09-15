@@ -15,6 +15,34 @@ function downloadFlie() {
     document.body.removeChild(elementA);
 }
 
+let deepCopy = (obj) => {
+    if (typeof obj !== 'object') {
+        return obj;
+    }
+
+    let type = Object.prototype.toString.apply(obj);
+    let ret = type === '[object Array]' ? [] : {};
+
+    if (type === '[object Array]') {
+        ret = [];
+        let i = 0;
+        while (i < obj.length) {
+            ret[i] = deepCopy(obj[i]);
+            i++;
+        }
+    } else {
+        ret = {};
+        for (let k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                ret[k] = deepCopy(obj[k]);
+            }
+        }
+    }
+
+    return ret;
+}
+
 export default {
-    downloadFlie: downloadFlie
+    downloadFlie: downloadFlie,
+    deepCopy: deepCopy
 }

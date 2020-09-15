@@ -12,7 +12,7 @@
         <template slot="title">工程管理</template>
         <el-menu-item index="9-1">新建</el-menu-item>
         <el-menu-item index="9-2">打开</el-menu-item>
-        <el-menu-item index="9-3">保存</el-menu-item>
+        <el-menu-item index="9-3" @click="saveProject">保存</el-menu-item>
       </el-submenu>
       <el-submenu index="2">
         <template slot="title">系统配置</template>
@@ -25,6 +25,9 @@
       <el-menu-item index="4">
         <div @click="showCode">查看代码</div>
       </el-menu-item>
+      <el-menu-item index="5">
+        <div @click="run">运行</div>
+      </el-menu-item>
     </el-menu>
     <img :src="logoPath"/>
     
@@ -32,6 +35,7 @@
 </template>
 
 <script>
+import Tools from "@/Tools.js";
 export default {
   name: "Header",
   data() {
@@ -48,6 +52,42 @@ export default {
 
     showCode(){
         debugger;
+    },
+
+    run(){
+      this.axios({
+        url: '/service/run',
+        method: 'post',
+        data: {
+          path: ''
+        }
+      })
+    },
+
+    saveProject(){
+      // save stateData
+      let stateData = Tools.deepCopy(statePageVue.threadAry);
+     
+      // save blockly xml
+      let blocklyWindow = document.getElementsByTagName('iframe')[0].contentWindow;
+      let blocklyData = blocklyWindow.Blockly.Xml.workspaceToDom(blocklyWindow.Code.workspace);
+     
+       // save qrl
+       let code = blocklyWindow.Blockly.Lua.workspaceToCode(blocklyWindow.Code.workspace);
+     this.axios({
+        url: '/service/saveProject',
+        method: 'post',
+        data: {
+          stateData: stateData,
+          blocklyData: stateDataXml, //blocklyData,
+          code: code
+        }
+      }).then((res)=>{
+        // debugger;
+      })
+
+
+
     }
   }
 };

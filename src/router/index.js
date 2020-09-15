@@ -10,6 +10,7 @@ import Demo from '@/components/Demo'
 import DemoIndex from '@/components/demos/DemoIndex'
 import PathAnimation from '@/components/demos/PathAnimation'
 import StatePage from '@/components/demos/StatePage'
+import IOPage from '@/components/IOPage'
 
 Vue.use(Router)
 
@@ -67,6 +68,10 @@ export default new Router({
         {
           path: 'state',
           component: StatePage
+        },
+        {
+          path: 'io',
+          component: IOPage
         }
       ]
     }
