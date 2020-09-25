@@ -3,26 +3,61 @@
     <div class="toolbox">
       <el-button type="primary" plain @click="addThread">线程</el-button>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
-      <span draggable="true" @drag="drag" @dragstart="dragStart" @dragend="dragEnd">
+      <span
+        draggable="true"
+        @drag="drag"
+        @dragstart="dragStart"
+        @dragend="dragEnd"
+      >
         <el-button type="primary" plain stateType="stateDiv">状态</el-button>
       </span>
-      <span draggable="true" @drag="drag" @dragstart="dragStart" @dragend="dragEnd">
+      <span
+        draggable="true"
+        @drag="drag"
+        @dragstart="dragStart"
+        @dragend="dragEnd"
+      >
         <el-button type="primary" plain stateType="loopDiv">循环</el-button>
       </span>
-      <el-button type="primary" plain @click="save">保存</el-button>
+      <!-- <el-button type="primary" plain @click="save">保存</el-button>
       <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
       <el-button type="primary" plain @click="exportFile" title="将当前图面数据以文件形式导出">导出</el-button>
       <el-button type="primary" plain @click="json2xml" title="将当前图面数据以文件形式导出">生成block.xml</el-button>
-      <el-button type="primary" plain @click="genFromBlockly2QBlock" title="根据Blockly生成QBlock">根据Blockly生成QBlock</el-button>
+      <el-button type="primary" plain @click="genFromBlockly2QBlock" title="根据Blockly生成QBlock">根据Blockly生成QBlock</el-button> -->
       <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
-      <input type="file" name="importFile" id="importFile" />
+      <!-- <input type="file" name="importFile" id="importFile" /> -->
       <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
+      <span>输入变量名称：</span>
+      <input type="text" name="search" id="demovar" v-model="varName" />
+      <el-button type="primary" plain @click="searchVar" title="查询变量的值"
+        >查询</el-button
+      >
+      <el-button type="primary" plain @click="run" title="运行程序"
+        >运行</el-button
+      >
+      <el-button type="primary" plain @click="step" title="单步执行"
+        >单步</el-button
+      >
+      <el-button type="primary" plain @click="stop" title="停止程序"
+        >停止</el-button
+      >
+      <el-button type="primary" plain @click="releaseAuth" title="释放权限"
+        >释放权限</el-button
+      >
       <el-button-group>
-        <el-button type="primary" size="medium" @click="activeStatePage">State Diagram</el-button>
-        <el-button type="primary" size="medium" @click="activeBlockly">Blockly</el-button>
+        <el-button type="primary" size="medium" @click="activeStatePage"
+          >State Diagram</el-button
+        >
+        <el-button type="primary" size="medium" @click="activeBlockly"
+          >Blockly</el-button
+        >
       </el-button-group>
     </div>
-    <div v-show="activeName === 'statePage'" class="content" @click="hideLineContextMenu()">
+    <div
+      v-show="activeName === 'statePage'"
+      class="content"
+      @click="hideLineContextMenu()"
+    >
       <line-context-menu
         ref="lineContextMenu"
         v-show="lineContextMenuData.show"
@@ -30,11 +65,23 @@
         :lineId="lineContextMenuData.lineId"
         :lineData="lineContextMenuData.lineData"
         :threadIndex="lineContextMenuData.threadIndex"
-        :style="{left: lineContextMenuData.position.x + 'px', top: lineContextMenuData.position.y + 'px'}"
+        :style="{
+          left: lineContextMenuData.position.x + 'px',
+          top: lineContextMenuData.position.y + 'px',
+        }"
         @selectItem="onSelect"
       ></line-context-menu>
-      <state-context-menu v-show="showDeleteStateMenu" @deleteStateFn="deleteStateFn" :xy="contextmenuXY"></state-context-menu>
-      <thread-svg v-for="(thread, i) in threadAry" :key="i" :thread="thread" :threadIndex="i"></thread-svg>
+      <state-context-menu
+        v-show="showDeleteStateMenu"
+        @deleteStateFn="deleteStateFn"
+        :xy="contextmenuXY"
+      ></state-context-menu>
+      <thread-svg
+        v-for="(thread, i) in threadAry"
+        :key="i"
+        :thread="thread"
+        :threadIndex="i"
+      ></thread-svg>
     </div>
     <iframe
       v-show="activeName === 'blocklyPage'"
@@ -42,7 +89,7 @@
       frameborder="0"
       width="100%"
       :height="iframeHeight"
-      style="position:absolute;top:60px;left:0px;"
+      style="position: absolute; top: 60px; left: 0px"
     ></iframe>
   </div>
 </template>
@@ -61,10 +108,11 @@ export default {
     ThreadSvg,
     StateDiv,
     LineContextMenu,
-    StateContextMenu
+    StateContextMenu,
   },
   data() {
     return {
+      varName: null,
       statenameIndex: 0,
       _statenameIndex: 0, //todo  为什么这里不能用_开头命名？
       iframeHeight: 0,
@@ -74,7 +122,7 @@ export default {
       showDeleteStateMenu: false,
       contextmenuXY: {
         x: 0,
-        y: 0
+        y: 0,
       },
       tempLineData: null,
       operate: "default",
@@ -92,10 +140,10 @@ export default {
               outputAry: [],
               children: [],
               x: 5,
-              y: 0
+              y: 0,
             },
-           
-         /*    {
+
+            /*    {
               name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
               stateId: "state-long",
               stateType: "stateDiv",
@@ -106,26 +154,28 @@ export default {
               y: 0
             }, */
             {
-              width: '600px',
-              height: '320px',
+              width: "600px",
+              height: "320px",
               name: "状态描述99",
-              stateType: 'loopDiv',
+              stateType: "loopDiv",
               stateId: window.genId("state"),
               inputAry: [],
               outputAry: [],
               x: 200,
               y: 100,
-              children: [{
-                name: "child1",
-                stateId: "state-child1",
-                stateType: "stateDiv",
-                inputAry: [],
-                outputAry: [],
-                x: 50,
-                y: 50
-              }]
+              children: [
+                {
+                  name: "child1",
+                  stateId: "state-child1",
+                  stateType: "stateDiv",
+                  inputAry: [],
+                  outputAry: [],
+                  x: 50,
+                  y: 50,
+                },
+              ],
             },
-           /*  {
+            /*  {
               name: "取料",
               stateId: "state-ql-1",
               stateType: "stateDiv",
@@ -147,7 +197,7 @@ export default {
             }, */
           ],
           lineAry: [
-           /*  {
+            /*  {
               lineId: "custom-line-id",
               d: "M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z",
               startPoint: {
@@ -167,8 +217,8 @@ export default {
                 stateIndex: 1
               }
             } */
-          ]
-        }
+          ],
+        },
         /*   {
           name: "线程名称2",
           width: 1000,
@@ -207,11 +257,11 @@ export default {
         threadIndex: null,
         position: {
           x: 0,
-          y: 0
-        }
+          y: 0,
+        },
       },
 
-      fileList: []
+      fileList: [],
     };
   },
   methods: {
@@ -226,9 +276,9 @@ export default {
             stateId: "state-start",
             inputAry: [],
             outputAry: [],
-            
+
             x: 50,
-            y: 50
+            y: 50,
           },
           {
             name: "结束",
@@ -236,44 +286,49 @@ export default {
             inputAry: [],
             outputAry: [],
             x: 350,
-            y: 50
-          }
-        ]
+            y: 50,
+          },
+        ],
       });
     },
     addState(data) {
       this.threadAry[data.index].stateAry.push({
-        width: data.stateType === 'loopDiv' ? '300px' : '76px',
-        height: data.stateType === 'loopDiv' ? '120px' : '40px',
-        name: "状态描述" + (this.statenameIndex++),
+        width: data.stateType === "loopDiv" ? "300px" : "76px",
+        height: data.stateType === "loopDiv" ? "120px" : "40px",
+        name: "状态描述" + this.statenameIndex++,
         stateType: data.stateType,
         stateId: window.genId("state"),
         inputAry: [],
         outputAry: [],
         x: data.x,
         y: data.y,
-        children: data.stateType === 'loopDiv' ? [{
-          name: "child1",
-          stateId: "state-child1",
-          // stateType: "loopBlock",
-          inputAry: [],
-          outputAry: [],
-          x: 50,
-          y: 50
-        }] : []
+        children:
+          data.stateType === "loopDiv"
+            ? [
+                {
+                  name: "child1",
+                  stateId: "state-child1",
+                  // stateType: "loopBlock",
+                  inputAry: [],
+                  outputAry: [],
+                  x: 50,
+                  y: 50,
+                },
+              ]
+            : [],
       });
     },
-    deleteState(data){
+    deleteState(data) {
       this.contextmenuXY.x = data.mousedownPoint.x;
       this.contextmenuXY.y = data.mousedownPoint.y;
       this.showDeleteStateMenu = true;
       this._deleteStateData = data;
     },
-    deleteStateFn(){
+    deleteStateFn() {
       let data = this._deleteStateData;
-      let tI = data.indexAry.pop();//线程索引
+      let tI = data.indexAry.pop(); //线程索引
       let target = this.threadAry[tI].stateAry;
-      while(data.indexAry.length > 1){
+      while (data.indexAry.length > 1) {
         let i = data.indexAry.pop();
         target = target[i].children;
       }
@@ -300,8 +355,8 @@ export default {
     dragStart(e) {
       // e.dataTransfer.items.push('aaa');
       // e.dataTransfer.items.add('aaa');
-      let stateType = e.target.firstElementChild.getAttribute('stateType');
-      
+      let stateType = e.target.firstElementChild.getAttribute("stateType");
+
       e.dataTransfer.setData("operate", "addState");
       e.dataTransfer.setData("stateType", stateType);
     },
@@ -331,7 +386,7 @@ export default {
         threadDivBorderWidth = 1,
         stateDivBorderWidth = 1,
         stateDivHeight = 50; // 50是状态的高度
-      this.threadAry[index].stateAry.forEach(state => {
+      this.threadAry[index].stateAry.forEach((state) => {
         // TODO  这里还需要根据状态是子状态还是父状态作判断，后续实现状态块时修改
         // maxY = Math.max(state.y + this.titleHeight + stateDivHeight + 2 * threadDivBorderWidth + 2 * stateDivBorderWidth, maxY);
         maxY = Math.max(
@@ -358,9 +413,9 @@ export default {
         // console.log("load success!");
       }
     },
-    genFromBlockly2QBlock(){
+    genFromBlockly2QBlock() {
       //todo
-      let blocklyPage = document.getElementsByTagName('iframe')[0];
+      let blocklyPage = document.getElementsByTagName("iframe")[0];
       let data = [blocklyPage.contentWindow.aa];
       this.threadAry = data;
     },
@@ -383,7 +438,7 @@ export default {
           ].outputAry = outputAry;
         }
         outputAry.push({
-          lineId: data.lineData.lineId //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
+          lineId: data.lineData.lineId, //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
         });
       }
     },
@@ -402,7 +457,7 @@ export default {
           ].inputAry = inputAry;
         }
         inputAry.push({
-          lineId: data.lineData.lineId
+          lineId: data.lineData.lineId,
         });
       }
     },
@@ -446,7 +501,7 @@ export default {
       // this.lineContextMenuData.show = false;
     },
     updateLineData(data) {
-      let line = this.threadAry[data.threadIndex].lineAry.find(lineItem => {
+      let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
         return lineItem.lineId === data.lineId;
       });
       line.desc = data.desc;
@@ -466,7 +521,7 @@ export default {
       }
       //更新这条线的始末状态的outputAry inputAry信息
       let stateAry = this.threadAry[data.threadIndex].stateAry;
-      let startState = stateAry.find(item => {
+      let startState = stateAry.find((item) => {
         return item.stateId === line.startState.stateId;
       });
       let outputAry = startState.outputAry;
@@ -477,7 +532,7 @@ export default {
         }
       });
 
-      let endState = stateAry.find(item => {
+      let endState = stateAry.find((item) => {
         return item.stateId === line.endState.stateId;
       });
       let inputAry = endState.inputAry;
@@ -501,7 +556,7 @@ export default {
     },
     json2xml() {
       const NAME_SPACE = "https://developers.google.com/blockly/xml";
-      const createEl = tagName => {
+      const createEl = (tagName) => {
         return document.createElementNS(NAME_SPACE, tagName);
       };
       /**
@@ -511,22 +566,28 @@ export default {
        */
       let blocklyPageData;
       let statePageData = this.threadAry;
-      const genBlockType = (type)=>{
-        let ret = 'run_state';
-        if(type === 'loopDiv'){
-          ret = 'controls_whileUntil';
+      const genBlockType = (type) => {
+        let ret = "run_state";
+        if (type === "loopDiv") {
+          ret = "controls_whileUntil";
         }
         return ret;
-      }
+      };
       let state2dom = (rootState, threadData) => {
         let rootEl = createEl("block");
-console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.stateType);
+        console.log(
+          rootState.stateId +
+            " --- " +
+            rootState.name +
+            " --- " +
+            rootState.stateType
+        );
         rootEl.setAttribute("id", rootState.stateId);
         // rootEl.setAttribute('type', rootState.type || 'state_run');
         rootEl.setAttribute("type", genBlockType(rootState.stateType));
 
         // allFieldsToDom_
-        let field2dom = field => {
+        let field2dom = (field) => {
           let container = createEl("field");
           container.setAttribute("name", field.name);
           container.textContent = field.value;
@@ -534,7 +595,7 @@ console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.
         };
         let fieldDom = field2dom({
           name: "NAME",
-          value: rootState.name
+          value: rootState.name,
         });
         rootEl.appendChild(fieldDom);
 
@@ -557,11 +618,11 @@ console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.
             //outputAry里面只存放了lineId 所以我们需要做以下事情：
             //1 根据lineId找到对应的line数据
             //2 根据line里面的endState的stateId找到对应的state数据
-            let line = threadData.lineAry.find(item => {
+            let line = threadData.lineAry.find((item) => {
               return item.lineId === outputItem.lineId;
             });
             if (line) {
-              let state = threadData.stateAry.find(item => {
+              let state = threadData.stateAry.find((item) => {
                 return item.stateId === line.endState.stateId;
               });
               if (state) {
@@ -585,7 +646,7 @@ console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.
         "xmlns",
         "https://developers.google.com/blockly/xml"
       );
-      statePageData.forEach(thread => {
+      statePageData.forEach((thread) => {
         let firstState = thread.stateAry[0];
         blocklyXml.appendChild(state2dom(firstState, thread));
       });
@@ -617,14 +678,75 @@ console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.
       // iframeNode.contentWindow.postMessage('updateFromLocalStorage', '*');
       iframeNode.contentWindow.postMessage(window.stateDataXml, "*");
     },
-    saveDragData(data){
+    saveDragData(data) {
       this._dragData = data;
-    }
+    },
+    setBp(blockId) {
+      this.axios({
+        url: "/service/setBreakpoint",
+        method: "post",
+        data: {
+          blockId: blockId,
+        },
+      }).then((res) => {
+        alert(res.data.msg);
+      });
+    },
+    searchVar() {
+      this.axios({
+        url: "/service/searchVar",
+        method: "post",
+        data: {
+          varName: this.varName,
+        },
+      }).then((res) => {
+        console.log(res);
+      });
+    },
+    run() {
+      this.axios({
+        url: "/service/run",
+        method: "post",
+        data: {
+          path: "",
+        },
+      });
+    },
+    stop() {
+      this.axios({
+        url: "/service/stop",
+        method: "post",
+        data: {
+          varName: this.varName,
+        },
+      }).then((res) => {
+        console.log(res);
+      });
+    },
+    releaseAuth() {
+      this.axios({
+        url: "/service/releaseAuth",
+        method: "post",
+        data: {
+        },
+      }).then((res) => {
+        console.log(res);
+      });
+    },
+    step() {
+      this.axios({
+        url: "/service/step",
+        method: "post",
+        data: {},
+      }).then((res) => {
+        console.log(res);
+      });
+    },
   },
   computed: {
-    sumHeight: function(i) {
+    sumHeight: function (i) {
       return 0;
-    }
+    },
   },
 
   created() {
@@ -639,22 +761,31 @@ console.log( rootState.stateId + ' --- ' + rootState.name + ' --- ' + rootState.
     EventObj.$on("deleteLine", this.deleteLine, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
     EventObj.$on("saveDragData", this.saveDragData, this);
+
+    window.addEventListener("message", function (e) {
+      let data = e.data;
+      if (data.eventType === "setBreakpoint") {
+        statePageVue.setBp(data.blockId);
+      }
+    });
   },
   mounted() {
     window.statePageVue = this;
 
     var importFileBtn = document.getElementById("importFile");
-    importFileBtn.addEventListener("change", function(e) {
-      var file = e.target.files[0];
-      var reader = new FileReader();
-      reader.onload = fe => {
-        window.statePageVue.threadAry = JSON.parse(fe.target.result);
-      };
-      reader.readAsText(file);
-    });
+    if (importFileBtn) {
+      importFileBtn.addEventListener("change", function (e) {
+        var file = e.target.files[0];
+        var reader = new FileReader();
+        reader.onload = (fe) => {
+          window.statePageVue.threadAry = JSON.parse(fe.target.result);
+        };
+        reader.readAsText(file);
+      });
+    }
 
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度
-  }
+  },
 };
 </script>
 

@@ -4,6 +4,7 @@
     <el-switch v-model="status" active-color="#13ce66" inactive-color="#DCDFE6"></el-switch>
 
     <el-button type="primary" @click="refresh" style="display: block; margin-left: 100px;margin-top:50px;">刷新</el-button>
+    <el-button type="primary" @click="setBp" >设置断点</el-button>
   </div>
 </template>
 
@@ -31,6 +32,18 @@ export default {
     },
     refresh(){
         this.getStatus();
+    },
+    setBp(){
+      this.axios({
+        url: "/service/setBreakpoint",
+        method: "post",
+        data: {
+          port: "20103",
+          line: 23
+        },
+      }).then((res) => {
+        console.log(res);
+      });
     }
   },
   created(){

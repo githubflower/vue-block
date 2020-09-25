@@ -28,6 +28,9 @@
       <el-menu-item index="5">
         <div @click="run">运行</div>
       </el-menu-item>
+      <el-menu-item index="6">
+        <div @click="connDebugger">连接QRL-Debugger</div>
+      </el-menu-item>
     </el-menu>
     <img :src="logoPath"/>
     
@@ -63,6 +66,18 @@ export default {
         }
       })
     },
+    connDebugger(){
+      this.axios({
+        url: '/service/connDebugger',
+        method: 'post',
+        data: {
+          path: ''
+        }
+      })
+      .then((res)=>{
+        console.log('连接至QRL-Debugger成功！');
+      })
+    },
 
     saveProject(){
       // save stateData
@@ -74,12 +89,13 @@ export default {
      
        // save qrl
        let code = blocklyWindow.Blockly.Lua.workspaceToCode(blocklyWindow.Code.workspace);
+       debugger;
      this.axios({
         url: '/service/saveProject',
         method: 'post',
         data: {
           stateData: stateData,
-          blocklyData: stateDataXml, //blocklyData,
+          blocklyData: blocklyData, //blocklyData,
           code: code
         }
       }).then((res)=>{
