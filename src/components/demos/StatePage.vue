@@ -19,12 +19,42 @@
       >
         <el-button type="primary" plain stateType="loopDiv">循环</el-button>
       </span>
-      <!-- <el-button type="primary" plain @click="save">保存</el-button>
-      <el-button type="primary" plain @click="loadFromLocal" title="加载localstorage中的数据">加载</el-button>
-      <el-button type="primary" plain @click="exportFile" title="将当前图面数据以文件形式导出">导出</el-button>
-      <el-button type="primary" plain @click="json2xml" title="将当前图面数据以文件形式导出">生成block.xml</el-button>
-      <el-button type="primary" plain @click="genFromBlockly2QBlock" title="根据Blockly生成QBlock">根据Blockly生成QBlock</el-button> -->
-      <!-- <el-button type="primary" plain @click="importFile" title="从文件导入图面数据">导入</el-button> -->
+      <el-button type="primary" plain @click="save">保存</el-button>
+      <el-button
+        type="primary"
+        plain
+        @click="loadFromLocal"
+        title="加载localstorage中的数据"
+        >加载</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="exportFile"
+        title="将当前图面数据以文件形式导出"
+        >导出</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="json2xml"
+        title="将当前图面数据以文件形式导出"
+        >生成block.xml</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="genFromBlockly2QBlock"
+        title="根据Blockly生成QBlock"
+        >根据Blockly生成QBlock</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="importFile"
+        title="从文件导入图面数据"
+        >导入</el-button
+      >
       <!-- <input type="file" name="importFile" id="importFile" /> -->
       <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
       <span>输入变量名称：</span>
@@ -38,8 +68,15 @@
       <el-button type="primary" plain @click="step" title="单步执行"
         >单步</el-button
       >
+      <el-button
+        type="primary"
+        plain
+        @click="stopDebugger"
+        title="终止被调试端运行的虚拟机"
+        >停止调试</el-button
+      >
       <el-button type="primary" plain @click="stop" title="停止程序"
-        >停止</el-button
+        >停止程序</el-button
       >
       <el-button type="primary" plain @click="releaseAuth" title="释放权限"
         >释放权限</el-button
@@ -701,6 +738,17 @@ export default {
         },
       }).then((res) => {
         console.log(res);
+        let msg = res.data.msg;
+        let successFlag = msg.indexOf("[Debug]:ok;eval;") > -1;
+        let reg = /\{(.*)\}/;
+        let valAry = reg.exec(msg);
+        let val = null;
+        if (successFlag && valAry) {
+          val = this.varName + "的值是：" + valAry[1];
+        } else {
+          val = "查询失败：" + msg;
+        }
+        alert(val);
       });
     },
     run() {
@@ -713,12 +761,16 @@ export default {
       });
     },
     stop() {
+      this.debugService("stop", {});
+    },
+    stopDebugger() {
+      this.debugService("stopDebugger", {});
+    },
+    debugService(appName, data) {
       this.axios({
-        url: "/service/stop",
+        url: "/service/" + appName,
         method: "post",
-        data: {
-          varName: this.varName,
-        },
+        data: data,
       }).then((res) => {
         console.log(res);
       });
@@ -727,8 +779,7 @@ export default {
       this.axios({
         url: "/service/releaseAuth",
         method: "post",
-        data: {
-        },
+        data: {},
       }).then((res) => {
         console.log(res);
       });
@@ -739,7 +790,22 @@ export default {
         method: "post",
         data: {},
       }).then((res) => {
-        console.log(res);
+        alert(res.data.msg);
+        let blocklyPage = document.getElementsByTagName("iframe")[0];
+        let grps = blocklyPage.contentDocument.getElementsByTagName("g");
+        let ary = Array.prototype.slice.call(grps);
+        let block;
+        if (ary) {
+          block = ary.find((item) => {
+            return item.getAttribute("data-id") === res.data.blockId;
+          });
+          if (block) {
+            block.firstElementChild.setAttribute(
+              "style",
+              "fill: yellow; fill-opacity: 1;"
+            );
+          }
+        }
       });
     },
   },

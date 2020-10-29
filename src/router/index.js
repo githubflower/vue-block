@@ -22,44 +22,9 @@ export default new Router({
     }, */
     {
       path: '/',
-      name: 'HelloWorld',
-      component: HelloWorld,
-      redirect: '/demos/state'
-    },
-    {
-      path: '/test',
-      name: 'Test',
-      component: Test
-    },
-    {
-      path: '/moveForm',
-      name: 'MoveForm',
-      component: MoveForm
-    },
-    {
-      path: '/ifForm',
-      name: 'IfForm',
-      component: IfForm
-    },
-    {
-      path: '/SightForm',
-      name: 'SightForm',
-      component: SightForm
-    },
-    {
-      path: '/FlowCanvas',
-      name: 'FlowCanvas',
-      component: FlowCanvas
-    },
-    {
-      path: '/Demo',
-      name: 'Demo',
-      component: Demo
-    },
-    {
-      path: '/demos',
-      name: 'animation',
+      name: 'page',
       component: DemoIndex,
+      redirect: '/state',
       children: [
         {
           path: 'dashoffset',

@@ -1,10 +1,11 @@
 <template>
         <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
+        <!-- :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}" -->
     <div
         :stateId="stateData.stateId" 
         :index="index"
         :class="['state-wrap', {'is-dragging': isDragging}]"
-        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}"
+        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData),  zIndex: zIndex}"
         :draggable="draggable"
         
         @mousedown="onStateMousedown"
@@ -538,7 +539,7 @@ export default {
     top: 0;
     left: 0;
     display: inline-block;
-    background-color: rgba(50, 50, 50, 0.62);
+    /* background-color: rgba(50, 50, 50, 0.62); */
 };
 
 .state-wrap > p{
