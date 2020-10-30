@@ -176,13 +176,6 @@ export default {
     titleStyle() {
       return `height: ${this.titleHeight}px;`;
     },
-    addState() {
-      this.stateAry.push({
-        name: "状态",
-        inCount: 0,
-        outCount: 0
-      });
-    },
     /* generateDefaultPos(index) {
       const gap = 35;
       return `translate(50, ${(300 + gap) * (index - 1)})`;
@@ -233,10 +226,10 @@ export default {
       lineData.endState = endState;
       lineData.lineId = window.genId('line');
       lineData.desc = '';
-      EventObj.$emit('addLine2svg', {
-          threadIndex: this.threadIndex,
-          lineData: lineData
-      })
+      store.addLine({
+        threadIndex: this.threadIndex,
+        lineData: lineData
+      });
     },
     copy(obj){
       return deepCopy(obj);
@@ -334,12 +327,13 @@ export default {
     drop(e) {
       if (e.dataTransfer.getData("operate") === "addState") {
         let threadPosInfo = e.target.getBoundingClientRect();
-        EventObj.$emit("addState", {
+        let data = {
           index: this.threadIndex,
           x: e.x - threadPosInfo.x,
           y: e.y - threadPosInfo.y,
           stateType: e.dataTransfer.getData("stateType")
-        });
+        };
+        store.addState(data);
       }else{
         let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
         let isStateIdInThread = (id, thread)=>{

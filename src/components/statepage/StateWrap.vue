@@ -351,7 +351,7 @@ export default {
                 needResizeInfo.dw = targetInfo.right - curSvgRect.right;
             }
             if(needResizeW || needResizeH){
-                EventObj.$emit('resizeSvg', needResizeInfo);
+                store.resizeThread(needResizeInfo)
             }
             // this.$emit('resizeSvg', needResizeInfo);
         },

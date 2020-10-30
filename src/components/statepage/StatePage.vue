@@ -163,130 +163,7 @@ export default {
       },
       tempLineData: null,
       operate: "default",
-      threadAry: [
-        {
-          name: "线程1",
-          width: 1200,
-          height: 500,
-          stateAry: [
-            {
-              stateId: "custom-state-id",
-              stateType: "stateDiv",
-              name: "默认状态名称1",
-              inputAry: [],
-              outputAry: [],
-              children: [],
-              x: 5,
-              y: 0,
-            },
-
-            /*    {
-              name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              stateId: "state-long",
-              stateType: "stateDiv",
-              inputAry: [],
-              outputAry: [],
-              children: [],
-              x: 100,
-              y: 0
-            }, */
-            {
-              width: "600px",
-              height: "320px",
-              name: "状态描述99",
-              stateType: "loopDiv",
-              stateId: window.genId("state"),
-              inputAry: [],
-              outputAry: [],
-              x: 200,
-              y: 100,
-              children: [
-                {
-                  name: "child1",
-                  stateId: "state-child1",
-                  stateType: "stateDiv",
-                  inputAry: [],
-                  outputAry: [],
-                  x: 50,
-                  y: 50,
-                },
-              ],
-            },
-            /*  {
-              name: "取料",
-              stateId: "state-ql-1",
-              stateType: "stateDiv",
-              inputAry: [],
-              outputAry: [],
-              children: [],
-              x: 600,
-              y: 0
-            },
-            {
-              name: "取料2",
-              stateId: "state-ql-2",
-              stateType: "stateDiv",
-              inputAry: [],
-              outputAry: [],
-              children: [],
-              x: 700,
-              y: 0
-            }, */
-          ],
-          lineAry: [
-            /*  {
-              lineId: "custom-line-id",
-              d: "M 240.5 174.5 h 50 v 106 L 394 280 m 0 0 z",
-              startPoint: {
-                x: 0,
-                y: 0
-              },
-              endPoint: {
-                x: 0,
-                y: 0
-              },
-              startState: {
-                stateId: "",
-                stateIndex: 0
-              },
-              endState: {
-                stateId: "",
-                stateIndex: 1
-              }
-            } */
-          ],
-        },
-        /*   {
-          name: "线程名称2",
-          width: 1000,
-          height: 500,
-          stateAry: [
-            {
-              name: "流水线视觉定位",
-              inputAry: [],
-              outputAry: [],
-              x: 100,
-              y: 50
-            },
-            {
-              name: "取料",
-              inputAry: [],
-              outputAry: [],
-              x: 300,
-              y: 50
-            },
-            {
-              name: "状态名称很长的时候会显示省略号鼠标放上去显示详细描述",
-              inputAry: [],
-              outputAry: [],
-              x: 500,
-              y: 450
-            }
-          ],
-          lineAry: []
-        } */
-      ],
-
+      threadAry: store.stateData.threadAry,
       lineContextMenuData: {
         show: false,
         lineId: null,
@@ -303,7 +180,7 @@ export default {
   },
   methods: {
     addThread() {
-      this.threadAry.push({
+      store.addThread({
         name: "线程名称" + (this.threadAry.length + 1),
         width: 1000,
         height: 300,
@@ -326,33 +203,6 @@ export default {
             y: 50,
           },
         ],
-      });
-    },
-    addState(data) {
-      this.threadAry[data.index].stateAry.push({
-        width: data.stateType === "loopDiv" ? "300px" : "76px",
-        height: data.stateType === "loopDiv" ? "120px" : "40px",
-        name: "状态描述" + this.statenameIndex++,
-        stateType: data.stateType,
-        stateId: window.genId("state"),
-        inputAry: [],
-        outputAry: [],
-        x: data.x,
-        y: data.y,
-        children:
-          data.stateType === "loopDiv"
-            ? [
-                {
-                  name: "child1",
-                  stateId: "state-child1",
-                  // stateType: "loopBlock",
-                  inputAry: [],
-                  outputAry: [],
-                  x: 50,
-                  y: 50,
-                },
-              ]
-            : [],
       });
     },
     deleteState(data) {
@@ -380,20 +230,11 @@ export default {
             const gapX = 60;
             return `translate(${(90 + gapX) * (index - 1)}, 40)`;
         }, */
-    resizeSvg(resizeInfo) {
-      if (resizeInfo.dh) {
-        this.threadAry[resizeInfo.threadIndex].height += resizeInfo.dh;
-      }
-      if (resizeInfo.dw) {
-        this.threadAry[resizeInfo.threadIndex].width += resizeInfo.dw;
-      }
-    },
     drag() {},
     dragStart(e) {
       // e.dataTransfer.items.push('aaa');
       // e.dataTransfer.items.add('aaa');
       let stateType = e.target.firstElementChild.getAttribute("stateType");
-
       e.dataTransfer.setData("operate", "addState");
       e.dataTransfer.setData("stateType", stateType);
     },
@@ -456,48 +297,7 @@ export default {
       let data = [blocklyPage.contentWindow.aa];
       this.threadAry = data;
     },
-    addLine2svg(data) {
-      //新增连线
-      this.threadAry[data.threadIndex].lineAry.push(data.lineData);
-      //将连线数据添加到首尾2个状态块
-      this.addLine2startState(data);
-      this.addLine2endState(data);
-    },
-    addLine2startState(data) {
-      if (data.lineData.startState) {
-        let outputAry = this.threadAry[data.threadIndex].stateAry[
-          data.lineData.startState.stateIndex
-        ].outputAry;
-        if (!outputAry) {
-          outputAry = [];
-          this.threadAry[data.threadIndex].stateAry[
-            data.lineData.startState.stateIndex
-          ].outputAry = outputAry;
-        }
-        outputAry.push({
-          lineId: data.lineData.lineId, //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
-        });
-      }
-    },
-    addLine2endState(data) {
-      if (
-        data.lineData.endState &&
-        data.lineData.endState.stateIndex !== null
-      ) {
-        let inputAry = this.threadAry[data.threadIndex].stateAry[
-          data.lineData.endState.stateIndex
-        ].inputAry;
-        if (!inputAry) {
-          inputAry = [];
-          this.threadAry[data.threadIndex].stateAry[
-            data.lineData.endState.stateIndex
-          ].inputAry = inputAry;
-        }
-        inputAry.push({
-          lineId: data.lineData.lineId,
-        });
-      }
-    },
+
     // 用于绘制连线的临时数据
     updateTempLineData(data) {
       /* {
@@ -817,11 +617,9 @@ export default {
 
   created() {
     // this.loadFromLocal();
-    EventObj.$on("resizeSvg", this.resizeSvg, this);
-    EventObj.$on("addState", this.addState, this);
     EventObj.$on("deleteState", this.deleteState, this);
     EventObj.$on("operateChange", this.operateChange, this);
-    EventObj.$on("addLine2svg", this.addLine2svg, this);
+    
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
     EventObj.$on("updateLineData", this.updateLineData, this);
     EventObj.$on("deleteLine", this.deleteLine, this);
