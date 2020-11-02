@@ -118,6 +118,47 @@ window.store = {
     this.relateLine2endState(data);
   },
   /**
+   * 删除连线 
+   * 参数：连线id， 线程索引（TODO:后续考虑修改为线程id）
+   * @param {lineId, threadIndex} data
+   */
+  deleteLine(data) {
+    let lineAry = this.stateData.threadAry[data.threadIndex].lineAry,
+      lineItem,
+      line,
+      i;
+    for (i = 0; i < lineAry.length; i++) {
+      lineItem = lineAry[i];
+      if (lineItem.lineId === data.lineId) {
+        line = lineAry.splice(i, 1)[0];
+        break;
+      }
+    }
+    //更新这条线的始末状态的outputAry inputAry信息
+    let stateAry = this.stateData.threadAry[data.threadIndex].stateAry;
+    let startState = stateAry.find((item) => {
+      return item.stateId === line.startState.stateId;
+    });
+    let outputAry = startState.outputAry;
+    outputAry.forEach((item, index) => {
+      if (item.lineId === line.lineId) {
+        outputAry.splice(index, 1);
+        return false;
+      }
+    });
+
+    let endState = stateAry.find((item) => {
+      return item.stateId === line.endState.stateId;
+    });
+    let inputAry = endState.inputAry;
+    inputAry.forEach((item, index) => {
+      if (item.lineId === line.lineId) {
+        inputAry.splice(index, 1);
+        return false;
+      }
+    });
+  },
+  /**
    * 将连线数据和连线的首尾2个状态关联
    * @param  { threadIndex, lineData }data
    */

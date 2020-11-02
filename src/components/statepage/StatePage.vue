@@ -153,7 +153,7 @@ export default {
       statenameIndex: 0,
       _statenameIndex: 0, //todo  为什么这里不能用_开头命名？
       iframeHeight: 0,
-      activeName: "blocklyPage", //'statePage'
+      activeName: "statePage", //'statePage'    'blocklyPage'
       // activeName: "statePage", //'statePage'
       showTempLine: false,
       showDeleteStateMenu: false,
@@ -343,42 +343,6 @@ export default {
       });
       line.desc = data.desc;
       this.lineContextMenuData.show = false;
-    },
-    deleteLine(data) {
-      let lineAry = this.threadAry[data.threadIndex].lineAry,
-        lineItem,
-        line,
-        i;
-      for (i = 0; i < lineAry.length; i++) {
-        lineItem = lineAry[i];
-        if (lineItem.lineId === data.lineId) {
-          line = lineAry.splice(i, 1)[0];
-          break;
-        }
-      }
-      //更新这条线的始末状态的outputAry inputAry信息
-      let stateAry = this.threadAry[data.threadIndex].stateAry;
-      let startState = stateAry.find((item) => {
-        return item.stateId === line.startState.stateId;
-      });
-      let outputAry = startState.outputAry;
-      outputAry.forEach((item, index) => {
-        if (item.lineId === line.lineId) {
-          outputAry.splice(index, 1);
-          return false;
-        }
-      });
-
-      let endState = stateAry.find((item) => {
-        return item.stateId === line.endState.stateId;
-      });
-      let inputAry = endState.inputAry;
-      inputAry.forEach((item, index) => {
-        if (item.lineId === line.lineId) {
-          inputAry.splice(index, 1);
-          return false;
-        }
-      });
     },
     exportFile() {
       Tools.downloadFlie();
@@ -622,7 +586,6 @@ export default {
     
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
     EventObj.$on("updateLineData", this.updateLineData, this);
-    EventObj.$on("deleteLine", this.deleteLine, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
     EventObj.$on("saveDragData", this.saveDragData, this);
 

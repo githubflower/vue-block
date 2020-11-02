@@ -1,9 +1,7 @@
 <template>
     <g
         @contextmenu.prevent="onContextMenu"
-        @click="activeLine"
-        @mouseenter="activeLine"
-        @mouseleave="disActiveLine"
+        @click="activeLineChange"
         :class="{active: isActive}"
     >
         <path 
@@ -11,6 +9,9 @@
             :lineId="line.lineId"
             :d="line.d" 
             :class="genClass()"></path>
+        <path
+            :d="getLineMidPoint(line)"
+            :id="line.lineId + '-textpath'"></path>
         <text
             v-if="line.desc"
             x="10"
@@ -18,7 +19,7 @@
             style="fill: red;"
         >
             <textPath
-                :xlink:href="'#' + line.lineId"
+                :xlink:href="'#' + line.lineId + '-textpath'"
             >{{line.desc}}</textPath>
         </text>
     </g>
@@ -31,6 +32,8 @@ export default {
     data(){
         return {
             isActive: false,
+            //TODO: 运行时动画
+            isRunning: false,
         }
     },
     methods: {
@@ -50,6 +53,14 @@ export default {
         generateByState(){
 
         },
+        getLineMidPoint(line){
+            let startX, startY, endY, midPointPath
+            startX = line.startPoint.x;
+            startY = line.startPoint.y;
+            endY = line.endPoint.y;
+            midPointPath = `M ${startX + 55} ${(startY + endY) / 2} h 150`;
+            return midPointPath
+    },
         genId(){
             return window.genId('line');
         },
@@ -64,12 +75,14 @@ export default {
                 }
             });
         },
-        activeLine(){
-            this.isActive = true;
+        activeLineChange(){
+            if(this.isActive){
+                this.isActive = false;
+            }
+            else{
+                this.isActive = true;
+            }
         },
-        disActiveLine(){
-            this.isActive = false;
-        }
     },
     created(){
         this.$set(this.line, 'active', false);
@@ -102,13 +115,15 @@ export default {
 .connect-line{
     stroke: #aaaaaa;
     stroke-width: 2px;
-    fill: transparent;
+    fill: #aaaaaa;
 }
 .connect-line:hover{
     stroke:yellow;
+    fill: yellow;
 }
 .active .connect-line{
-    stroke:yellow;
+    stroke:rgb(112, 255, 255);
+    fill: rgb(112, 255, 255);
 }
 text{
     display: none;

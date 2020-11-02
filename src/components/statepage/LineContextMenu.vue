@@ -59,7 +59,7 @@ export default {
           break;
         case "delete":
             this.showMenu = false;
-            EventObj.$emit('deleteLine', {
+            store.deleteLine({
                 lineId: this.lineId,
                 threadIndex: this.threadIndex,
             });
