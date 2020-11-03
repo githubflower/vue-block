@@ -120,14 +120,14 @@
         :threadIndex="i"
       ></thread-svg>
     </div>
-    <iframe
+   <!--  <iframe
       v-show="activeName === 'blocklyPage'"
       src="./static/blockly/demos/code/index.html"
       frameborder="0"
       width="100%"
       :height="iframeHeight"
       style="position: absolute; top: 60px; left: 0px"
-    ></iframe>
+    ></iframe> -->
   </div>
 </template>
 

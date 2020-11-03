@@ -1,0 +1,10 @@
+{
+    "plugins": [
+        {
+            "name": "plugin_a",
+            "desc": "插件a",
+            "url": "./",
+            "version": "0.0.1"
+        }
+    ]
+}

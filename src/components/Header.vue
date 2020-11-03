@@ -4,34 +4,30 @@
       :default-active="activeIndex"
       class="el-menu-demo"
       mode="horizontal"
+      menu-trigger="click"
+      unique-opened="true"
       @select="handleSelect"
       
     >
-      <el-menu-item index="1">主页</el-menu-item>
-      <el-submenu index="9">
-        <template slot="title">工程管理</template>
-        <el-menu-item index="9-1">新建</el-menu-item>
-        <el-menu-item index="9-2">打开</el-menu-item>
-        <el-menu-item index="9-3" @click="saveProject">保存</el-menu-item>
+      <el-submenu v-for="item in menuCfg" :index="item.id" :key="item.id">
+        <template slot="title">{{ item.name }}</template>
+        <el-menu-item v-for="subItem in item.children" :index="subItem.id" :key="subItem.id">
+          <template>{{ subItem.name }}</template>
+          <el-submenu v-for="thirdLevelItem in subItem.children" :index="thirdLevelItem.id" :key="thirdLevelItem.id">
+            <template>{{ thirdLevelItem.name }}</template>
+          </el-submenu>
+        </el-menu-item>
       </el-submenu>
-      <el-submenu index="2">
-        <template slot="title">系统配置</template>
-        <el-menu-item index="2-1">点位列表</el-menu-item>
-        <el-menu-item index="2-2">速度配置</el-menu-item>
-        <el-menu-item index="2-3">机器人示教</el-menu-item>
-        <!-- <el-menu-item index="2-4">系统连接</el-menu-item> -->
+
+      <el-submenu index="11">
+        <template slot="title">plugins</template>
+        <el-menu-item index="11.1">
+          <!--  router-link { name: '路由名称', params: { name: '插件名称'}}    -->
+          <router-link :to="{ name: 'plugin', params: { name: 'plugin_a'}}">打开插件a</router-link>
+        </el-menu-item>
       </el-submenu>
-      <el-menu-item index="3">系统连接</el-menu-item>
-      <el-menu-item index="4">
-        <div @click="showCode">查看代码</div>
-      </el-menu-item>
-      <el-menu-item index="5">
-        <div @click="run">运行</div>
-      </el-menu-item>
-      <el-menu-item index="6">
-        <div @click="connDebugger">连接QRL-Debugger</div>
-      </el-menu-item>
     </el-menu>
+
     <img :src="logoPath"/>
     
   </div>
@@ -39,13 +35,50 @@
 
 <script>
 import Tools from "@/Tools.js";
+
 export default {
   name: "Header",
+  // props: ['menuCfg'],
   data() {
     return {
       logoPath: '',
       activeIndex: "1",
-      activeIndex2: "1"
+      activeIndex2: "1",
+
+      menuCfg: [
+        {
+          id: '0',
+          name: '主页',
+          callback: null,
+          router: null,
+          children: []
+        },{
+          id: '1',
+          name: '工程管理',
+          callback: null,
+          router: null,
+          children: [{
+            id: '1-0',
+            name: '新建工程',
+            callback: null,
+            router: null,
+            children: []
+          },{
+            id: '1-1',
+            name: '打开工程',
+            callback: null,
+            router: null,
+            children: []
+          },{
+            id: '1-2',
+            name: '保存工程',
+            callback: null,
+            router: null,
+            children: []
+          }]
+        }
+
+      ]
     };
   },
   methods: {

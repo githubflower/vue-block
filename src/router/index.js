@@ -11,6 +11,9 @@ const StatePage = ()=>{
 const IOPage = () => {
   return import(/* webpackChunkName: "IOPage" */ '@/components/io/IOPage')
 }
+const PluginIframe = ()=>{
+  return import(/* webpackChunkName: "PluginIframe" */ '@/components/plugin_iframe/PluginIframe')
+}
 
 Vue.use(Router)
 
@@ -37,6 +40,11 @@ export default new Router({
         {
           path: 'io',
           component: IOPage
+        },
+        {
+          path: 'plugin/:name',
+          name: 'plugin',
+          component: PluginIframe
         }
       ]
     }

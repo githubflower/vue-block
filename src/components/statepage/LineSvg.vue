@@ -8,7 +8,8 @@
             :id="line.lineId"
             :lineId="line.lineId"
             :d="line.d" 
-            :class="genClass()"></path>
+            :class="genClass()"
+            :style="{ strokeWidth: strokeWidth}"></path>
         <path
             :d="getLineMidPoint(line)"
             :id="line.lineId + '-textpath'"></path>
@@ -20,12 +21,17 @@
         >
             <textPath
                 :xlink:href="'#' + line.lineId + '-textpath'"
+                :id="line.lineId + '-text'"
             >{{line.desc}}</textPath>
+            <span></span>
         </text>
     </g>
 </template>
 
 <script>
+import {lineCfg} from './graphCfg.js'
+const line_h = lineCfg.line_h
+const stroke_width = lineCfg.stroke_width
 export default {
     name: 'LineSvg',
     props: ['line', 'threadIndex', 'lineClass'],
@@ -34,6 +40,7 @@ export default {
             isActive: false,
             //TODO: 运行时动画
             isRunning: false,
+            strokeWidth: stroke_width
         }
     },
     methods: {
@@ -58,9 +65,9 @@ export default {
             startX = line.startPoint.x;
             startY = line.startPoint.y;
             endY = line.endPoint.y;
-            midPointPath = `M ${startX + 55} ${(startY + endY) / 2} h 150`;
+            midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 100`;
             return midPointPath
-    },
+        },
         genId(){
             return window.genId('line');
         },
@@ -114,16 +121,15 @@ export default {
 <style>
 .connect-line{
     stroke: #aaaaaa;
-    stroke-width: 2px;
-    fill: #aaaaaa;
+    fill: none;
 }
 .connect-line:hover{
     stroke:yellow;
-    fill: yellow;
+    fill: none;
 }
 .active .connect-line{
     stroke:rgb(112, 255, 255);
-    fill: rgb(112, 255, 255);
+    fill: none;
 }
 text{
     display: none;
