@@ -557,11 +557,9 @@ export default {
             return
           }
         }
-        // TODO: 动态改变半径
-        // 小于2*半径时，动态将半径更新为起始点与结束点差的绝对值的1/2，并分情况绘制连线
+
       }
     },
-    // 拖动被连接状态时更新连线
     drawUpdateOutputLine(startPoint, curLine, lineRadius){
       let tempRadius = lineRadius;
       let linepath;
@@ -815,12 +813,12 @@ text {
 
 .templine {
   stroke: #ff0000;
-  stroke-width: 1px;
+  stroke-width: 1px !important;
   fill: none;
 }
 .templine:hover {
   stroke: yellow;
-  fill:yellow
+  fill: none;
 }
 .virtual-box {
   position: absolute;

@@ -1,10 +1,12 @@
 {
     "plugins": [
         {
+            "id": "custom",
             "name": "plugin_a",
             "desc": "插件a",
-            "url": "./",
-            "version": "0.0.1"
+            "url": "默认不用配置",
+            "version": "0.0.1",
+            "menuGroupId": "1"
         }
     ]
 }

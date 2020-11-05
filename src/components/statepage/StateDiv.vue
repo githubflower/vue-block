@@ -109,7 +109,6 @@ export default {
                     y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
                 }
             };
-            console.log(JSON.stringify(data));
             this.$emit('updateTempLineData', data);
 
             window.stateManage.startPoint = {

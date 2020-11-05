@@ -1,16 +1,22 @@
 <template>
   <div id="app">
     <TopMenu/>
+    <ProjectManagementPanel/>
     <router-view/>
+    <CtrlPanel/>
   </div>
 </template>
 
 <script>
 import TopMenu from '@/components/Header'
+import ProjectManagementPanel from '@/components/ProjectManagementPanel'
+import CtrlPanel from '@/components/CtrlPanel'
 export default {
   name: 'App',
   components: {
-    TopMenu
+    TopMenu,
+    ProjectManagementPanel,
+    CtrlPanel
   }
 }
 </script>

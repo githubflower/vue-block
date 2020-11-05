@@ -19,7 +19,7 @@
       >
         <el-button type="primary" plain stateType="loopDiv">循环</el-button>
       </span>
-      <el-button type="primary" plain @click="save">保存</el-button>
+      <!-- <el-button type="primary" plain @click="save">保存</el-button>
       <el-button
         type="primary"
         plain
@@ -54,10 +54,10 @@
         @click="importFile"
         title="从文件导入图面数据"
         >导入</el-button
-      >
+      > -->
       <!-- <input type="file" name="importFile" id="importFile" /> -->
       <!-- <el-button-group style="position: absolute; top: 10px; left: 700px;"> -->
-      <span>输入变量名称：</span>
+      <!-- <span>输入变量名称：</span>
       <input type="text" name="search" id="demovar" v-model="varName" />
       <el-button type="primary" plain @click="searchVar" title="查询变量的值"
         >查询</el-button
@@ -88,7 +88,7 @@
         <el-button type="primary" size="medium" @click="activeBlockly"
           >Blockly</el-button
         >
-      </el-button-group>
+      </el-button-group> -->
     </div>
     <div
       v-show="activeName === 'statePage'"
@@ -618,7 +618,7 @@ export default {
 
 <style scope>
 html {
-  background-color: #001f3a;
+  background-color: #192A49;
 }
 .main {
   margin-top: 61px; /*Header的高度*/

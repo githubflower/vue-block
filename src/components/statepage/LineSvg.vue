@@ -11,27 +11,34 @@
             :class="genClass()"
             :style="{ strokeWidth: strokeWidth}"></path>
         <path
-            :d="getLineMidPoint(line)"
+            :d="getTextPath(line)"
             :id="line.lineId + '-textpath'"></path>
         <text
             v-if="line.desc"
-            x="10"
+            x="15"
             y="0"
-            style="fill: red;"
+            :style="{fill: 'yellow'}"
         >
+            <title>{{line.desc}}</title>
             <textPath
                 :xlink:href="'#' + line.lineId + '-textpath'"
                 :id="line.lineId + '-text'"
-            >{{line.desc}}</textPath>
-            <span></span>
+            >{{line.desc.length > descLimit ? line.desc.slice(0,8) + '...' : line.desc}}</textPath>
         </text>
+        <!--
+            使用foreignObject包裹来显示
+
+
+        -->
     </g>
 </template>
 
 <script>
 import {lineCfg} from './graphCfg.js'
+
 const line_h = lineCfg.line_h
 const stroke_width = lineCfg.stroke_width
+const desc_limit = lineCfg.desc_limit
 export default {
     name: 'LineSvg',
     props: ['line', 'threadIndex', 'lineClass'],
@@ -40,7 +47,9 @@ export default {
             isActive: false,
             //TODO: 运行时动画
             isRunning: false,
-            strokeWidth: stroke_width
+            strokeWidth: stroke_width,
+            descLimit: desc_limit,
+            isShowDesc: false,
         }
     },
     methods: {
@@ -60,14 +69,31 @@ export default {
         generateByState(){
 
         },
-        getLineMidPoint(line){
-            let startX, startY, endY, midPointPath
+        /*
+        * 获取连线中点，然后以这个中点为起点绘制文字的路径
+        *
+        */
+        getTextPath(line){
+            let startX, startY, endY, midPointPath, midPoint
             startX = line.startPoint.x;
             startY = line.startPoint.y;
             endY = line.endPoint.y;
             midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 100`;
+            midPoint = {
+                x: startX + line_h,
+                y: (startY + endY) / 2
+            }
+            //return `translate: (${midPoint.x}px, ${midPoint.y}px) `
             return midPointPath
         },
+        // TODO: 鼠标移动到文字上时浮窗显示全部文字
+        showDesc(e){
+
+        },
+        hideDesc(e){
+
+        },
+
         genId(){
             return window.genId('line');
         },
@@ -136,5 +162,8 @@ text{
 }
 .active text{
     display: block;
+    overflow: hidden; 
+    text-overflow:ellipsis; 
+    white-space: nowrap;
 }
 </style>    
