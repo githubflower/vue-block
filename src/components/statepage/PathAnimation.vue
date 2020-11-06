@@ -3,20 +3,25 @@
     <svg xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 500px;">
       <g>
         <!-- <path class="test" d="m 100.5 100.5 l 100 0  v 40 l 100 0 m 0 0 m -8 -6 l 8 6 m -8 6 l 8 -6 z" stroke="#00ffff" /> -->
-        <path class="test" d="m 100.5 100.5 l 100 0  v 40 l 100 0 m -8 -6 l 8 6 m -8 6 l 8 -6 z" stroke="#00ffff" />
+        <path 
+          class="test" 
+          d="m 100.5 100.5 l 100 0  v 40 l 100 0 m -8 -6 l 8 6 m -8 6 l 8 -6 z" stroke="#00ffff" />
+
       </g>
-      <g>
         <!-- <rect class="breath-light" x="100" y="20" rx="5" width="100" height="40" ></rect> -->
-      </g>
     </svg>
   </div>
 </template>
 
 <script>
 export default {
-  name: "PathAnimation",
+  name: "pathAnimation",
+  props:['line'],
   data() {
-    return {};
+    return {
+      //TODO: 运行时动画
+      isRunning: false,
+    };
   }
 };
 </script>
@@ -33,7 +38,6 @@ path.test{
   fill: none;
   stroke-width: 2;
   stroke-dasharray: 10 10;
-  
   animation: run-right 8s linear forwards infinite normal;
   animation-fill-mode: none;
 }
@@ -46,6 +50,7 @@ path.test{
     /* stroke-dasharray: 650px 0px; */
   }
 }
+
 
 .breath-light{
 

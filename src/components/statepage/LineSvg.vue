@@ -9,7 +9,8 @@
             :lineId="line.lineId"
             :d="line.d" 
             :class="genClass()"
-            :style="{ strokeWidth: strokeWidth}"></path>
+            :style="{ strokeWidth: strokeWidth}">
+            </path>
         <path
             :d="getTextPath(line)"
             :id="line.lineId + '-textpath'"></path>
@@ -25,31 +26,29 @@
                 :id="line.lineId + '-text'"
             >{{line.desc.length > descLimit ? line.desc.slice(0,8) + '...' : line.desc}}</textPath>
         </text>
-        <!--
-            使用foreignObject包裹来显示
-
-
-        -->
     </g>
 </template>
 
 <script>
 import {lineCfg} from './graphCfg.js'
-
+import pathAnimation from './PathAnimation'
 const line_h = lineCfg.line_h
 const stroke_width = lineCfg.stroke_width
 const desc_limit = lineCfg.desc_limit
 export default {
     name: 'LineSvg',
     props: ['line', 'threadIndex', 'lineClass'],
+    components:{
+        pathAnimation
+    },
     data(){
         return {
             isActive: false,
+            isShowDesc: false,
             //TODO: 运行时动画
             isRunning: false,
             strokeWidth: stroke_width,
             descLimit: desc_limit,
-            isShowDesc: false,
         }
     },
     methods: {
@@ -78,7 +77,7 @@ export default {
             startX = line.startPoint.x;
             startY = line.startPoint.y;
             endY = line.endPoint.y;
-            midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 100`;
+            midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 300`;
             midPoint = {
                 x: startX + line_h,
                 y: (startY + endY) / 2

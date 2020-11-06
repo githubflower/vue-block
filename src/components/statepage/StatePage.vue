@@ -93,7 +93,7 @@
     <div
       v-show="activeName === 'statePage'"
       class="content"
-      @click="hideLineContextMenu()"
+      @click ="hideLineContextMenu"
     >
       <line-context-menu
         ref="lineContextMenu"
@@ -107,6 +107,7 @@
           top: lineContextMenuData.position.y + 'px',
         }"
         @selectItem="onSelect"
+        @toggleLineContextMenu="toggleLineContextMenu"
       ></line-context-menu>
       <state-context-menu
         v-show="showDeleteStateMenu"
@@ -334,8 +335,8 @@ export default {
       this.lineContextMenuData.lineData = data.lineData;
       this.lineContextMenuData.threadIndex = data.threadIndex;
     },
-    hideLineContextMenu() {
-      // this.lineContextMenuData.show = false;
+    hideLineContextMenu(e) {
+      this.lineContextMenuData.show = false;
     },
     updateLineData(data) {
       let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
@@ -343,6 +344,9 @@ export default {
       });
       line.desc = data.desc;
       this.lineContextMenuData.show = false;
+    },
+    toggleLineContextMenu(bool){
+        this.lineContextMenuData.show = bool;
     },
     exportFile() {
       Tools.downloadFlie();
@@ -611,8 +615,10 @@ export default {
       });
     }
 
+
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度
   },
+
 };
 </script>
 

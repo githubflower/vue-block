@@ -1,6 +1,5 @@
 <template>
-  <div id="projectManagementPanel" :class="isCollapsed ? 'is-collapsed' : 'is-expanded'">
-    <!-- @mouseenter="expandPanel" -->
+  <div id="projectManagementPanel" :class="isCollapsed ? 'is-collapsed' : 'is-expanded'" @mouseenter="expandPanel">
     <el-tree
       v-show="!isCollapsed"
       :data="data"
@@ -15,7 +14,7 @@ export default {
   name: "ProjectManagementPanel",
   data() {
     return {
-      isCollapsed: false,
+      isCollapsed: true,
       data: [
         {
           label: "一级 1",
@@ -91,9 +90,17 @@ export default {
   },
 };
 </script>
-<style>
-@keyframes myease{
-    
+<style scoped>
+@keyframes myease1{
+    0%{
+        width: 0;
+    }
+    50%{
+        width: 280px;
+    }
+    100%{
+        width: 250px;
+    }
 }
 
 
@@ -111,6 +118,9 @@ export default {
 }
 #projectManagementPanel.is-expanded{
     width: 250px;
+    /* animation: name duration timing-function delay iteration-count direction fill-mode; */
+    animation: myease1 .2s ;
+    /* animation: myease 1s ease-in 0 1 direction fill-mode; */
 }
 #projectManagementPanel .icon{
     position: absolute;

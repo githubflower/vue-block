@@ -5,7 +5,7 @@
         v-for="(item, index) in menuData"
         :key="index"
         :type="item.type"
-        @click="onItemClick(index)"
+        @click="onItemClick($event, index)"
       >{{ item.desc }}</li>
     </ul>
     <el-form
@@ -20,7 +20,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSubmit">确定</el-button>
-        <el-button>取消</el-button>
+        <el-button @click="showForm = false">取消</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -33,6 +33,7 @@ export default {
   data() {
     return {
       showMenu: true,
+      //TODO: 添加一个新的boolean,判断是否关闭整个面板
       showForm: false,
       form: {
         desc: ""
@@ -50,7 +51,7 @@ export default {
     };
   },
   methods: {
-    onItemClick(index) {
+    onItemClick(e, index) {
       let data = this.menuData[index];
       switch (data.type) {
         case "editDesc":
@@ -63,11 +64,14 @@ export default {
                 lineId: this.lineId,
                 threadIndex: this.threadIndex,
             });
+            //通知外层元素修改mustShowMenu为false
+            this.$emit('toggleLineContextMenu', false);
           break;
         default:
+        
         // pass through
       }
-      
+      e.stopPropagation();
       //   this.$emit('selectItem', this.menuData[index])
     },
     onSubmit() {
