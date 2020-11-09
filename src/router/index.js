@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import Home from '@/components/Home'
+import Test from '@/components/Test'
 import PathAnimation from '@/components/statepage/PathAnimation'
 
 const StatePage = ()=>{
@@ -13,6 +14,10 @@ const IOPage = () => {
 }
 const PluginIframe = ()=>{
   return import(/* webpackChunkName: "PluginIframe" */ '@/components/plugin_iframe/PluginIframe')
+}
+
+const BlocklyPage = ()=>{
+  return import(/* webpackChunkName: "BlocklyPage" */ '@/components/BlocklyPage')
 }
 
 Vue.use(Router)
@@ -30,12 +35,20 @@ export default new Router({
       redirect: '/state',
       children: [
         {
+          path: 'test',
+          component: Test
+        },
+        {
           path: 'dashoffset',
           component: PathAnimation
         },
         {
           path: 'state',
           component: StatePage
+        },
+        {
+          path: 'blockly',
+          component: BlocklyPage
         },
         {
           path: 'io',
@@ -46,6 +59,7 @@ export default new Router({
           name: 'plugin',
           component: PluginIframe
         }
+
       ]
     }
   ]

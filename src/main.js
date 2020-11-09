@@ -28,7 +28,7 @@ window.store = {
     threadAry: [
       {
         name: "线程1",
-        width: 1200,
+        width: 1600,
         height: 500,
         stateAry: [
           {

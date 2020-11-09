@@ -83,9 +83,13 @@ export default {
       console.log(data);
     },
     expandPanel(){
+        return ;//开发时暂时屏蔽 TODO
         if(this.isCollapsed){
             this.isCollapsed = !this.isCollapsed;
         }
+    },
+    collapse(){
+        this.isCollapsed = true;
     }
   },
 };

@@ -1,26 +1,35 @@
 <template>
-  <div class="menu-wrap">
+
+  <div class="menu-wrap" @click.stop>
     <ul v-if="showMenu" class="line-context-menu">
       <li
         v-for="(item, index) in menuData"
         :key="index"
         :type="item.type"
-        @click="onItemClick($event, index)"
-      >{{ item.desc }}</li>
+        @click.stop="onItemClick(index)"
+      >
+        {{ item.desc }}
+      </li>
     </ul>
+
     <el-form
       v-if="showForm"
       ref="form"
       :model="form"
       label-width="80px"
-      style="background-color: #ffffff; width: 400px; padding: 5px; border-radius: 4px;"
+      style="
+        background-color: #ffffff;
+        width: 400px;
+        padding: 5px;
+        border-radius: 4px;
+      "
     >
       <el-form-item label="事件描述">
         <el-input type="textarea" v-model="form.desc"></el-input>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSubmit">确定</el-button>
-        <el-button @click="showForm = false">取消</el-button>
+        <el-button @click="onCancelClick">取消</el-button>
       </el-form-item>
     </el-form>
   </div>
@@ -29,29 +38,28 @@
 <script>
 export default {
   name: "LineContextMenu",
-  props: ['lineId', 'threadIndex', 'lineData', 'mustShowMenu'],
+  props: ["lineId", "threadIndex", "lineData", "mustShowMenu"],
   data() {
     return {
       showMenu: true,
-      //TODO: 添加一个新的boolean,判断是否关闭整个面板
       showForm: false,
       form: {
-        desc: ""
+        desc: "",
       },
       menuData: [
         {
           desc: "触发事件描述",
-          type: "editDesc"
+          type: "editDesc",
         },
         {
           desc: "删除",
-          type: "delete"
-        }
+          type: "delete",
+        },
       ],
     };
   },
   methods: {
-    onItemClick(e, index) {
+    onItemClick(index) {
       let data = this.menuData[index];
       switch (data.type) {
         case "editDesc":
@@ -59,42 +67,70 @@ export default {
           this.showForm = true;
           break;
         case "delete":
-            this.showMenu = false;
-            store.deleteLine({
-                lineId: this.lineId,
-                threadIndex: this.threadIndex,
-            });
-            //通知外层元素修改mustShowMenu为false
-            this.$emit('toggleLineContextMenu', false);
-          break;
-        default:
-        
-        // pass through
-      }
-      e.stopPropagation();
-      //   this.$emit('selectItem', this.menuData[index])
-    },
-    onSubmit() {
-        //通知StatePage更新lineAry中对应的line对象的数据
-        EventObj.$emit('updateLineData', {
+          this.showMenu = false;
+          store.deleteLine({
             lineId: this.lineId,
             threadIndex: this.threadIndex,
-            desc: this.form.desc
-        });
-        this.showForm = false;
-    }
+          });
+          //通知外层元素修改mustShowMenu为false
+          this.$emit("toggleLineContextMenu", false);
+          break;
+        default:
+
+        // pass through
+      }
+      //   this.$emit('selectItem', this.menuData[index])
+    },
+    onCancelClick(){
+      this.showForm = false;
+      this.$emit("toggleLineContextMenu", false);
+    },
+    onSubmit() {
+      //通知StatePage更新lineAry中对应的line对象的数据
+      EventObj.$emit("updateLineData", {
+        lineId: this.lineId,
+        threadIndex: this.threadIndex,
+        desc: this.form.desc,
+      });
+      this.showForm = false;
+    },
+    onItemMenu(){
+      /**
+       * this.$contextmenu({
+       *    items:[
+       *      {
+       *        label: "触发事件描述",
+       *        onClick: () => {
+       *          this.showMenu = false;
+       *          this.showForm = true;
+       *        }
+       *      }
+       *      {
+       *        label: "删除",
+       *        onClick: () => {
+       *          this.showMenu = false;
+                  store.deleteLine({
+                    lineId: this.lineId,
+                    threadIndex: this.threadIndex,
+                  });
+                  this.$emit("toggleLineContextMenu", false);
+       * 
+       *        }
+       *      }]})
+       */
+    },
   },
   watch: {
-      'mustShowMenu': function(v){
-          if(v){
-              this.showMenu = true;
-              this.form.desc = this.lineData && this.lineData.desc;
-          }
+    mustShowMenu: function (v) {
+      if (v) {
+        this.showMenu = true;
+        this.form.desc = this.lineData && this.lineData.desc;
       }
+    },
   },
   created() {
     this.form.desc = this.lineData && this.lineData.desc;
-  }
+  },
 };
 </script>
 

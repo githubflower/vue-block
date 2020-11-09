@@ -15,7 +15,7 @@
     "cssprefix": "^2.0.16",
     "element-ui": "^2.13.0",
     "less": "^3.11.1",
-    "less-loader": "^6.1.0",
+    "less-loader": "^5.0.0",
     "m-class-list": "^1.1.9",
     "plain-draggable": "^2.5.12",
     "pointer-event": "^1.0.0",

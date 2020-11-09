@@ -2,7 +2,9 @@
   <div id="app">
     <TopMenu/>
     <ProjectManagementPanel/>
-    <router-view/>
+    <keep-alive include="StatePage">
+      <router-view/>
+    </keep-alive>
     <CtrlPanel/>
   </div>
 </template>
@@ -21,18 +23,23 @@ export default {
 }
 </script>
 
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* text-align: center; */
-  color: #2c3e50;
-  /* margin-top: 60px; */
-
-}
-body{
-  margin: 0;
-  padding: 0;
+<style lang="less">
+html{
+  height: 100%;
+  body{
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    #app {
+      padding-top: 60px;
+      height: calc(100% - 60px);
+      font-family: 'Avenir', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* text-align: center; */
+      color: #2c3e50;
+      background-color: #192a49;
+    }
+  }
 }
 </style>

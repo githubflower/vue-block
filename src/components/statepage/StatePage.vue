@@ -1,5 +1,5 @@
 <template>
-  <div class="main" @mousemove="onMouseMove">
+  <div id="statePage" class="main" @mousemove="onMouseMove">
     <div class="toolbox">
       <el-button type="primary" plain @click="addThread">线程</el-button>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
@@ -93,7 +93,7 @@
     <div
       v-show="activeName === 'statePage'"
       class="content"
-      @click ="hideLineContextMenu"
+      @click="hideLineContextMenu"
     >
       <line-context-menu
         ref="lineContextMenu"
@@ -121,7 +121,7 @@
         :threadIndex="i"
       ></thread-svg>
     </div>
-   <!--  <iframe
+    <!--  <iframe
       v-show="activeName === 'blocklyPage'"
       src="./static/blockly/demos/code/index.html"
       frameborder="0"
@@ -220,6 +220,8 @@ export default {
         let i = data.indexAry.pop();
         target = target[i].children;
       }
+      // 需要调用删除连线的方法，将与状态连接的连线一并删除
+      // store.deleteLine({})
       target.splice(data.indexAry.pop(), 1);
       this.showDeleteStateMenu = false;
     },
@@ -336,7 +338,7 @@ export default {
       this.lineContextMenuData.threadIndex = data.threadIndex;
     },
     hideLineContextMenu(e) {
-      this.lineContextMenuData.show = false;
+      this.lineContextMenuData.show = false
     },
     updateLineData(data) {
       let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
@@ -345,8 +347,8 @@ export default {
       line.desc = data.desc;
       this.lineContextMenuData.show = false;
     },
-    toggleLineContextMenu(bool){
-        this.lineContextMenuData.show = bool;
+    toggleLineContextMenu(bool) {
+      this.lineContextMenuData.show = bool;
     },
     exportFile() {
       Tools.downloadFlie();
@@ -587,7 +589,7 @@ export default {
     // this.loadFromLocal();
     EventObj.$on("deleteState", this.deleteState, this);
     EventObj.$on("operateChange", this.operateChange, this);
-    
+
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
     EventObj.$on("updateLineData", this.updateLineData, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
@@ -615,66 +617,60 @@ export default {
       });
     }
 
-
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度
   },
-
 };
 </script>
 
-<style scope>
-html {
-  background-color: #192A49;
-}
-.main {
-  margin-top: 61px; /*Header的高度*/
-}
+<style lang="less" scoped>
+#statePage{
+  h4.title {
+    margin: 0;
+    width: 100%;
+    height: 35px;
+    color: #ffffff;
+    background-color: rgba(0, 219, 255, 0.42);
+  }
+  .thread-body {
+    /* height: calc(100% -35px); */
+    height: 265px;
+  }
 
-h4.title {
-  margin: 0;
-  width: 100%;
-  height: 35px;
-  color: #ffffff;
-  background-color: rgba(0, 219, 255, 0.42);
-}
-.thread-body {
-  /* height: calc(100% -35px); */
-  height: 265px;
-}
+  .toolbox {
+    position: fixed;
+    width: 100%;
+    background-color: #ffffff;
+    padding: 10px;
+    border: 1px solid #ebebeb;
+    border-radius: 3px;
+    z-index: 1;
+  }
+  .content {
+    padding-top: 54px;
+    text-align: center;
+    > svg {
+        /* width: 100%;  */
+        /* height: calc(100%); */
+        border: 1px solid rgba(0, 219, 255, 0.42);
+        background-color: #001f3a;
+      }
+  }
+  text {
+    fill: #ffffff;
+  }
 
-.toolbox {
-  position: fixed;
-  width: 100%;
-  background-color: #ffffff;
-  padding: 10px;
-  border: 1px solid #ebebeb;
-  border-radius: 3px;
-  z-index: 1;
-}
-.content {
-  padding-top: 54px;
-}
-.content > svg {
-  /* width: 100%;  */
-  /* height: calc(100%); */
-  border: 1px solid rgba(0, 219, 255, 0.42);
-  background-color: #001f3a;
-}
-
-text {
-  fill: #ffffff;
-}
-
-.state {
-  stroke: #aaaaaa;
-  stroke-width: 1;
-  fill: #00dbff;
-}
-.templine {
-  stroke: rgba(0, 219, 255, 0.42);
-  stroke-width: 1px;
-}
-.templine:hover {
-  stroke: yellow;
+  .state {
+    stroke: #aaaaaa;
+    stroke-width: 1;
+    fill: #00dbff;
+  }
+  .templine {
+    stroke: rgba(0, 219, 255, 0.42);
+    stroke-width: 1px;
+  }
+  .templine:hover {
+    stroke: yellow;
+  }
+  
 }
 </style>    

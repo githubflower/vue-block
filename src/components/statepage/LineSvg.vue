@@ -2,18 +2,19 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="{active: isActive}"
+        :class="{active: isActive, running:isRunning}"
     >
         <path 
             :id="line.lineId"
             :lineId="line.lineId"
             :d="line.d" 
             :class="genClass()"
-            :style="{ strokeWidth: strokeWidth}">
-            </path>
+            :style="{strokeWidth: strokeWidth}">
+        </path>
         <path
             :d="getTextPath(line)"
             :id="line.lineId + '-textpath'"></path>
+        
         <text
             v-if="line.desc"
             x="15"
@@ -31,7 +32,6 @@
 
 <script>
 import {lineCfg} from './graphCfg.js'
-import pathAnimation from './PathAnimation'
 const line_h = lineCfg.line_h
 const stroke_width = lineCfg.stroke_width
 const desc_limit = lineCfg.desc_limit
@@ -39,13 +39,11 @@ export default {
     name: 'LineSvg',
     props: ['line', 'threadIndex', 'lineClass'],
     components:{
-        pathAnimation
     },
     data(){
         return {
             isActive: false,
             isShowDesc: false,
-            //TODO: 运行时动画
             isRunning: false,
             strokeWidth: stroke_width,
             descLimit: desc_limit,
@@ -155,6 +153,22 @@ export default {
 .active .connect-line{
     stroke:rgb(112, 255, 255);
     fill: none;
+}
+
+.running .connect-line{
+    fill: none;
+    stroke-dasharray: 5 5;
+    animation: run-right 8s linear forwards infinite normal;
+    animation-fill-mode: none;
+}
+@keyframes run-right{
+  0%{
+    stroke-dashoffset: 650;
+  }
+  100%{
+    stroke-dashoffset: 0;
+    /* stroke-dasharray: 650px 0px; */
+  }
 }
 text{
     display: none;
