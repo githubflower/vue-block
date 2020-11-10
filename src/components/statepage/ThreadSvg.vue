@@ -55,6 +55,9 @@
         :line="line"
         :threadIndex="threadIndex"
       />
+      <path-animation
+        :lineId="runningLineId">
+      </path-animation>
     </svg>
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
     <i
@@ -67,12 +70,14 @@
       @mouseup="endResize"
     ></i>
     <!-- <div v-if="showVirtualBox" class="virtual-box"></div> -->
+
   </div>
 </template>
 
 <script>
 import StateWrap from "./StateWrap";
 import LineSvg from "./LineSvg";
+import PathAnimation from"./PathAnimation"
 import { lineCfg } from "./graphCfg.js";
 
 const line_h = lineCfg.line_h;
@@ -106,10 +111,11 @@ const deepCopy = (obj) => {
 
 export default {
   name: "ThreadSvg",
-  props: ["thread", "threadIndex"],
+  props: ["thread", "threadIndex", "runningLineId"],
   components: {
     StateWrap,
     LineSvg,
+    PathAnimation
   },
   data() {
     return {
@@ -218,20 +224,16 @@ export default {
       if (endPoint.x < startPoint.x + line_h) {
         this.updateTempLineData({
           endPoint: endPoint,
-          d: `M ${startPoint.x} ${startPoint.y} h ${line_h} m -5 -5
-          L ${startPoint.x + line_h} ${startPoint.y} L ${
-            startPoint.x + line_h - 5
-          } ${startPoint.y + 5}`,
+          d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
+          m -5 -5 L ${startPoint.x + line_h} ${startPoint.y} L ${startPoint.x + line_h - 5} ${startPoint.y + 5}`,
         });
       }
       // y坐标相等时绘制直线
       if (endPoint.y == startPoint.y) {
         this.updateTempLineData({
           endPoint: endPoint,
-          d: `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${
-            endPoint.y
-          } m -5 -5
-          L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
+          d: `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${endPoint.y}
+          m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
         });
       } else {
         // 当结束点的x, y坐标均大于起始点的时候
@@ -246,33 +248,21 @@ export default {
             this.updateTempLineData({
               endPoint: endPoint,
               d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-                startPoint.x + line_h + tempRadius
-              } ${startPoint.y + tempRadius}
-              m 0 0 V ${endPoint.y}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-                startPoint.x + line_h + 2 * tempRadius
-              } ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-              L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-                endPoint.y + 5
-              }`,
+              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + tempRadius} ${startPoint.y + tempRadius}
+              m 0 0 V ${endPoint.y - tempRadius}
+              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
+              m 0 0 L ${endPoint.x} ${endPoint.y} 
+              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             });
           } else {
             this.updateTempLineData({
               endPoint: endPoint,
               d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-                startPoint.x + line_h + lineRadius
-              } ${startPoint.y + lineRadius}
-              m 0 0 V ${endPoint.y}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-                startPoint.x + line_h + 2 * lineRadius
-              } ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-              L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-                endPoint.y + 5
-              }`,
+              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
+              m 0 0 V ${endPoint.y - lineRadius}
+              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
+              m 0 0 L ${endPoint.x} ${endPoint.y}
+              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             });
           }
         }
@@ -288,33 +278,21 @@ export default {
             this.updateTempLineData({
               endPoint: endPoint,
               d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-                startPoint.x + line_h + tempRadius
-              } ${startPoint.y - tempRadius}
-              m 0 0 V ${endPoint.y}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-                startPoint.x + line_h + 2 * tempRadius
-              } ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-              L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-                endPoint.y + 5
-              }`,
+              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + tempRadius} ${startPoint.y - tempRadius}
+              m 0 0 V ${endPoint.y + tempRadius}
+              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
+              m 0 0 L ${endPoint.x} ${endPoint.y} 
+              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             });
           } else {
             this.updateTempLineData({
               endPoint: endPoint,
               d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-                startPoint.x + line_h + lineRadius
-              } ${startPoint.y - lineRadius}
-              m 0 0 V ${endPoint.y}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-                startPoint.x + line_h + 2 * lineRadius
-              } ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-              L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-                endPoint.y + 5
-              }`,
+              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
+              m 0 0 V ${endPoint.y + lineRadius}
+              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
+              m 0 0 L ${endPoint.x} ${endPoint.y} 
+              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             });
           }
         }
@@ -562,22 +540,22 @@ export default {
     /**
      * 当连线的结束点变化时，动态更新连线
      *
+     * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
+     * 
      */
     drawUpdateLine(curLine, endPoint, lineRadius) {
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
       if (endPoint.y == curLine.startPoint.y) {
-        linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} L ${
-          endPoint.x
-        } ${endPoint.y} m -5 -5
-        L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
+        linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} L ${endPoint.x} ${endPoint.y} 
+        m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
         curLine.endPoint = endPoint;
         curLine.d = linepath;
         return;
       }
-        // 当结束点的x, y坐标均大于起始点的时候
-      else{
+      // 当结束点的x, y坐标均大于起始点的时候
+      else {
         if (
           endPoint.x > curLine.startPoint.x + line_h + lineRadius &&
           endPoint.y > curLine.startPoint.y
@@ -586,42 +564,28 @@ export default {
           if (endPoint.y - curLine.startPoint.y < 2 * tempRadius) {
             let doubleRadius = endPoint.y - curLine.startPoint.y;
             tempRadius = doubleRadius / 2;
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y } h ${line_h}
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${curLine.startPoint.x + line_h + tempRadius} ${curLine.startPoint.y + tempRadius}
+            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * tempRadius} 
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${curLine.startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y} 
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
+            curLine.endPoint = endPoint;
+            curLine.d = linepath;
+            return;
+          } else {
             linepath = `M ${curLine.startPoint.x} ${
               curLine.startPoint.y
             } h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-              curLine.startPoint.x + line_h + tempRadius
-            } ${curLine.startPoint.y + tempRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * tempRadius} 
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-              curLine.startPoint.x + line_h + 2 * tempRadius
-            } ${endPoint.y} m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-            L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-              endPoint.y + 5
-            }`;
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y + lineRadius}
+            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * lineRadius} 
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y} 
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
             curLine.endPoint = endPoint;
             curLine.d = linepath;
             return;
           }
-            else{
-            linepath = `M ${curLine.startPoint.x} ${
-              curLine.startPoint.y
-            } h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-              curLine.startPoint.x + line_h + lineRadius
-            } ${curLine.startPoint.y + lineRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * lineRadius} 
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-              curLine.startPoint.x + line_h + 2 * lineRadius
-            } ${endPoint.y }
-            m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-            L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-              endPoint.y + 5 
-            }`;
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-            }
         }
         //当结束点的x坐标大于起始点，y坐标小于起始点时
         if (
@@ -632,62 +596,43 @@ export default {
           if (curLine.startPoint.y - endPoint.y < 2 * tempRadius) {
             let doubleRadius = curLine.startPoint.y - endPoint.y;
             tempRadius = doubleRadius / 2;
-            linepath = `M ${curLine.startPoint.x} ${
-              curLine.startPoint.y
-            } h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-              curLine.startPoint.x + line_h + tempRadius
-            } ${curLine.startPoint.y - tempRadius}
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${curLine.startPoint.x + line_h + tempRadius} ${curLine.startPoint.y - tempRadius}
             m 0 0 v ${endPoint.y - curLine.startPoint.y + 2 * tempRadius}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-              curLine.startPoint.x + line_h + 2 * tempRadius
-            } ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-            L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-              endPoint.y + 5
-            }`,
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${curLine.startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y} 
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             curLine.endPoint = endPoint;
             curLine.d = linepath;
             return;
-          }
-          else{
-            linepath = `M ${curLine.startPoint.x} ${
-              curLine.startPoint.y
-            } h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-              curLine.startPoint.x + line_h + lineRadius
-            } ${curLine.startPoint.y - lineRadius}
+          } else {
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y - lineRadius}
             m 0 0 v ${endPoint.y - curLine.startPoint.y + 2 * lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-              curLine.startPoint.x + line_h + 2 * lineRadius
-            } ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} m -5 -5
-            L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${
-              endPoint.y + 5
-            }`,
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y} 
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
             curLine.endPoint = endPoint;
             curLine.d = linepath;
             return;
           }
         }
-        
       }
     },
     /**
      * 当连线的起始点发生变化时，动态更新连线
-     *
+     * 
+     * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
+     * 
      */
     drawUpdateOutputLine(startPoint, curLine, lineRadius) {
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
       if (curLine.endPoint.y == startPoint.y) {
-        linepath = `M ${startPoint.x} ${startPoint.y}v ${
-          curLine.endPoint.y - startPoint.y
-        } m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} m -5 -5
-        L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${
-          curLine.endPoint.x - 5
-        } ${curLine.endPoint.y + 5}`;
+        linepath = `M ${startPoint.x} ${startPoint.y}v ${curLine.endPoint.y - startPoint.y} 
+        m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
+        m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
         curLine.startPoint = startPoint;
         curLine.d = linepath;
         return;
@@ -702,34 +647,21 @@ export default {
             let doubleRadius = curLine.endPoint.y - startPoint.y;
             tempRadius = doubleRadius / 2;
             linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-              startPoint.x + line_h + tempRadius
-            } ${startPoint.y + tempRadius}
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + tempRadius} ${startPoint.y + tempRadius}
             m 0 0 v ${curLine.endPoint.y - startPoint.y - 2 * tempRadius} 
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-              startPoint.x + line_h + 2 * tempRadius
-            } ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} m -5 -5
-            L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${
-              curLine.endPoint.x - 5
-            } ${curLine.endPoint.y + 5}`;
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + 2 * tempRadius} ${curLine.endPoint.y}
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
             curLine.startPoint = startPoint;
             curLine.d = linepath;
             return;
-          }
-          else{
+          } else {
             linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-              startPoint.x + line_h + lineRadius
-            } ${startPoint.y + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
             m 0 0 v ${curLine.endPoint.y - startPoint.y - 2 * lineRadius} 
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-              startPoint.x + line_h + 2 * lineRadius
-            } ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} m -5 -5
-            L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${
-              curLine.endPoint.x - 5
-            } ${curLine.endPoint.y + 5}`;
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + 2 * lineRadius} ${curLine.endPoint.y}
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
             curLine.startPoint = startPoint;
             curLine.d = linepath;
             return;
@@ -745,34 +677,21 @@ export default {
             let doubleRadius = startPoint.y - curLine.endPoint.y;
             tempRadius = doubleRadius / 2;
             (linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${
-              startPoint.x + line_h + tempRadius
-            } ${startPoint.y - tempRadius}
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + tempRadius} ${startPoint.y - tempRadius}
             m 0 0 v ${curLine.endPoint.y - startPoint.y + 2 * tempRadius}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${
-              startPoint.x + line_h + 2 * tempRadius
-            } ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} m -5 -5
-            L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${
-              curLine.endPoint.x - 5
-            } ${curLine.endPoint.y + 5}`),
-              (curLine.startPoint = startPoint);
+            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + 2 * tempRadius} ${curLine.endPoint.y}
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`),
+            curLine.startPoint = startPoint;
             curLine.d = linepath;
             return;
-          }
-          else{
+          } else {
             linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${
-              startPoint.x + line_h + lineRadius
-            } ${startPoint.y - lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
             m 0 0 v ${curLine.endPoint.y - startPoint.y + 2 * lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${
-              startPoint.x + line_h + 2 * lineRadius
-            } ${curLine.endPoint.y}            
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} m -5 -5
-            L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${
-              curLine.endPoint.x - 5
-            } ${curLine.endPoint.y + 5 }`;
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + 2 * lineRadius} ${curLine.endPoint.y}            
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
             curLine.startPoint = startPoint;
             curLine.d = linepath;
             return;
@@ -933,10 +852,9 @@ h4.title {
   padding-left: 15px;
   line-height: 35px;
   color: #ffffff;
-
   // background-color: rgba(0, 219, 255, 0.42);
-    background-color: #7CC4FB;
-
+  background-color: rgba(72, 122, 254, 0.6);
+    // background-color: #487afe;
     // background-image: linear-gradient(100deg, #82FDFF, #7898F9);
 }
 .thread-body {

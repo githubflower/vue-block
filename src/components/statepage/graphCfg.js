@@ -8,4 +8,3 @@ const lineCfg = {
 export {
     lineCfg
 }
-    

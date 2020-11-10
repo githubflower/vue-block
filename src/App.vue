@@ -1,44 +1,83 @@
 <template>
   <div id="app">
-    <TopMenu/>
-    <ProjectManagementPanel/>
+    <TopMenu />
+    <ProjectManagementPanel />
     <keep-alive include="StatePage">
-      <router-view/>
+      <router-view />
     </keep-alive>
-    <CtrlPanel/>
+    <CtrlPanel />
+    <!-- <div class="bg">
+      <div></div>
+    </div> -->
   </div>
 </template>
 
 <script>
-import TopMenu from '@/components/Header'
-import ProjectManagementPanel from '@/components/ProjectManagementPanel'
-import CtrlPanel from '@/components/CtrlPanel'
+import TopMenu from "@/components/Header";
+import ProjectManagementPanel from "@/components/ProjectManagementPanel";
+import CtrlPanel from "@/components/CtrlPanel";
 export default {
-  name: 'App',
+  name: "App",
   components: {
     TopMenu,
     ProjectManagementPanel,
-    CtrlPanel
-  }
-}
+    CtrlPanel,
+  },
+};
 </script>
 
+<style lang="less" scoped>
+@menuHeight: 60px;
+
+#app {
+  padding-top: @menuHeight;
+  height: calc(100% - @menuHeight);
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* text-align: center; */
+  color: #2c3e50;
+  background-color: #192a49;
+  // background-color: rgba(25,42, 73, .8);
+  // background-color: #091A2A;
+}
+</style>
 <style lang="less">
-html{
+html {
   height: 100%;
-  body{
+  body {
     height: 100%;
     margin: 0;
     padding: 0;
-    #app {
-      padding-top: 60px;
-      height: calc(100% - 60px);
-      font-family: 'Avenir', Helvetica, Arial, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      /* text-align: center; */
-      color: #2c3e50;
-      background-color: #192a49;
+  }
+}
+
+.bg {
+  top: 0;
+  left: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -1;
+  > div {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    &::after {
+      content: "";
+      display: block;
+      top: 0;
+      left: 0;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      // filter: blur(10px);
+
+      background-color: #344b89;
+      // background: url(/static/imgs/tmp2.png) center center no-repeat;
+      // background: url(/static/imgs/bg_blue.jpg) center center no-repeat;
+      background-size: cover;
     }
   }
 }

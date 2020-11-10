@@ -1,7 +1,8 @@
 <template>
   <div id="statePage" class="main" @mousemove="onMouseMove">
     <div class="toolbox">
-      <el-button type="primary" plain @click="addThread">线程</el-button>
+      <!-- <el-button type="primary" plain @click="addThread">线程</el-button> -->
+      <div class="template-thread el-icon-circle-plus" @click="addThread">新建线程</div>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
       <span
         draggable="true"
@@ -9,7 +10,8 @@
         @dragstart="dragStart"
         @dragend="dragEnd"
       >
-        <el-button type="primary" plain stateType="stateDiv">状态</el-button>
+        <!-- <el-button type="primary" plain stateType="stateDiv">状态</el-button> -->
+        <div class="template-state" stateType="stateDiv">状态</div>
       </span>
       <span
         draggable="true"
@@ -17,8 +19,10 @@
         @dragstart="dragStart"
         @dragend="dragEnd"
       >
-        <el-button type="primary" plain stateType="loopDiv">循环</el-button>
+        <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
+        <div class="template-loop" stateType="loopDiv">循环</div>
       </span>
+      <SwitchBtn/>
       <!-- <el-button type="primary" plain @click="save">保存</el-button>
       <el-button
         type="primary"
@@ -119,7 +123,9 @@
         :key="i"
         :thread="thread"
         :threadIndex="i"
+        :runningLineId="runningLineId"
       ></thread-svg>
+      
     </div>
     <!--  <iframe
       v-show="activeName === 'blocklyPage'"
@@ -133,8 +139,7 @@
 </template>
 
 <script>
-// import MyPlainDraggable from 'plain-draggable'
-// import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
+import SwitchBtn from "@/components/SwitchBtn"
 import ThreadSvg from "./ThreadSvg";
 import StateDiv from "./StateDiv";
 import LineContextMenu from "./LineContextMenu";
@@ -147,6 +152,7 @@ export default {
     StateDiv,
     LineContextMenu,
     StateContextMenu,
+    SwitchBtn
   },
   data() {
     return {
@@ -156,6 +162,7 @@ export default {
       iframeHeight: 0,
       activeName: "statePage", //'statePage'    'blocklyPage'
       // activeName: "statePage", //'statePage'
+      runningLineId: "testrun",
       showTempLine: false,
       showDeleteStateMenu: false,
       contextmenuXY: {
@@ -220,6 +227,7 @@ export default {
         let i = data.indexAry.pop();
         target = target[i].children;
       }
+
       // 需要调用删除连线的方法，将与状态连接的连线一并删除
       // store.deleteLine({})
       target.splice(data.indexAry.pop(), 1);
@@ -338,7 +346,7 @@ export default {
       this.lineContextMenuData.threadIndex = data.threadIndex;
     },
     hideLineContextMenu(e) {
-      this.lineContextMenuData.show = false
+      this.lineContextMenuData.show = false;
     },
     updateLineData(data) {
       let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
@@ -578,6 +586,13 @@ export default {
         }
       });
     },
+    /**
+     * 将后台获取到的lineId传入runningLineId，提供给PathAnimation以运行动画
+     * 
+     */
+    highlight(lineId){
+      this.runningLineId = lineId
+    },
   },
   computed: {
     sumHeight: function (i) {
@@ -589,7 +604,6 @@ export default {
     // this.loadFromLocal();
     EventObj.$on("deleteState", this.deleteState, this);
     EventObj.$on("operateChange", this.operateChange, this);
-
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
     EventObj.$on("updateLineData", this.updateLineData, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
@@ -623,7 +637,7 @@ export default {
 </script>
 
 <style lang="less" scoped>
-#statePage{
+#statePage {
   h4.title {
     margin: 0;
     width: 100%;
@@ -639,21 +653,21 @@ export default {
   .toolbox {
     position: fixed;
     width: 100%;
-    background-color: #ffffff;
+    // background-color: #ffffff;
     padding: 10px;
-    border: 1px solid #ebebeb;
+    // border: 1px solid #ebebeb;
     border-radius: 3px;
     z-index: 1;
   }
   .content {
     padding-top: 54px;
-    text-align: center;
+    // text-align: center;
     > svg {
-        /* width: 100%;  */
-        /* height: calc(100%); */
-        border: 1px solid rgba(0, 219, 255, 0.42);
-        background-color: #001f3a;
-      }
+      /* width: 100%;  */
+      /* height: calc(100%); */
+      border: 1px solid rgba(0, 219, 255, 0.42);
+      background-color: #001f3a;
+    }
   }
   text {
     fill: #ffffff;
@@ -671,6 +685,69 @@ export default {
   .templine:hover {
     stroke: yellow;
   }
-  
+
+  @keyframes qkm_scale {
+    0% {
+    }
+    /*   50%{
+    } */
+    100% {
+    }
+  }
+
+  @templateDivH: 30px;
+  @qkmLightGreen: #1cf9ea;
+  @qkmOrange: #ffaf3d;
+  @qkmBlue: #3897e7;
+  @qkmPink: #ed5e67;
+  @qkmPurple: #9373ec;
+  @qkmGrey: #aaaaaa;
+  @qkmWhite: #ffffff;
+  .template-thread,
+  .template-state,
+  .template-loop {
+    display: inline-block;
+    position: relative;
+    margin-left: 20px;
+    width: 100px;
+    height: @templateDivH;
+    line-height: @templateDivH;
+    border: 1px solid #00dbff;
+    border-radius: 5px;
+    // color: #00dbff;
+    color: #aaaaaa;
+    text-align: center;
+    cursor: grab;
+    font-size: 14px;
+    &:hover {
+      // border-image: -webkit-linear-gradient(-45deg, #50FBFF, #7898F9) 5 5;
+      // animation: qkm_scale .3s;
+      // box-shadow: 0 0 5px 1px #fff;
+      color: #fff;
+    }
+  }
+
+  .template-thread {
+    // background-color: #3897E7;
+    border-color: @qkmWhite;
+    box-shadow: inset 0 0 5px 1px @qkmWhite;
+    box-shadow: 0 0 5px 1px @qkmWhite;
+    // background-color: @qkmBlue;
+    cursor: pointer;
+    &:hover {
+      color: #fff;
+      box-shadow: 0 0 5px 2px @qkmWhite;
+    }
+  }
+  .template-state {
+    // background-color: #9373ec;
+    border-color: @qkmGrey;
+    box-shadow: inset 0 0 5px 1px @qkmGrey;
+  }
+  .template-loop {
+    // background-color: #ed5e67;
+    border-color: @qkmPink;
+    box-shadow: inset 0 0 5px 1px @qkmPink;
+  }
 }
 </style>    

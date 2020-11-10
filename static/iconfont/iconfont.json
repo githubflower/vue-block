@@ -1,0 +1,58 @@
+{
+  "id": "1638315",
+  "name": "state",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "3928137",
+      "name": "blockly",
+      "font_class": "blockly",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "5880273",
+      "name": "状态",
+      "font_class": "zhuangtai",
+      "unicode": "e66e",
+      "unicode_decimal": 58990
+    },
+    {
+      "icon_id": "9451695",
+      "name": "状态",
+      "font_class": "tubiao-",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "9944292",
+      "name": "状态",
+      "font_class": "zhuangtai1",
+      "unicode": "e6c6",
+      "unicode_decimal": 59078
+    },
+    {
+      "icon_id": "11364983",
+      "name": "code",
+      "font_class": "code",
+      "unicode": "e7bb",
+      "unicode_decimal": 59323
+    },
+    {
+      "icon_id": "12768692",
+      "name": "状态",
+      "font_class": "ERPv_iconshangchuantubiao-",
+      "unicode": "e8b5",
+      "unicode_decimal": 59573
+    },
+    {
+      "icon_id": "7596045",
+      "name": "add",
+      "font_class": "add",
+      "unicode": "e625",
+      "unicode_decimal": 58917
+    }
+  ]
+}

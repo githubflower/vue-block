@@ -14,9 +14,9 @@ Vue.prototype.axios = axios;
 Vue.config.productionTip = false
 
 window.stateManage = {};//状态管理  后续采用vuex实现 TODO
-window.genId = (function(){
+window.genId = (function () {
   var _id = 0;
-  return function(type){
+  return function (type) {
     return type + '-' + +new Date();//+ ++_id
   }
 })();
@@ -42,8 +42,8 @@ window.store = {
             y: 0,
           },
           {
-            width: "600px",
-            height: "320px",
+            width: "302px",
+            height: "122px",
             name: "状态描述99",
             stateType: "loopDiv",
             stateId: window.genId("state"),
@@ -66,17 +66,17 @@ window.store = {
         ],
         lineAry: [],
       },
-    
+
     ],
   },
-  addThread(obj){
+  addThread(obj) {
     this.stateData.threadAry.push(obj);
   },
   /**
   * 获取状态组件的默认配置
   * @param {index: this.threadIndex, x: e.x - threadPosInfo.x, y: e.y - threadPosInfo.y, stateType: e.dataTransfer.getData("stateType")} data
   */
-  getDefaultStateCfg(data){
+  getDefaultStateCfg(data) {
     return {
       width: data.stateType === "loopDiv" ? "300px" : "76px",
       height: data.stateType === "loopDiv" ? "120px" : "40px",
@@ -103,7 +103,7 @@ window.store = {
           : [],
     }
   },
-  addState(data){
+  addState(data) {
     let state = this.getDefaultStateCfg(data);
     this.stateData.threadAry[data.index].stateAry.push(state);
   },
@@ -111,7 +111,7 @@ window.store = {
    * 在线程框内增加连线
    * @param { threadIndex, lineData }data
    */
-  addLine(data){
+  addLine(data) {
     this.stateData.threadAry[data.threadIndex].lineAry.push(data.lineData);
     //将连线数据添加到首尾2个状态块
     this.relateLine2startState(data);
@@ -201,7 +201,7 @@ window.store = {
    * 调整线程框的宽高
    * @param {dw, dh} data 
    */
-  resizeThread(data){
+  resizeThread(data) {
     if (data.dh) {
       this.stateData.threadAry[data.threadIndex].height += data.dh;
     }

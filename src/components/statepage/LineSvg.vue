@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="{active: isActive, running:isRunning}"
+        :class="{active: isActive}"
     >
         <path 
             :id="line.lineId"
@@ -14,7 +14,6 @@
         <path
             :d="getTextPath(line)"
             :id="line.lineId + '-textpath'"></path>
-        
         <text
             v-if="line.desc"
             x="15"
@@ -38,8 +37,6 @@ const desc_limit = lineCfg.desc_limit
 export default {
     name: 'LineSvg',
     props: ['line', 'threadIndex', 'lineClass'],
-    components:{
-    },
     data(){
         return {
             isActive: false,
@@ -76,11 +73,6 @@ export default {
             startY = line.startPoint.y;
             endY = line.endPoint.y;
             midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 300`;
-            midPoint = {
-                x: startX + line_h,
-                y: (startY + endY) / 2
-            }
-            //return `translate: (${midPoint.x}px, ${midPoint.y}px) `
             return midPointPath
         },
         // TODO: 鼠标移动到文字上时浮窗显示全部文字
@@ -106,13 +98,9 @@ export default {
             });
         },
         activeLineChange(){
-            if(this.isActive){
-                this.isActive = false;
-            }
-            else{
-                this.isActive = true;
-            }
+            this.isActive = !this.isActive
         },
+
     },
     created(){
         this.$set(this.line, 'active', false);
@@ -155,21 +143,6 @@ export default {
     fill: none;
 }
 
-.running .connect-line{
-    fill: none;
-    stroke-dasharray: 5 5;
-    animation: run-right 8s linear forwards infinite normal;
-    animation-fill-mode: none;
-}
-@keyframes run-right{
-  0%{
-    stroke-dashoffset: 650;
-  }
-  100%{
-    stroke-dashoffset: 0;
-    /* stroke-dasharray: 650px 0px; */
-  }
-}
 text{
     display: none;
 }

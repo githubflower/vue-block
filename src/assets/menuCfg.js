@@ -1,3 +1,3 @@
-export default{
-    menu: [1,2,3]
+export default {
+    menu: [1, 2, 3]
 }

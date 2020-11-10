@@ -1,52 +1,56 @@
 <template>
-        <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
-        <!-- :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}" -->
-    <div
-        :stateId="stateData.stateId" 
-        :index="index"
-        :class="['state-wrap', {'is-dragging': isDragging}]"
-        :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData),  zIndex: zIndex}"
-        :draggable="draggable"
-        
-        @mousedown="onStateMousedown"
-        @mouseup="onStateMouseup"
-        @drag.stop="onDrag"
-        @dragleave="onDragLeave"
-        @dragstart.stop="dragStart"
-        @dragend.stop="dragEnd"
-        @drop="onDrop"
-        @dragover.prevent
-        @dragenter="onDragenter"
-        @contextmenu.prevent="contextmenu"
-    >
-        <loop-div v-if="stateData.stateType === 'loopDiv'"
-            :stateData="stateData"
-            :index="index"
-            :threadIndex="threadIndex"
-            
-            @updateTempLineData="updateTempLineData"
-        ></loop-div>
-        <!-- @updateStateData="updateStateData" -->
-        <state-div v-else
-            :stateData="stateData"
-            :index="index"
-            :threadIndex="threadIndex"
-            
-            @updateTempLineData="updateTempLineData"
-        ></state-div>
-        <!-- <div> -->
-            <state-wrap
-                class="child"
-                v-for="(item, cIndex) in stateData.children" :key="cIndex" 
-                :stateData="item"
-                :index="cIndex"
-                :threadIndex="threadIndex"
-                @updateStateData="updateStateData"
-                @updateTempLineData="updateTempLineData"
-               
-            ></state-wrap>
-        <!-- </div> -->
-        <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
+  <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
+  <!-- :style="{transform: generateStatePos(stateData), width: getWidth(stateData), height: getHeight(stateData), backgroundColor: colors[index % 5], zIndex: zIndex}" -->
+  <div
+    :stateId="stateData.stateId"
+    :index="index"
+    :class="['state-wrap', { 'is-dragging': isDragging }]"
+    :style="{
+      transform: generateStatePos(stateData),
+      width: getWidth(stateData),
+      height: getHeight(stateData),
+      zIndex: zIndex,
+    }"
+    :draggable="draggable"
+    @mousedown="onStateMousedown"
+    @mouseup="onStateMouseup"
+    @drag.stop="onDrag"
+    @dragleave="onDragLeave"
+    @dragstart.stop="dragStart"
+    @dragend.stop="dragEnd"
+    @drop="onDrop"
+    @dragover.prevent
+    @dragenter="onDragenter"
+    @contextmenu.prevent="contextmenu"
+  >
+    <loop-div
+      v-if="stateData.stateType === 'loopDiv'"
+      :stateData="stateData"
+      :index="index"
+      :threadIndex="threadIndex"
+      @updateTempLineData="updateTempLineData"
+    ></loop-div>
+    <!-- @updateStateData="updateStateData" -->
+    <state-div
+      v-else
+      :stateData="stateData"
+      :index="index"
+      :threadIndex="threadIndex"
+      @updateTempLineData="updateTempLineData"
+    ></state-div>
+    <!-- <div> -->
+    <state-wrap
+      class="child"
+      v-for="(item, cIndex) in stateData.children"
+      :key="cIndex"
+      :stateData="item"
+      :index="cIndex"
+      :threadIndex="threadIndex"
+      @updateStateData="updateStateData"
+      @updateTempLineData="updateTempLineData"
+    ></state-wrap>
+    <!-- </div> -->
+    <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
             :stateData="item"
             :index="cIndex"
             :threadIndex="threadIndex"
@@ -54,138 +58,150 @@
             @updateTempLineData="updateTempLineData"
             style="position: absolute; top: 30px; left: 10px;"
         ></component> -->
-         <i v-if="stateData.stateType === 'loopDiv' || stateData.mode === 'nest'"
-        class="resize-icon resizable"
-        :style="{ backgroundImage: 'url(' + resizableImg + ')', backgroundRepeat: 'no-repeat'}"
-        @mousedown.stop="onResizeIconMousedown"
-        @mouseup.stop="onResizeIconMouseup"
-        @mouseleave.stop="onResizeIconMouseup"
-        ></i>
-    </div>
-
+    <i
+      v-if="stateData.stateType === 'loopDiv' || stateData.mode === 'nest'"
+      class="resize-icon resizable"
+      :style="{
+        backgroundImage: 'url(' + resizableImg + ')',
+        backgroundRepeat: 'no-repeat',
+      }"
+      @mousedown.stop="onResizeIconMousedown"
+      @mouseup.stop="onResizeIconMouseup"
+      @mouseleave.stop="onResizeIconMouseup"
+    ></i>
+  </div>
 </template>
 
 <script>
 // import MyPlainDraggable from 'plain-draggable'
 // import MyPlainDraggable from 'plain-draggable/plain-draggable.esm.js'
-import LoopDiv from './LoopDiv'
-import StateDiv from './StateDiv'
-import StatePageVue from './StatePage.vue';
+import LoopDiv from "./LoopDiv";
+import StateDiv from "./StateDiv";
+import StatePageVue from "./StatePage.vue";
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
-const isNumber = (str)=>{
-    return typeof str === 'number';
-}
+const isNumber = (str) => {
+  return typeof str === "number";
+};
 export default {
-    name: 'StateWrap',
-    props: ['stateData', 'index', 'threadIndex'],
-    components: {
-        LoopDiv,
-        StateDiv
+  name: "StateWrap",
+  props: ["stateData", "index", "threadIndex"],
+  components: {
+    LoopDiv,
+    StateDiv,
+  },
+  data() {
+    return {
+      zIndex: 1,
+      colors: ["#A30014", "#52D3F0", "#BFBF00", "#70B603", "#00BFBF"],
+      draggable: true,
+      showInput: false,
+      isDragging: false,
+      operate: null, // IS_MOVING    IS_CONNECTING
+      stateId: null,
+      showInputAry: false,
+      showOutputAry: false,
+      resizableImg: "../../../static/imgs/resizable.png",
+    };
+  },
+  methods: {
+    getCompType(stateType) {
+      return "StateWrap";
+      // return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
     },
-    data(){
-        return {
-            zIndex: 1,
-            colors: ['#A30014', '#52D3F0', '#BFBF00', '#70B603', '#00BFBF'],
-            draggable: true,
-            showInput: false,
-            isDragging: false,
-            operate: null,// IS_MOVING    IS_CONNECTING   
-            stateId: null,
-            showInputAry: false,
-            showOutputAry: false,
-            resizableImg: "../../../static/imgs/resizable.png",
-        }
+    genId() {
+      return window.genId("state");
     },
-    methods: {
-        getCompType(stateType){
-            return 'StateWrap';
-            // return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
-        },
-        genId(){
-            return window.genId('state');
-        },
-        /* generateStatePos(stateData){
+    /* generateStatePos(stateData){
             return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
         }, */
-        generateStatePos(stateData){
-            return (isNumber(stateData.x) && isNumber(stateData.y)) ? `translate(${stateData.x}px, ${stateData.y}px)` : 'translate(0, 0)';
-        },
-        getWidth(stateData){
-            return stateData.width ? stateData.width : (stateData.stateType === 'loopDiv' ? '192px': '76px');
-        },
-        getHeight(stateData){
-            return stateData.height ? stateData.height : (stateData.stateType === 'loopDiv' ? '120px': '40px');
-        },
-        isConnectPoint(dom){
-            let connectPointReg = /connect-point/;
-            let classStr = dom.getAttribute('class');
-            if(connectPointReg.test(classStr)){
-                return true;
-            }
-            return false;
-        },
-        onStateMousedown(e){
-            if(this.isConnectPoint(e.target)){
-                this.operate = IS_CONNECTING;
-            }else{
-                this.operate = null;
-            }
-        },
-        onStateMouseup(){
-            // console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
-            this._isResizing = false;
-            
-        },
-        /**
-         * 鼠标在连接点按下
-         */
-        onConnectPointMousedown(e){
-            // this.operate = IS_CONNECTING;
-            
-            window.stateManage.isConnecting = true;
-            let boundingRect = e.target.getBoundingClientRect();
-            let curSvg = e.target.closest('svg');
-            let curSvgRect = curSvg.getBoundingClientRect();
-            let data = {
-                threadIndex: this.threadIndex,
-                startState: {
-                    stateId: this.stateId,
-                    stateIndex: this.index
-                },
-                startPoint: {
-                    x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
-                    y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
-                }
-            };
-            this.$emit('updateTempLineData', data);
+    generateStatePos(stateData) {
+      return isNumber(stateData.x) && isNumber(stateData.y)
+        ? `translate(${stateData.x}px, ${stateData.y}px)`
+        : "translate(0, 0)";
+    },
+    getWidth(stateData) {
+      return stateData.width
+        ? stateData.width
+        : stateData.stateType === "loopDiv"
+        ? "192px"
+        : "76px";
+    },
+    getHeight(stateData) {
+      return stateData.height
+        ? stateData.height
+        : stateData.stateType === "loopDiv"
+        ? "120px"
+        : "40px";
+    },
+    isConnectPoint(dom) {
+      let connectPointReg = /connect-point/;
+      let classStr = dom.getAttribute("class");
+      if (connectPointReg.test(classStr)) {
+        return true;
+      }
+      return false;
+    },
+    onStateMousedown(e) {
+      if (this.isConnectPoint(e.target)) {
+        this.operate = IS_CONNECTING;
+      } else {
+        this.operate = null;
+      }
+    },
+    onStateMouseup() {
+      // console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
+      this._isResizing = false;
+    },
+    /**
+     * 鼠标在连接点按下
+     */
+    onConnectPointMousedown(e) {
+      // this.operate = IS_CONNECTING;
 
-            window.stateManage.startPoint = {
-                x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
-                y: boundingRect.top - curSvgRect.top + boundingRect.height / 2
-            };
+      window.stateManage.isConnecting = true;
+      let boundingRect = e.target.getBoundingClientRect();
+      let curSvg = e.target.closest("svg");
+      let curSvgRect = curSvg.getBoundingClientRect();
+      let data = {
+        threadIndex: this.threadIndex,
+        startState: {
+          stateId: this.stateId,
+          stateIndex: this.index,
         },
-        onMouseup(){
-            stateManage.isConnecting = false;
+        startPoint: {
+          x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
+          y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
         },
-        onDrag(e){
-            if(this._isResizing){
-                return false;
-            }
-            this._endInfo = {
-                x: e.x,
-                y: e.pageY
-            }
-            
-            this.judgeBoundary(e.target);
-            this.updatePosition(e.target);
-        },
-        dragStart(e){
-            if(this._isResizing){
-                return false;
-            }
-           /*  if(e.target){
+      };
+      this.$emit("updateTempLineData", data);
+
+      window.stateManage.startPoint = {
+        x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
+        y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
+      };
+    },
+    onMouseup() {
+      stateManage.isConnecting = false;
+    },
+    onDrag(e) {
+      if (this._isResizing) {
+        return false;
+      }
+      this._endInfo = {
+        x: e.x,
+        y: e.pageY,
+      };
+
+      this.judgeBoundary(e.target);
+      this.updatePosition(e.target);
+    },
+    dragStart(e) {
+      if (this._isResizing) {
+        return false;
+      }
+      /*  if(e.target){
                 let childReg = /child/;
                 let resizeIconReg = /resize\-icon/;
                     debugger;
@@ -193,305 +209,325 @@ export default {
                     return false;
                 }
             } */
-            if(this.operate === IS_CONNECTING){
-                e.preventDefault();
-                return false;
-            }
-            e.dataTransfer.effectAllowed = 'copyMove';
+      if (this.operate === IS_CONNECTING) {
+        e.preventDefault();
+        return false;
+      }
+      e.dataTransfer.effectAllowed = "copyMove";
 
-            
-            
-            this.isDragging = true;
-            // this._startInfo = e.target.getBoundingClientRect();
-            this._startInfo = {
-                x: e.x,
-                y: e.pageY
-            };
-            this._mousedownPoint = {
-                x: this.$el.getBoundingClientRect().left,
-                y: this.$el.getBoundingClientRect().top
-            };
-            this._startInfo.transform = this.getStyleTransform(e.target);
-            console.log('---dragStart---',this._startInfo);
-            e.dataTransfer.setData('theDragStateData', JSON.stringify(this.stateData));
+      this.isDragging = true;
+      // this._startInfo = e.target.getBoundingClientRect();
+      this._startInfo = {
+        x: e.x,
+        y: e.pageY,
+      };
+      this._mousedownPoint = {
+        x: this.$el.getBoundingClientRect().left,
+        y: this.$el.getBoundingClientRect().top,
+      };
+      this._startInfo.transform = this.getStyleTransform(e.target);
+      console.log("---dragStart---", this._startInfo);
+      e.dataTransfer.setData(
+        "theDragStateData",
+        JSON.stringify(this.stateData)
+      );
 
-            let indexAry = [];
-            indexAry.push(this.index);
-            let parent = this.$parent;
-            while (parent && (parent.$options.name !== 'StatePage')){
-                if(parent.$options.name === 'ThreadSvg'){
-                    indexAry.push(parent.threadIndex);    
-                }else{
-                    indexAry.push(parent.index);
-                }
-                parent = parent.$parent;
-            };
-            EventObj.$emit('saveDragData', {
-                mousedownPoint: {
-                    x: this._mousedownPoint.x,
-                    y: this._mousedownPoint.y
-                },
-                indexAry: indexAry
-            });
-            this.zIndex = 0;
+      let indexAry = [];
+      indexAry.push(this.index);
+      let parent = this.$parent;
+      while (parent && parent.$options.name !== "StatePage") {
+        if (parent.$options.name === "ThreadSvg") {
+          indexAry.push(parent.threadIndex);
+        } else {
+          indexAry.push(parent.index);
+        }
+        parent = parent.$parent;
+      }
+      EventObj.$emit("saveDragData", {
+        mousedownPoint: {
+          x: this._mousedownPoint.x,
+          y: this._mousedownPoint.y,
         },
-        dragEnd(e){
-            if(this._isResizing){
-                this._isResizing = false;
-                return false;
-            }
-            this.isDragging = false;
-            // this._endInfo = e.target.getBoundingClientRect();
-            this._endInfo = {
-                x: e.x,
-                y: e.pageY
-            }
-            this.updatePosition(e.target);
-            this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
+        indexAry: indexAry,
+      });
+      this.zIndex = 0;
+    },
+    dragEnd(e) {
+      if (this._isResizing) {
+        this._isResizing = false;
+        return false;
+      }
+      this.isDragging = false;
+      // this._endInfo = e.target.getBoundingClientRect();
+      this._endInfo = {
+        x: e.x,
+        y: e.pageY,
+      };
+      this.updatePosition(e.target);
+      this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
-            this.zIndex = 1;
-        },
-        onDragenter(e){
-            // console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);            
-        },
-        onDrop(e){
-            let theDragStateData = JSON.parse(e.dataTransfer.getData('theDragStateData'));
-            if(this.stateData.stateId === theDragStateData.stateId){
-                return false;
-            }
-            
-            //如果拖拽的块本身就是这个drop监听事件块的子节点则直接返回
-            let isStateIdInChildren = (id, children)=>{
-                let flag = false;
-                if(children && children.length){
+      this.zIndex = 1;
+    },
+    onDragenter(e) {
+      // console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);
+    },
+    onDrop(e) {
+      let theDragStateData = JSON.parse(
+        e.dataTransfer.getData("theDragStateData")
+      );
+      if (this.stateData.stateId === theDragStateData.stateId) {
+        return false;
+      }
 
-                    children.forEach(item => {
-                        if(item.stateId === id){
-                            flag = true;
-                            return false;
-                        }
-                    })
-                }
-                return flag;
+      //如果拖拽的块本身就是这个drop监听事件块的子节点则直接返回
+      let isStateIdInChildren = (id, children) => {
+        let flag = false;
+        if (children && children.length) {
+          children.forEach((item) => {
+            if (item.stateId === id) {
+              flag = true;
+              return false;
             }
-            //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
-            let isTargetInParent = (el, e)=>{
-                let inFlag = true;
-                let info = el.getBoundingClientRect();
-                if(e.pageX < info.x || e.pageX > (info.x + info.width) || e.pageY < info.y || e.pageY > (info.y + info.height)){
-                    inFlag = false;
-                }
-                return inFlag;
-            }
+          });
+        }
+        return flag;
+      };
+      //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
+      let isTargetInParent = (el, e) => {
+        let inFlag = true;
+        let info = el.getBoundingClientRect();
+        if (
+          e.pageX < info.x ||
+          e.pageX > info.x + info.width ||
+          e.pageY < info.y ||
+          e.pageY > info.y + info.height
+        ) {
+          inFlag = false;
+        }
+        return inFlag;
+      };
 
-            // debugger;
-            let stateInChildrenFlag = isStateIdInChildren(theDragStateData.stateId, this.stateData.children);
-            if(stateInChildrenFlag){
-                let inFlag = isTargetInParent(this.$el, e);
-                if(inFlag){
-                    //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
-                    e.stopPropagation();
-                }    
-                return false;
-            }
+      // debugger;
+      let stateInChildrenFlag = isStateIdInChildren(
+        theDragStateData.stateId,
+        this.stateData.children
+      );
+      if (stateInChildrenFlag) {
+        let inFlag = isTargetInParent(this.$el, e);
+        if (inFlag) {
+          //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
+          e.stopPropagation();
+        }
+        return false;
+      }
 
+      let inFlag = isTargetInParent(this.$el, e);
+      if (!inFlag) {
+        return;
+      }
 
-            let inFlag = isTargetInParent(this.$el, e);
-            if(!inFlag){
-                return;
-            }
-            
-            //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
-            let x = e.pageX - this.$el.getBoundingClientRect().left;
-            let y = e.pageY - this.$el.getBoundingClientRect().top;
-          
-            theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
-            theDragStateData.y = y/*  - statePageVue._dragData.mousedownPoint.y */;
+      //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
+      let x = e.pageX - this.$el.getBoundingClientRect().left;
+      let y = e.pageY - this.$el.getBoundingClientRect().top;
 
-            this.stateData.children.push(theDragStateData);
-            let tI = statePageVue._dragData.indexAry.pop();//线程索引
-            let dragTargetParent = statePageVue.threadAry[tI].stateAry;
-            while(statePageVue._dragData && (statePageVue._dragData.indexAry.length > 1)){
-                let i = statePageVue._dragData.indexAry.pop();
-                dragTargetParent = dragTargetParent[i].children;
-            }
-            setTimeout(()=>{
-                //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
-                dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
-            }, 10)
-            e.stopPropagation();
-        },
-        onDragLeave(e){
-            //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
-            if(!this._startInfo){
-                return;
-            }
-          
-            this._endInfo = {
-                x: e.x,
-                y: e.pageY
-            }
-            
-            this.judgeBoundary(e.target);
-            this.updatePosition(e.target);
-        },
-        judgeBoundary(dom){
-            let targetInfo = dom.getBoundingClientRect();
-            let curSvg = dom.closest('svg');
-            let curSvgRect = curSvg.getBoundingClientRect();
-            let needResizeW = (targetInfo.right > curSvgRect.right),
-                needResizeH = (targetInfo.bottom > curSvgRect.bottom),
-                needResizeInfo = {
-                    threadIndex: this.threadIndex
-                };
-            if(needResizeH){
-                needResizeInfo.dh = targetInfo.bottom - curSvgRect.bottom;
-            }
-            if(needResizeW){
-                needResizeInfo.dw = targetInfo.right - curSvgRect.right;
-            }
-            if(needResizeW || needResizeH){
-                store.resizeThread(needResizeInfo)
-            }
-            // this.$emit('resizeSvg', needResizeInfo);
-        },
-        updatePosition(dom){
-            let dx = this._endInfo.x - this._startInfo.x,
-                dy = this._endInfo.y - this._startInfo.y,
-                reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
-                style = dom.getAttribute('style'),
-                cx = this._startInfo.transform.x + dx,
-                cy = this._startInfo.transform.y + dy;
-            // 手動更新样式
-            /* if(style){
+      theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
+      theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
+
+      this.stateData.children.push(theDragStateData);
+      let tI = statePageVue._dragData.indexAry.pop(); //线程索引
+      let dragTargetParent = statePageVue.threadAry[tI].stateAry;
+      while (
+        statePageVue._dragData &&
+        statePageVue._dragData.indexAry.length > 1
+      ) {
+        let i = statePageVue._dragData.indexAry.pop();
+        dragTargetParent = dragTargetParent[i].children;
+      }
+      setTimeout(() => {
+        //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
+        dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
+      }, 10);
+      e.stopPropagation();
+    },
+    onDragLeave(e) {
+      //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
+      if (!this._startInfo) {
+        return;
+      }
+
+      this._endInfo = {
+        x: e.x,
+        y: e.pageY,
+      };
+
+      this.judgeBoundary(e.target);
+      this.updatePosition(e.target);
+    },
+    judgeBoundary(dom) {
+      let targetInfo = dom.getBoundingClientRect();
+      let curSvg = dom.closest("svg");
+      let curSvgRect = curSvg.getBoundingClientRect();
+      let needResizeW = targetInfo.right > curSvgRect.right,
+        needResizeH = targetInfo.bottom > curSvgRect.bottom,
+        needResizeInfo = {
+          threadIndex: this.threadIndex,
+        };
+      if (needResizeH) {
+        needResizeInfo.dh = targetInfo.bottom - curSvgRect.bottom;
+      }
+      if (needResizeW) {
+        needResizeInfo.dw = targetInfo.right - curSvgRect.right;
+      }
+      if (needResizeW || needResizeH) {
+        store.resizeThread(needResizeInfo);
+      }
+      // this.$emit('resizeSvg', needResizeInfo);
+    },
+    updatePosition(dom) {
+      let dx = this._endInfo.x - this._startInfo.x,
+        dy = this._endInfo.y - this._startInfo.y,
+        reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
+        style = dom.getAttribute("style"),
+        cx = this._startInfo.transform.x + dx,
+        cy = this._startInfo.transform.y + dy;
+      // 手動更新样式
+      /* if(style){
                 style = style.replace(reg, `transform: translate(${cx}px, ${cy}px)`);
             }else{
                 style = `transform: translate(${cx}px, ${cy}px)`;
             }
             dom.setAttribute('style', style); */
 
-            //通知父容器更新transform数据 （数据驱动更新样式）
-            this.$emit('updateStateData', {
-                transform: {
-                    x: cx,
-                    y: cy
-                },
-                index: this.index
-            });
+      //通知父容器更新transform数据 （数据驱动更新样式）
+      this.$emit("updateStateData", {
+        transform: {
+          x: cx,
+          y: cy,
         },
-        getStyleTransform(dom){
-            let style, 
-                transform = {
-                    x: 0,
-                    y: 0
-                },
-                reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
-                ret;
-            if(dom){
-                style = dom.getAttribute('style');
-                if(style){
-                    ret = style.match(reg);
-                    if(ret){
-                        transform = {
-                            x: parseInt(ret[1], 10),
-                            y: parseInt(ret[3], 10)
-                        }
-                    }
-                }
-            }
-            return transform;
-        },
-        contextmenu(e){
-            let indexAry = [];
-            indexAry.push(this.index);
-            let parent = this.$parent;
-            while (parent && (parent.$options.name !== 'StatePage')){
-                if(parent.$options.name === 'ThreadSvg'){
-                    indexAry.push(parent.threadIndex);    
-                }else{
-                    indexAry.push(parent.index);
-                }
-                parent = parent.$parent;
-            };
-
-            EventObj.$emit('deleteState', {
-                mousedownPoint: {
-                    x: e.pageX,
-                    y: e.pageY
-                },
-                indexAry: indexAry
-            });
-        },
-        rename(){
-            this.showInput = true;
-            // this.$el.child('.state-name-input')
-            this.$nextTick(function(){
-                // this.$el.firstChild.focus();
-                 this.$el.firstChild.firstElementChild.focus()
-            })
-        },
-        hideInput(){
-            this.showInput = false;
-        },
-        /**
-         * 根据lineId获取这个连线的描述信息
-         */
-        getDesc(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
-                return item.lineId === lineId;
-            }) || {};
-            return line.desc;
-        },
-        activeLine(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
-                return item.lineId === lineId;
-            }) || {};
-
-            line.active = true;
-        },
-        disActiveLine(lineId){
-            let line = this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(item => {
-                return item.lineId === lineId;
-            }) || {};
-
-            line.active = false;
-        },
-        updateTempLineData(data){
-            this.$emit('updateTempLineData', data);
-        },
-        updateStateData(data){
-            this.$emit('updateStateData', {
-                data: data,
-                index: this.index  //cIndex: 子状态的索引
-            });
-        },
-        onResizeIconMousedown(e) {
-            this.draggable = false;
-            this._isResizing = true;
-            this.$emit("updateMoveData", {
-                operate: "resize-state",
-                stateIndex: this.index,
-                startPoint: {
-                    x: e.pageX,
-                    y: e.pageY
-                },
-                originW: this.$el.offsetWidth,
-                originH: this.$el.offsetHeight
-            });
-        },
-        onResizeIconMouseup(e) {
-            this.draggable = true;
-            this._isResizing = false;
-            this.$emit("stopMoving");
-            // this._lastHeight = this.thread.height;
-        },
-        
+        index: this.index,
+      });
     },
-    // created(){
-    //     this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
-    // },
-    mounted(){
-        /*
+    getStyleTransform(dom) {
+      let style,
+        transform = {
+          x: 0,
+          y: 0,
+        },
+        reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
+        ret;
+      if (dom) {
+        style = dom.getAttribute("style");
+        if (style) {
+          ret = style.match(reg);
+          if (ret) {
+            transform = {
+              x: parseInt(ret[1], 10),
+              y: parseInt(ret[3], 10),
+            };
+          }
+        }
+      }
+      return transform;
+    },
+    contextmenu(e) {
+      let indexAry = [];
+      indexAry.push(this.index);
+      let parent = this.$parent;
+      while (parent && parent.$options.name !== "StatePage") {
+        if (parent.$options.name === "ThreadSvg") {
+          indexAry.push(parent.threadIndex);
+        } else {
+          indexAry.push(parent.index);
+        }
+        parent = parent.$parent;
+      }
+
+      EventObj.$emit("deleteState", {
+        mousedownPoint: {
+          x: e.pageX,
+          y: e.pageY,
+        },
+        indexAry: indexAry,
+      });
+    },
+    rename() {
+      this.showInput = true;
+      // this.$el.child('.state-name-input')
+      this.$nextTick(function () {
+        // this.$el.firstChild.focus();
+        this.$el.firstChild.firstElementChild.focus();
+      });
+    },
+    hideInput() {
+      this.showInput = false;
+    },
+    /**
+     * 根据lineId获取这个连线的描述信息
+     */
+    getDesc(lineId) {
+      let line =
+        this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(
+          (item) => {
+            return item.lineId === lineId;
+          }
+        ) || {};
+      return line.desc;
+    },
+    activeLine(lineId) {
+      let line =
+        this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(
+          (item) => {
+            return item.lineId === lineId;
+          }
+        ) || {};
+
+      line.active = true;
+    },
+    disActiveLine(lineId) {
+      let line =
+        this.$parent.$parent.threadAry[this.threadIndex].lineAry.find(
+          (item) => {
+            return item.lineId === lineId;
+          }
+        ) || {};
+
+      line.active = false;
+    },
+    updateTempLineData(data) {
+      this.$emit("updateTempLineData", data);
+    },
+    updateStateData(data) {
+      this.$emit("updateStateData", {
+        data: data,
+        index: this.index, //cIndex: 子状态的索引
+      });
+    },
+    onResizeIconMousedown(e) {
+      this.draggable = false;
+      this._isResizing = true;
+      this.$emit("updateMoveData", {
+        operate: "resize-state",
+        stateIndex: this.index,
+        startPoint: {
+          x: e.pageX,
+          y: e.pageY,
+        },
+        originW: this.$el.offsetWidth,
+        originH: this.$el.offsetHeight,
+      });
+    },
+    onResizeIconMouseup(e) {
+      this.draggable = true;
+      this._isResizing = false;
+      this.$emit("stopMoving");
+      // this._lastHeight = this.thread.height;
+    },
+  },
+  // created(){
+  //     this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();
+  // },
+  mounted() {
+    /*
         var elm = this.$el;
         window.testVueObj = this;
         window.draggableDiv = new PlainDraggable(elm, {
@@ -520,8 +556,7 @@ export default {
         // this.$nextTick(function(){
             // window.line = new LeaderLine(states[0], states[1], );
         }*/
-
-        /* draggable.snap = {
+    /* draggable.snap = {
             x: {
                 step: 40 //90 + 60
             },
@@ -529,101 +564,101 @@ export default {
                 step: 40 //40 + 40
             }
         }; */
-    }
-}
+  },
+};
 </script>
 
 <style scoped>
-.state-wrap{
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: inline-block;
-    /* background-color: rgba(50, 50, 50, 0.62); */
-};
+.state-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  /* background-color: rgba(50, 50, 50, 0.62); */
+}
 
-.state-wrap > p{
-    display: -webkit-box;
-    position: relative;
-    top: 50%;
-    transform: translateY(-50%);
-    text-align: center;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    font-size: 14px;
+.state-wrap > p {
+  display: -webkit-box;
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 14px;
 }
-.event-count{
-    width: 20px;
-    height: 20px;
-    border-radius: 10px;
-    background-color: rgba(0,157,218, .33);
-    color: #ffffff;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    text-align: center;
-    line-height: 20px;
-    font-size: 14px;
+.event-count {
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: rgba(0, 157, 218, 0.33);
+  color: #ffffff;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  line-height: 20px;
+  font-size: 14px;
 }
-.event-count:hover{
-    background-color: rgba(0,157,218, 1);
-    cursor: pointer;
+.event-count:hover {
+  background-color: rgba(0, 157, 218, 1);
+  cursor: pointer;
 }
-.in{
-    left: 0;
+.in {
+  left: 0;
 }
-.out{
-    right: 0;
+.out {
+  right: 0;
 }
-.connect-point{
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 10px;
-    height: 10px;
-    border-radius: 10px;
+.connect-point {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 10px;
 }
-.connect-point:hover{
-    border: 2px solid #ff0000 !important;
-    cursor: default;
+.connect-point:hover {
+  border: 2px solid #ff0000 !important;
+  cursor: default;
 }
-.state-wrap:hover .connect-point{
-    border: 2px solid blue;
-    cursor: default;
+.state-wrap:hover .connect-point {
+  border: 2px solid blue;
+  cursor: default;
 }
-.connect-point.in{
-    transform: translate(-50%, -50%);
+.connect-point.in {
+  transform: translate(-50%, -50%);
 }
-.connect-point.out{
-    transform: translate(50%, -50%);
+.connect-point.out {
+  transform: translate(50%, -50%);
 }
-.is-dragging{
+.is-dragging {
   cursor: move;
 }
 
 .input-list,
-.output-list{
-    list-style: none;
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background-color: #ffffff;
-    color: #000000;
-    z-index: 1;
+.output-list {
+  list-style: none;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: #ffffff;
+  color: #000000;
+  z-index: 1;
 }
-.output-list{
-    left: 20px;
-    right: initial;
+.output-list {
+  left: 20px;
+  right: initial;
 }
 
 .input-list > li,
-.output-list > li{
-    width: 120px;
+.output-list > li {
+  width: 120px;
 }
 .input-list > li:hover,
-.output-list > li:hover{
-    background-color: #e6f7ff;
+.output-list > li:hover {
+  background-color: #e6f7ff;
 }
 </style>    

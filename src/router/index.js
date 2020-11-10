@@ -4,7 +4,7 @@ import Home from '@/components/Home'
 import Test from '@/components/Test'
 import PathAnimation from '@/components/statepage/PathAnimation'
 
-const StatePage = ()=>{
+const StatePage = () => {
   // 此注释不能删除，生产打包时会根据此配置创建相应的文件
   return import(/* webpackChunkName: "StatePage" */ '@/components/statepage/StatePage')
 }
@@ -12,11 +12,11 @@ const StatePage = ()=>{
 const IOPage = () => {
   return import(/* webpackChunkName: "IOPage" */ '@/components/io/IOPage')
 }
-const PluginIframe = ()=>{
+const PluginIframe = () => {
   return import(/* webpackChunkName: "PluginIframe" */ '@/components/plugin_iframe/PluginIframe')
 }
 
-const BlocklyPage = ()=>{
+const BlocklyPage = () => {
   return import(/* webpackChunkName: "BlocklyPage" */ '@/components/BlocklyPage')
 }
 
