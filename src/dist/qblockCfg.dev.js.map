@@ -1,1 +1,0 @@
-{"version":3,"sources":["qblockCfg.js"],"names":["qblockCfg","enableCustomMenu"],"mappings":";;;;;;AAAA,IAAMA,SAAS,GAAG;AACdC,EAAAA,gBAAgB,EAAE,KADJ,CACW;;AADX,CAAlB","sourcesContent":["const qblockCfg = {\r\n    enableCustomMenu: false, //是否允许自定义配置插件菜单\r\n}\r\n\r\nexport {\r\n    qblockCfg\r\n}\r\n"],"file":"qblockCfg.dev.js"}

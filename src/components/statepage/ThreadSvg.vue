@@ -153,6 +153,9 @@ export default {
     };
   },
   methods: {
+    /**
+     * 拖拽缩放部分
+     */
     updateMoveData(data) {
       if (!this._isResizingState) {
         this._isResizingState = true;
@@ -324,8 +327,15 @@ export default {
       });
       // debugger;
     },
+    /**
+     * 
+     * TODO：在循环组件内连线无法监听，移动循环组件时连线起始点变化
+     * (循环组件内无法触发此方法)
+     */
     drawConnectLine(e) {
+      //debugger;
       let endState = this.getEndState(e);
+      console.log("getting endstate...", endState)
       let lineData = this.copy(this.tempLineData);
       lineData.endState = endState;
       lineData.lineId = window.genId("line");
@@ -367,6 +377,7 @@ export default {
      * @return object { stateId: 状态块的stateid属性}
      */
     getEndState(e) {
+      //debugger;
       let stateId = null,
         clazz = ".state-wrap",
         stateIndex;
@@ -721,12 +732,12 @@ export default {
       if (stateType == "loopDiv") {
         endPoint = {
           x: stateData.transform.x,
-          y: stateData.transform.y + stateHeight + 35,
+          y: stateData.transform.y + stateHeight + 36,
         };
       } else {
         endPoint = {
           x: stateData.transform.x,
-          y: stateData.transform.y + 55,
+          y: stateData.transform.y + 56,
         };
       }
       this.drawUpdateLine(curLine, endPoint, line_radius);
@@ -747,11 +758,11 @@ export default {
       if (stateType == "loopDiv") {
         startPoint = {
           x: stateData.transform.x,
-          y: stateData.transform.y + stateHeight / 2 + 30,
+          y: stateData.transform.y + stateHeight / 2 + 36,
         };
       } else {
         startPoint = {
-          x: stateData.transform.x + 78,
+          x: stateData.transform.x + 79,
           y: stateData.transform.y + 56,
         };
       }

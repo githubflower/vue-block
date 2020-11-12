@@ -28,7 +28,7 @@ window.store = {
     threadAry: [
       {
         name: "线程1",
-        width: 1600,
+        width: 1200,
         height: 500,
         stateAry: [
           {
@@ -211,7 +211,13 @@ window.store = {
   },
 }
 
-
+router.beforeEach((to, from, next)=>{
+  console.log(to);
+  if ((from.name === 'blockly' && to.name === 'state') || (to.name === 'blockly' && from.name === 'state')){
+    alert('同步数据... '); //TODO
+  }
+  next();
+})
 /* eslint-disable no-new */
 window.EventObj = new Vue();
 new Vue({

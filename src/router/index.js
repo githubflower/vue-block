@@ -44,11 +44,21 @@ export default new Router({
         },
         {
           path: 'state',
-          component: StatePage
+          name: 'state',
+          component: StatePage,
+          beforeRouteLeave(to, from, next) {
+            alert(to + '\n' + from);
+            next();
+          }
         },
         {
           path: 'blockly',
-          component: BlocklyPage
+          name: 'blockly',
+          component: BlocklyPage,
+          beforeRouteLeave(to, from, next){
+            alert(to + '\n' + from);
+            next();
+          }
         },
         {
           path: 'io',

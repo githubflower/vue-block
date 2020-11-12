@@ -108,7 +108,6 @@ export default {
      */
     onConnectPointMousedown(e) {
       // this.operate = IS_CONNECTING;
-
       window.stateManage.isConnecting = true;
       let boundingRect = e.target.getBoundingClientRect();
       let curSvg = e.target.closest("svg");
@@ -132,8 +131,11 @@ export default {
         y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
       };
     },
-    onMouseup() {
-      stateManage.isConnecting = false;
+
+
+    onMouseup(e) {
+        stateManage.isConnecting = false;
+      
     },
     onDrag(e) {
       this._endInfo = {

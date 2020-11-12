@@ -135,7 +135,7 @@ export default {
     fill: none;
 }
 .connect-line:hover{
-    stroke:yellow;
+    stroke:rgb(112, 255, 255);
     fill: none;
 }
 .active .connect-line{

@@ -140,7 +140,7 @@ export default {
   //   box-shadow: 0px 3px 2px 1px #aaa;
   //   background-color: rgba(109, 252, 255, 0.722);
   // background-color: rgba(25,42, 73, .9);
-
+  transition: all 0.2s;
   .bg {
     top: 0;
     left: 0;

@@ -96,6 +96,7 @@ export default {
   //   background-color: #0a0b44;
   background-color: @panelBgColor;
   border-left: 1px solid #aaa;
+  transition: all 0.2s;
   .title {
     width: auto;
     display: block;
@@ -148,7 +149,7 @@ export default {
 
 .inner-shadow {
   position: absolute;
-  top: 462px;
+  top: 0;
   right: 0;
 }
 .inner-shadow li {

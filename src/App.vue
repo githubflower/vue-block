@@ -28,6 +28,10 @@ export default {
 
 <style lang="less" scoped>
 @menuHeight: 60px;
+@deepBlue1: #090723;
+@deepBlue2: #192a49;
+@deepBlue3: #0A0B44;
+@white: #ffffff;
 
 #app {
   padding-top: @menuHeight;
@@ -37,9 +41,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   /* text-align: center; */
   color: #2c3e50;
-  background-color: #192a49;
-  // background-color: rgba(25,42, 73, .8);
-  // background-color: #091A2A;
+  background-color: @deepBlue3;
 }
 </style>
 <style lang="less">

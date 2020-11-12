@@ -6,11 +6,16 @@
       width="100%"
       height="100%"
     ></iframe>
+    <SwitchBtn/>
   </div>
 </template>
 <script>
+import SwitchBtn from "@/components/SwitchBtn"
 export default {
   name: "BlocklyPage",
+  components: {
+    SwitchBtn
+  },
   data() {
     return {};
   },
@@ -24,5 +29,8 @@ export default {
 @topMenuHeight: 60px;
 #blocklyPage {
   height: 100%;
+  .switch-btn{
+    top: 70px;
+  }
 }
 </style>

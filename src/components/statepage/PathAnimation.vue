@@ -1,26 +1,19 @@
 <template>
-      <g :id="lineId + '-animation'" v-show=false>
-        <!-- 调用时使用this.lineId -->
-        <path id="calc1" :d="getAnimationPath(`M 91 86 h 50 
-              m 0 0 A 5 5 0 0 1 146 91
-              m 0 0 V 272
-              m 0 0 A 5 5 0 0 0 151 277
-              m 0 0 L 384 277
-              m -5 -5 L 384 277 L 379 282`)" :style="{fill:'none'}"/>
-
+      <g :id="lineId + '-animation'" v-show=isLineId>
+        <path id="calc" :d="getAnimationPath(this.lineId)" :style="{fill:'none'}"/>
         <rect width="10" height="10" fill="#00ffff">
           <animateMotion begin="0s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc1"></mpath>
+            <mpath xlink:href="#calc"></mpath>
           </animateMotion>
         </rect>
         <rect width="10" height="10" fill="#00ffff">
           <animateMotion begin="0.1s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc1"></mpath>
+            <mpath xlink:href="#calc"></mpath>
           </animateMotion>
         </rect>
         <rect width="10" height="10" fill="#00ffff">
           <animateMotion  begin="0.2s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc1"></mpath>
+            <mpath xlink:href="#calc"></mpath>
           </animateMotion>
         </rect>
       </g>
@@ -28,23 +21,39 @@
 
 <script>
 export default {
+  
   name: "pathAnimation",
   props: ['lineId'],
   data() {
     return {
-      
+      isLineId: true,
     };
   },
   methods:{
     /**
+     * 
+     * 计算用于显示动画运行时箭头的路径
+     * 
+     */
+    getLinePath(lineId){
+      if(!document.getElementById(lineId)){
+        this.isLineId = false
+        return
+      }
+      return document.getElementById(lineId).getAttribute('d')
+    },
+    /**
      * 计算用于运行时动画的动画路径
      * @param {lineId}
-     * TODO: 随着连线的更新而动态更新：连线更新 -> 重新调用getAnimationPath来计算路径
+     * 
      */
-    // 测试用，后续修改为根据连线ID来获取path
-    getAnimationPath(path){
-      //var dom = document.getElementById(lineId);
-      //let path = dom.getAttribute("d");
+    getAnimationPath(lineId){
+      if(!document.getElementById(lineId)){
+        this.isLineId = false
+        return
+      }
+      var dom = document.getElementById(lineId);
+      let path = dom.getAttribute("d");
       // 去除path内的换行符
       path = path.replace(/[\r\n]/g,"");
       // 用于匹配箭头，圆角，开始与结束点的正则表达式
@@ -103,32 +112,5 @@ export default {
 </script>
 
 <style>
-.svg {
-  width: 100%;
-  height: 800px;
-  /*border: 1px solid #909399;*/
-}
 
-
-path.test{
-  fill: none;
-  stroke-width: 2;
-  stroke-dasharray: 5 5;
-  animation: run-right 8s linear forwards infinite normal;
-  animation-fill-mode: none;
-}
-@keyframes run-right{
-  0%{
-    stroke-dashoffset: 650;
-  }
-  100%{
-    stroke-dashoffset: 0;
-    /* stroke-dasharray: 650px 0px; */
-  }
-}
-
-
-.breath-light{
-  fill: none;
-}
 </style>

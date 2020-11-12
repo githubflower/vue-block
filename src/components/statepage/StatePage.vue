@@ -162,7 +162,7 @@ export default {
       iframeHeight: 0,
       activeName: "statePage", //'statePage'    'blocklyPage'
       // activeName: "statePage", //'statePage'
-      runningLineId: "testrun",
+      runningLineId: "",
       showTempLine: false,
       showDeleteStateMenu: false,
       contextmenuXY: {
@@ -633,6 +633,9 @@ export default {
 
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度
   },
+  beforeRouteUpdate(to, from, next){
+    alert(to + '\n' + from);
+  }
 };
 </script>
 
@@ -654,7 +657,7 @@ export default {
     position: fixed;
     width: 100%;
     // background-color: #ffffff;
-    padding: 10px;
+    padding: 10px 0;
     // border: 1px solid #ebebeb;
     border-radius: 3px;
     z-index: 1;

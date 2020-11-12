@@ -231,9 +231,9 @@ export default {
         "theDragStateData",
         JSON.stringify(this.stateData)
       );
-
       let indexAry = [];
-      indexAry.push(this.index);
+      indexAry.push(this.index); 
+      
       let parent = this.$parent;
       while (parent && parent.$options.name !== "StatePage") {
         if (parent.$options.name === "ThreadSvg") {
@@ -272,9 +272,12 @@ export default {
       // console.info(' onDragenter: ' + this.stateData.name + ' --- ' + this.stateData.stateId);
     },
     onDrop(e) {
+      debugger;
       let theDragStateData = JSON.parse(
         e.dataTransfer.getData("theDragStateData")
       );
+      console.log("transfered data:", theDragStateData)
+      // bug
       if (this.stateData.stateId === theDragStateData.stateId) {
         return false;
       }
@@ -348,6 +351,21 @@ export default {
         dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
       }, 10);
       e.stopPropagation();
+
+      // 用于记录parent的index
+      let parentIndex = null;
+      parentIndex = this.index; 
+      console.log("--this, this.index:", this, this.index)
+      theDragStateData.parent = parentIndex;
+      // 当拖动的组件为循环组件时，动态更新循环组件内children的parent
+      if(theDragStateData.children){
+        let i = 0;
+        console.log(theDragStateData.children.length)
+        while(i < theDragStateData.children.length){
+          theDragStateData.children[i].parent = this.stateData.children.length - 1;
+          i++;
+        }
+      }
     },
     onDragLeave(e) {
       //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
