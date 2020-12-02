@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="{active: isActive}"
+        :class="[{active: line.isActive}]"
     >
         <path 
             :id="line.lineId"
@@ -26,11 +26,13 @@
                 :id="line.lineId + '-text'"
             >{{line.desc.length > descLimit ? line.desc.slice(0,8) + '...' : line.desc}}</textPath>
         </text>
+        
     </g>
 </template>
 
 <script>
 import {lineCfg} from './graphCfg.js'
+
 const line_h = lineCfg.line_h
 const stroke_width = lineCfg.stroke_width
 const desc_limit = lineCfg.desc_limit
@@ -41,7 +43,6 @@ export default {
         return {
             isActive: false,
             isShowDesc: false,
-            isRunning: false,
             strokeWidth: stroke_width,
             descLimit: desc_limit,
         }
@@ -97,9 +98,11 @@ export default {
                 }
             });
         },
+        //TODO: if line.isActive -> Active
         activeLineChange(){
-            this.isActive = !this.isActive
+            this.line.isActive = !this.line.isActive
         },
+
 
     },
     created(){
@@ -112,7 +115,7 @@ export default {
         
     },
     watch: {
-        'line.active': function(v){
+        'line.isActive': function(v){
             if(v){
                 this.isActive = true;
             }else{
@@ -137,11 +140,13 @@ export default {
 .connect-line:hover{
     stroke:rgb(112, 255, 255);
     fill: none;
+    cursor:pointer;
 }
 .active .connect-line{
     stroke:rgb(112, 255, 255);
     fill: none;
 }
+
 
 text{
     display: none;

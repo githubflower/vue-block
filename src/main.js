@@ -7,7 +7,6 @@ import Element from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
 
-
 Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.prototype.axios = axios;
 
@@ -30,44 +29,12 @@ window.store = {
         name: "线程1",
         width: 1200,
         height: 500,
-        stateAry: [
-          {
-            stateId: "custom-state-id",
-            stateType: "stateDiv",
-            name: "默认状态名称1",
-            inputAry: [],
-            outputAry: [],
-            children: [],
-            x: 5,
-            y: 0,
-          },
-          {
-            width: "302px",
-            height: "122px",
-            name: "状态描述99",
-            stateType: "loopDiv",
-            stateId: window.genId("state"),
-            inputAry: [],
-            outputAry: [],
-            x: 200,
-            y: 100,
-            children: [
-              {
-                name: "child1",
-                stateId: "state-child1",
-                stateType: "stateDiv",
-                inputAry: [],
-                outputAry: [],
-                x: 50,
-                y: 50,
-              },
-            ],
-          },
-        ],
+        stateAry: [],
         lineAry: [],
       },
-
     ],
+  //用于DEMO
+  demoStateData: {}
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -85,22 +52,11 @@ window.store = {
       stateId: window.genId("state"),
       inputAry: [],
       outputAry: [],
+      parent: null,
+      mode:'normal',
       x: data.x,
       y: data.y,
-      children:
-        data.stateType === "loopDiv"
-          ? [
-            {
-              name: "child1",
-              stateId: "state-child1",
-              // stateType: "loopBlock",
-              inputAry: [],
-              outputAry: [],
-              x: 50,
-              y: 50,
-            },
-          ]
-          : [],
+      children:[],
     }
   },
   addState(data) {
@@ -162,35 +118,60 @@ window.store = {
    * 将连线数据和连线的首尾2个状态关联
    * @param  { threadIndex, lineData }data
    */
+
   relateLine2startState(data) {
+    let result = []
+    // 用于深度搜索stateId的方法，寻找到的state存储在result内
+    function traverse(stateAry) {
+      for (var i in stateAry){
+        if (stateAry[i].stateId === data.lineData.startState.stateId){
+          result.push(stateAry[i]);
+          return
+        }
+        traverse(stateAry[i].children);
+      }
+    };
+
     if (data.lineData.startState) {
-      let outputAry = this.stateData.threadAry[data.threadIndex].stateAry[
-        data.lineData.startState.stateIndex
-      ].outputAry;
+      traverse(this.stateData.threadAry[data.threadIndex].stateAry)
+      let outputAry = result[0].outputAry;
       if (!outputAry) {
         outputAry = [];
-        this.stateData.threadAry[data.threadIndex].stateAry[
-          data.lineData.startState.stateIndex
-        ].outputAry = outputAry;
+        result[0].outputAry = outputAry;
       }
       outputAry.push({
         lineId: data.lineData.lineId, //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
       });
     }
   },
+  /**
+   * 
+   * 
+   * 
+   */
   relateLine2endState(data) {
     if (
       data.lineData.endState &&
       data.lineData.endState.stateIndex !== null
     ) {
-      let inputAry = this.stateData.threadAry[data.threadIndex].stateAry[
-        data.lineData.endState.stateIndex
-      ].inputAry;
+      // 根据id来拿
+      let result = []
+      // 用于深度搜索stateId的方法，寻找到的state存储在result内
+      function traverse(stateAry) {
+        for (var i in stateAry){
+          if (stateAry[i].stateId === data.lineData.endState.stateId){
+            result.push(stateAry[i]);
+            return
+          }
+          traverse(stateAry[i].children);
+        }
+      };
+      traverse(this.stateData.threadAry[data.threadIndex].stateAry)
+      let inputAry = result[0].inputAry;
+      
       if (!inputAry) {
         inputAry = [];
-        this.stateData.threadAry[data.threadIndex].stateAry[
-          data.lineData.endState.stateIndex
-        ].inputAry = inputAry;
+        result[0].inputAry = inputAry;
       }
       inputAry.push({
         lineId: data.lineData.lineId,
@@ -214,7 +195,7 @@ window.store = {
 router.beforeEach((to, from, next)=>{
   console.log(to);
   if ((from.name === 'blockly' && to.name === 'state') || (to.name === 'blockly' && from.name === 'state')){
-    alert('同步数据... '); //TODO
+    console.log('同步数据... '); //TODO
   }
   next();
 })

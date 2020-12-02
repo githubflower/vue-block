@@ -23,9 +23,17 @@
           @mousemove="onConnecting"
           @mouseup="onMouseup"
         >
-          <h4 class="title" contenteditable="true" :style="titleStyle">
-            {{ thread.name }}
-          </h4>
+            <div class="operating" v-show="operationStatus == 'operating'" style="color: rgb(26,250,41);">
+              <img src="/static/imgs/operating.png">运行中</div>
+            <div class="pausing" v-show="operationStatus == 'pausing'" style="color: yellow;">
+              <img src="/static/imgs/pausing.png">暂停</div>
+            <div class="stopping" v-show="operationStatus == 'stopping'" style="color: red;">
+              <img src="/static/imgs/stopping.png">停止</div>
+            <div v-show=false></div>
+            <h4 class="title" contenteditable=true :style="titleStyle">
+              {{ thread.name }}
+            </h4>
+
           <div class="thread-body">
             <state-wrap
               v-for="(stateItem, index) in thread.stateAry"
@@ -33,6 +41,7 @@
               :stateData="stateItem"
               :index="index"
               :threadIndex="threadIndex"
+              :runningStateData="runningStateData"
               @updateStateData="updateStateData"
               @updateTempLineData="updateTempLineData"
               @updateMoveData="updateMoveData"
@@ -54,9 +63,11 @@
         :key="index2"
         :line="line"
         :threadIndex="threadIndex"
+        
       />
       <path-animation
-        :lineId="runningLineId">
+        v-if="isInCurrentThread(runningLineId)"
+        :runningLineId="runningLineId">
       </path-animation>
     </svg>
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
@@ -79,8 +90,9 @@ import StateWrap from "./StateWrap";
 import LineSvg from "./LineSvg";
 import PathAnimation from"./PathAnimation"
 import { lineCfg } from "./graphCfg.js";
-
+import Tools from "@/Tools.js";
 const line_h = lineCfg.line_h;
+const line_v = lineCfg.line_v;
 const line_radius = lineCfg.line_radius;
 const deepCopy = (obj) => {
   if (typeof obj !== "object") {
@@ -111,7 +123,7 @@ const deepCopy = (obj) => {
 
 export default {
   name: "ThreadSvg",
-  props: ["thread", "threadIndex", "runningLineId"],
+  props: ["thread", "threadIndex", "runningLineId", "runningStateData"],
   components: {
     StateWrap,
     LineSvg,
@@ -120,10 +132,13 @@ export default {
   data() {
     return {
       // bgImg: '../../../../static/imgs/grid3-50x50.png',
-      bgImg: "../../../../static/imgs/tmp3.png",
+      bgImg: "../../../static/imgs/tmp3.png",
+      arrowImg: "../../../static/imgs/startActive.png",
       showVirtualBox: false,
       showTempLine: false,
-      strokeRadius: 5,
+      componentKey: 0,
+      //线程的运行状态：只能为operating, pausing, stopping中的其中一个
+      operationStatus:"",
       tempLineClass: "templine",
       tempLineData: {
         startState: null,
@@ -137,6 +152,7 @@ export default {
           y: 0,
         },
         d: "",
+        isActive: false,
       },
       threadCount: 1,
       titleHeight: 35,
@@ -153,6 +169,16 @@ export default {
     };
   },
   methods: {
+    isInCurrentThread(lineId){
+      let currentThread = store.stateData.threadAry[this.threadIndex].lineAry;
+      for (let i=0; i<currentThread.length; i++){
+        if (currentThread[i].lineId == lineId){
+          return true
+        }
+      }
+      return false
+    },
+
     /**
      * 拖拽缩放部分
      */
@@ -182,7 +208,7 @@ export default {
         },
       });
       let moveData = this.moveData;
-      let threadData = statePageVue.threadAry[0];
+      let threadData = store.stateData.threadAry[this.threadIndex];
       // threadData = this.thread;
       // this.$set(this.thread.stateAry[this.moveData.stateIndex], 'width', this.thread.stateAry[this.moveData.stateIndex].width + (moveData.endPoint.x - moveData.startPoint.x))
       function translatePX2Num(str) {
@@ -222,26 +248,54 @@ export default {
      * 绘制临时连线
      */
     drawOnConnectingLine(startPoint, endPoint, lineRadius) {
-      // 鼠标在连接点左侧时绘制固定连线，以免影响美观
       let tempRadius = lineRadius;
-      if (endPoint.x < startPoint.x + line_h) {
-        this.updateTempLineData({
-          endPoint: endPoint,
-          d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-          m -5 -5 L ${startPoint.x + line_h} ${startPoint.y} L ${startPoint.x + line_h - 5} ${startPoint.y + 5}`,
-        });
-      }
       // y坐标相等时绘制直线
-      if (endPoint.y == startPoint.y) {
+      if (endPoint.y == startPoint.y && endPoint.x > startPoint.x) {
         this.updateTempLineData({
           endPoint: endPoint,
           d: `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${endPoint.y}
           m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
         });
-      } else {
-        // 当结束点的x, y坐标均大于起始点的时候
+      } 
+
+      // 鼠标在连接点左侧时
+      // 在这里不对被连接的状态块的宽度进行计算，等到连线完成之后再更新一次
+      if ((endPoint.x - line_h - lineRadius < startPoint.x &&
+          endPoint.y < startPoint.y)) {
+        this.updateTempLineData({
+          endPoint: endPoint,
+          d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
+          m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
+          m 0 0 V ${endPoint.y - line_v + lineRadius - 20}
+          m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h} ${endPoint.y - line_v - 20}
+          m 0 0 L ${endPoint.x - 20 + lineRadius} ${endPoint.y - line_v - 20}
+          m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${endPoint.x - 20} ${endPoint.y - line_v + lineRadius - 20}
+          m 0 0 V ${endPoint.y - lineRadius}
+          m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
+          m 0 0 L ${endPoint.x} ${endPoint.y}
+          m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
+        });
+      }
+      if (endPoint.x - line_h - lineRadius < startPoint.x &&
+          endPoint.y > startPoint.y){
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
+            m 0 0 V ${endPoint.y + line_v - line_radius + 20}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h} ${endPoint.y + line_v + 20}
+            m 0 0 L ${endPoint.x - 20 + line_radius} ${endPoint.y + line_v + 20}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20} ${endPoint.y + line_v - lineRadius + 20}
+            m 0 0 V ${endPoint.y + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y}
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
+          }) 
+          }
+
+        // 当结束点的x, y坐标均大于起始点的时候 
         if (
-          endPoint.x > startPoint.x + line_h + lineRadius &&
+          endPoint.x  > startPoint.x + line_h + lineRadius&&
           endPoint.y > startPoint.y
         ) {
           // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
@@ -299,7 +353,7 @@ export default {
             });
           }
         }
-      }
+      
     },
     onConnecting(e) {
       if (stateManage.isConnecting) {
@@ -325,17 +379,11 @@ export default {
       Object.keys(lineData).forEach((key) => {
         this.tempLineData[key] = lineData[key];
       });
-      // debugger;
     },
-    /**
-     * 
-     * TODO：在循环组件内连线无法监听，移动循环组件时连线起始点变化
-     * (循环组件内无法触发此方法)
-     */
+
     drawConnectLine(e) {
       //debugger;
       let endState = this.getEndState(e);
-      console.log("getting endstate...", endState)
       let lineData = this.copy(this.tempLineData);
       lineData.endState = endState;
       lineData.lineId = window.genId("line");
@@ -345,6 +393,7 @@ export default {
         lineData: lineData,
       });
     },
+
     copy(obj) {
       return deepCopy(obj);
     },
@@ -360,7 +409,8 @@ export default {
     },
     isDuplicateLine(line) {
       let dupFlag = false;
-      this.thread.lineAry.forEach((item) => {
+      let currentThread = store.stateData.threadAry[this.threadIndex]
+      currentThread.lineAry.forEach((item) => {
         if (this.isSameLine(item, line)) {
           dupFlag = true;
           return false;
@@ -395,12 +445,14 @@ export default {
       };
     },
     getEndPoint(e) {
+      //debugger;
       let curSvg = e.target.closest("svg");
       let curSvgRect = curSvg.getBoundingClientRect();
       let target_class = e.target.getAttribute("class");
       let regIsConnectPoint = /connect-point/;
+      let loopConnectPointReg = /loop-connect-point/;
       let point;
-      if (regIsConnectPoint.test(target_class)) {
+      if (regIsConnectPoint.test(target_class) || loopConnectPointReg.test(target_class)) {
         point = {
           x:
             e.target.getBoundingClientRect().left -
@@ -421,6 +473,7 @@ export default {
       return point;
     },
     onMouseup(e) {
+      //debugger;
       if (stateManage.isConnecting) {
         //TODO 触发EventObj更新lineObj
         let curSvg = e.target.closest("svg");
@@ -442,13 +495,21 @@ export default {
       }
     },
 
+    /**
+     * 
+     * 需要考虑移动带有其余嵌套状态的循环状态时将连线一并移动
+     * 
+     */
+
     drop(e) {
       if (e.dataTransfer.getData("operate") === "addState") {
         let threadPosInfo = e.target.getBoundingClientRect();
+        let leftGap = e.dataTransfer.getData("mousedowntoleft")
+        let topGap = e.dataTransfer.getData("mousedowntotop")
         let data = {
           index: this.threadIndex,
-          x: e.x - threadPosInfo.x,
-          y: e.y - threadPosInfo.y,
+          x: e.x - threadPosInfo.x - leftGap,
+          y: e.y - threadPosInfo.y - topGap,
           stateType: e.dataTransfer.getData("stateType"),
         };
         store.addState(data);
@@ -466,21 +527,61 @@ export default {
           });
           return flag;
         };
-        // debugger;
+
         let stateInThreadFlag = isStateIdInThread(
           theDragStateData.stateId,
           this.thread
         );
+        let findingIndex = (stateAry, DragStateId) =>{
+          let stateIndex = 0;
+          for(let i = 0; i < stateAry.length; i++){
+            if (stateAry[i].stateId === DragStateId){
+              stateIndex = i;
+              break
+            }
+          }
+          return stateIndex;
+        };
         if (stateInThreadFlag) {
+          // 进入这里说明是同一层级内部的拖动
+          let copiedIndexAry = Tools.deepCopy(statePageVue._dragData.indexAry);
+          let copiedThreadIndex = copiedIndexAry.pop();
+          let parentIndex = null;
+          theDragStateData.parent = parentIndex;
+          // 当拖动的组件为循环组件时，动态更新循环组件内children的parent
+          if(theDragStateData.children){
+            let i = 0;
+            while(i < theDragStateData.children.length){
+              // 通过在stateAry里寻找父数据来确认parent，不可以直接用length
+              theDragStateData.children[i].parent = findingIndex(statePageVue.threadAry[copiedThreadIndex].stateAry, theDragStateData.stateId);
+              i++;
+            }
+        }
+          //console.log("drop内移动阶段：", theDragStateData)
           return false;
         }
-
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
         let x = e.pageX - this.$el.getBoundingClientRect().left;
         let y = e.pageY - this.$el.getBoundingClientRect().top;
         theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
         theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
-
+        // 放开时重新计算状态的parent属性
+        
+        let copiedIndexAry = Tools.deepCopy(statePageVue._dragData.indexAry);
+        let copiedThreadIndex = copiedIndexAry.pop();
+        let parentIndex = null;
+        theDragStateData.parent = parentIndex;
+        // 当拖动的组件为循环组件时，动态更新循环组件内children的parent
+        if(theDragStateData.children){
+          
+          let i = 0;
+          while(i < theDragStateData.children.length){
+            // 走到这里说明是从循环内部拖动到外部，因为增加了一个模块，直接用stateAry.length来做parent
+            theDragStateData.children[i].parent = statePageVue.threadAry[copiedThreadIndex].stateAry.length;
+            i++;
+          }
+        }
+        //console.log("drop内嵌套阶段：", theDragStateData)
         let tI = statePageVue._dragData.indexAry.pop(); //线程索引
         statePageVue.threadAry[tI].stateAry.push(theDragStateData);
 
@@ -497,8 +598,23 @@ export default {
         }, 10);
       }
     },
-
+    // 需要修改成通过id寻找state
     updateStateData(stateData) {
+      //debugger;
+      let currentThread = store.stateData.threadAry[this.threadIndex]
+      let result = []
+      // 用于深度搜索stateId的方法，寻找到的state存储在result内
+      function traverse(stateAry) {
+        for (var i in stateAry){
+            if (stateAry[i].stateId === stateData.stateId){
+            result.push(stateAry[i]);
+            return
+            }
+          traverse(stateAry[i].children);
+        } 
+      };
+      traverse(currentThread.stateAry);
+      let currentState = result[0]
       if (typeof stateData.data !== "undefined") {
         let update = (obj, data) => {
           //组件嵌套的情况，会将数据依次往上传递，传递的过程中会包一层data
@@ -509,22 +625,49 @@ export default {
             obj[data.index].y = data.transform.y;
           }
         };
-        update(this.thread.stateAry, stateData);
+        update(currentThread.stateAry, stateData);
+        this.updateLines(stateData);
       } else {
-        // todo 后续这个数据应更新到外层的threadAry     this.thread相当于只是临时的显示数据
-        this.thread.stateAry[stateData.index].x = stateData.transform.x;
-        this.thread.stateAry[stateData.index].y = stateData.transform.y;
+        //currentThread.stateAry[stateData.index].x = stateData.transform.x;
+        //currentThread.stateAry[stateData.index].y = stateData.transform.y;
+        currentState.x = stateData.transform.x;
+        currentState.y = stateData.transform.y;
         this.updateLines(stateData);
       }
     },
     /**
      * 更新某个状态块的所有输入连线和输出连线
+     * 
+     * 
      */
     updateLines(stateData) {
+      //debugger;
+      let currentThread = store.stateData.threadAry[this.threadIndex]
+      let result = []
+      // 用于深度搜索stateId的方法，寻找到的state存储在result内
+      function traverse(stateAry) {
+        for (var i in stateAry){
+            if (stateAry[i].stateId === stateData.stateId){
+            result.push(stateAry[i]);
+            return
+            }
+          traverse(stateAry[i].children);
+          }
+      };
+      traverse(currentThread.stateAry)
       let lineAry, curLine;
-      let state = this.thread.stateAry[stateData.index];
+
+      // 判断传入的stateData是通过事件传入的还是递归传入的childrenData
+      let state
+      if(!stateData.stateId){
+        state = stateData
+      }
+      else{
+        state = result[0]
+      }
+
       if (state.inputAry) {
-        lineAry = this.thread.lineAry;
+        lineAry = currentThread.lineAry;
         state.inputAry.forEach((inputLine) => {
           // inputLine --> state中保存的lineId以及对这个触发事件的描述等信息，没有真正的用于画连线的数据
           curLine = lineAry.find((line) => {
@@ -536,7 +679,7 @@ export default {
       }
 
       if (state.outputAry) {
-        lineAry = this.thread.lineAry;
+        lineAry = currentThread.lineAry;
         state.outputAry.forEach((outputLine) => {
           // inputLine --> state中保存的lineId以及对这个触发事件的描述等信息，没有真正的用于画连线的数据
           curLine = lineAry.find((line) => {
@@ -546,27 +689,117 @@ export default {
           this.updateOutputLineData(curLine, stateData);
         });
       }
+
+      // 在更新stateData的连线状态时递归更新stateData的children的连线状态。
+      // 因为拖动父状态时嵌套在父状态内的子状态没有独立事件，所以使用childrenData来更新连线数据
+      let copiedStateData = Tools.deepCopy(stateData)
+      let copiedState = Tools.deepCopy(state)
+      while(copiedStateData.data){
+        copiedStateData = copiedStateData.data
+      };
+      
+      while(state.children){
+        for (var i in state.children){
+          let copiedChildren = Tools.deepCopy(state.children[i]);
+          let childrenData;
+            //第一次计算嵌套组件的位置信息时调用if块
+            if(copiedStateData.AbsolutePosition){
+              childrenData = {
+                children: copiedChildren.children,
+                // 状态块的绝对位置
+                statePos: {
+                  x: copiedChildren.x + copiedStateData.AbsolutePosition.x,
+                  y: copiedChildren.y + copiedStateData.AbsolutePosition.y,
+                },
+                parentStatePos: copiedStateData.AbsolutePosition,
+                stateType: copiedChildren.stateType,
+                inputAry: copiedChildren.inputAry,
+                outputAry: copiedChildren.outputAry,
+                width: copiedChildren.width,
+                height: copiedChildren.height,
+                inLoop: true
+              }
+            }
+            //第二次以上计算嵌套组件的位置信息时调用else块
+            else{
+              childrenData = {
+                children: copiedChildren.children,
+                statePos: {
+                  x: copiedChildren.x + copiedStateData.statePos.x,
+                  y: copiedChildren.y + copiedStateData.statePos.y,
+                },
+                parentStatePos: copiedStateData.statePos,
+                stateType: copiedChildren.stateType,
+                inputAry: copiedChildren.inputAry,
+                outputAry: copiedChildren.outputAry,
+                width: copiedChildren.width,
+                height: copiedChildren.height,
+                inLoop: true
+              }
+            }
+          //}
+          this.updateLines(childrenData)
+        }
+        state = state.children
+      }
     },
 
     /**
      * 当连线的结束点变化时，动态更新连线
      *
      * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
-     * 
+     * TODO: 增加连线样式
      */
-    drawUpdateLine(curLine, endPoint, lineRadius) {
+    drawUpdateLine(curLine, stateHeight, endPoint, lineRadius) {
+      //debugger
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
-      if (endPoint.y == curLine.startPoint.y) {
+      if (endPoint.x > curLine.startPoint.x + line_h + lineRadius && endPoint.y == curLine.startPoint.y) {
         linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} L ${endPoint.x} ${endPoint.y} 
         m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
         curLine.endPoint = endPoint;
         curLine.d = linepath;
         return;
       }
+
+      
+      // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
+      if ((endPoint.x - line_h - lineRadius < curLine.startPoint.x &&
+          endPoint.y < curLine.startPoint.y) || (endPoint.x < curLine.startPoint.x && endPoint.y == curLine.startPoint.y)){
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y - lineRadius}
+            m 0 0 V ${endPoint.y - line_v - stateHeight + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h} ${endPoint.y - line_v - stateHeight}
+            m 0 0 L ${endPoint.x - 20 + lineRadius} ${endPoint.y - line_v - stateHeight}
+            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${endPoint.x - 20} ${endPoint.y - line_v - stateHeight + lineRadius}
+            m 0 0 V ${endPoint.y - lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y}
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
+            curLine.endPoint = endPoint;
+            curLine.d = linepath;
+            return;
+          }
+      // 当结束点的x坐标小于起始点时且y坐标大于起始点时
+      if (endPoint.x - line_h - lineRadius < curLine.startPoint.x &&
+          endPoint.y > curLine.startPoint.y){
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y + lineRadius}
+            m 0 0 V ${endPoint.y + line_v + stateHeight - line_radius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h} ${endPoint.y + line_v + stateHeight}
+            m 0 0 L ${endPoint.x - 20 + line_radius} ${endPoint.y + line_v + stateHeight}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20} ${endPoint.y + line_v + stateHeight - lineRadius}
+            m 0 0 V ${endPoint.y + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
+            m 0 0 L ${endPoint.x} ${endPoint.y}
+            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
+            curLine.endPoint = endPoint;
+            curLine.d = linepath
+            return
+          }
       // 当结束点的x, y坐标均大于起始点的时候
-      else {
+
         if (
           endPoint.x > curLine.startPoint.x + line_h + lineRadius &&
           endPoint.y > curLine.startPoint.y
@@ -585,9 +818,7 @@ export default {
             curLine.d = linepath;
             return;
           } else {
-            linepath = `M ${curLine.startPoint.x} ${
-              curLine.startPoint.y
-            } h ${line_h}
+            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
             m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y + lineRadius}
             m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * lineRadius} 
             m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
@@ -627,7 +858,7 @@ export default {
             curLine.d = linepath;
             return;
           }
-        }
+        
       }
     },
     /**
@@ -636,18 +867,53 @@ export default {
      * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
      * 
      */
-    drawUpdateOutputLine(startPoint, curLine, lineRadius) {
+    drawUpdateOutputLine(startPoint, stateHeight, curLine, lineRadius) {
+      //debugger
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
-      if (curLine.endPoint.y == startPoint.y) {
+      if (curLine.endPoint.x > startPoint.x + line_h + lineRadius && curLine.endPoint.y == startPoint.y) {
         linepath = `M ${startPoint.x} ${startPoint.y}v ${curLine.endPoint.y - startPoint.y} 
         m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
         m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
         curLine.startPoint = startPoint;
         curLine.d = linepath;
         return;
-      } else {
+      } 
+
+      if ((curLine.endPoint.x - line_h - lineRadius < startPoint.x &&
+          curLine.endPoint.y < startPoint.y) || (curLine.endPoint.x < startPoint.x && curLine.endPoint.y == startPoint.y)){
+            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
+            m 0 0 V ${curLine.endPoint.y - line_v - stateHeight + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h} ${curLine.endPoint.y - line_v - stateHeight}
+            m 0 0 L ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y - line_v - stateHeight}
+            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${curLine.endPoint.x - 20} ${curLine.endPoint.y - line_v - stateHeight + lineRadius}
+            m 0 0 V ${curLine.endPoint.y - lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y}
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y}
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`
+            curLine.startPoint = startPoint;
+            curLine.d = linepath;
+            return
+          }
+              // 当结束点的x坐标小于起始点时且y坐标大于起始点时
+      if (curLine.endPoint.x - line_h - lineRadius < startPoint.x &&
+          curLine.endPoint.y > startPoint.y){
+            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
+            m 0 0 V ${curLine.endPoint.y + line_v + stateHeight - line_radius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h} ${curLine.endPoint.y + line_v + stateHeight}
+            m 0 0 L ${curLine.endPoint.x - 20 + line_radius} ${curLine.endPoint.y + line_v + stateHeight}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.endPoint.x - 20} ${curLine.endPoint.y + line_v + stateHeight - lineRadius}
+            m 0 0 V ${curLine.endPoint.y + lineRadius}
+            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y}
+            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y}
+            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`
+            curLine.startPoint = startPoint;
+            curLine.d = linepath;
+            return
+          }
         // 当结束点的x, y坐标均大于起始点的时候
         if (
           curLine.endPoint.x > startPoint.x + line_h + lineRadius &&
@@ -707,66 +973,192 @@ export default {
             curLine.d = linepath;
             return;
           }
-        }
+        
       }
     },
     /**
      * 根据状态块的transform数据更新其endPoint, 然后更新用于画线的数据d   todo
      * 连线方案：判断当前的鼠标位置，目标状态，如果存在这样1个状态a，它的纵坐标和startState，endState相等，且a的横坐标在startState，endState中间，则需要绕着a画折线
      * 连线分多种复杂场景，这部分后面逐渐完善
+     * 
+     * 
      */
     updateLineData(curLine, stateData) {
+      //debugger;
       function translatePX2Num(str) {
         if (/px/.test(str)) {
           str = str.replace("px", "");
         }
         return +str;
       }
-      let stateType = this.thread.stateAry[stateData.index].stateType;
-      let stateHeight = parseInt(
-        translatePX2Num(this.thread.stateAry[stateData.index].height) / 2,
-        10
-      );
-
-      let endPoint;
-      if (stateType == "loopDiv") {
-        endPoint = {
-          x: stateData.transform.x,
-          y: stateData.transform.y + stateHeight + 36,
-        };
-      } else {
-        endPoint = {
-          x: stateData.transform.x,
-          y: stateData.transform.y + 56,
-        };
+      let currentThread = store.stateData.threadAry[this.threadIndex]
+      let result = []
+      // 用于深度搜索stateId的方法，寻找到的state存储在result内
+      function traverse(stateAry) {
+        for (var i in stateAry){
+            if (stateAry[i].stateId === stateData.stateId){
+            result.push(stateAry[i]);
+            return
+            }
+          traverse(stateAry[i].children);
+          }
+      };
+      traverse(currentThread.stateAry);
+      let currentState
+      if(!stateData.stateId){
+        currentState = stateData
       }
-      this.drawUpdateLine(curLine, endPoint, line_radius);
+      else{
+        currentState = result[0]
+      }
+
+      let stateType = currentState.stateType
+      let stateHeight = parseInt(translatePX2Num(currentState.height) / 2, 10)
+      //TODO: 需要设计一下要如何储存这里的height
+      window.localStorage.setItem("heightForCalc", stateHeight);
+      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
+      let copiedStateData = Tools.deepCopy(stateData);
+      let copiedTransform = copiedStateData.transform;
+      while(copiedStateData.data){
+        copiedStateData = copiedStateData.data
+      }
+      let endPoint;
+      //需要再添加一个条件来判断多层嵌套状态下传入的数据
+      if(!stateData.data){
+        //多层嵌套下时套用这个起始位置的数据
+        if(stateData.inLoop){
+          if (stateType == "loopDiv") {
+          endPoint = {
+            x: stateData.statePos.x,
+            y: stateData.statePos.y + stateHeight,
+          };
+          } else {
+          endPoint = {
+            x: stateData.statePos.x,
+            y: stateData.statePos.y + 20,
+            };
+          }
+        }
+        //无嵌套情况下套用这个位置的数据
+        else{
+          if (stateType == "loopDiv") {
+          endPoint = {
+            x: stateData.transform.x,
+            y: stateData.transform.y + stateHeight + 36,
+          };
+          } else {
+          endPoint = {
+            x: stateData.transform.x,
+            y: stateData.transform.y + 56,
+            };
+          }
+        
+        }
+      }
+      //单层嵌套下套用这个起始位置的数据
+      else{
+        if (stateType == "loopDiv") {
+          endPoint = {
+            x: copiedStateData.AbsolutePosition.x,
+            y: copiedStateData.AbsolutePosition.y + stateHeight,
+          };
+        } else {
+          endPoint = {
+            x: copiedStateData.AbsolutePosition.x,
+            y: copiedStateData.AbsolutePosition.y + 20,
+          };
+        }
+      }
+      this.drawUpdateLine(curLine, stateHeight, endPoint, line_radius);
     },
 
     updateOutputLineData(curLine, stateData) {
+      //debugger
       function translatePX2Num(str) {
         if (/px/.test(str)) {
           str = str.replace("px", "");
         }
         return +str;
       }
-      let stateType = this.thread.stateAry[stateData.index].stateType;
-      let stateHeight = translatePX2Num(
-        this.thread.stateAry[stateData.index].height
-      );
-      let startPoint;
-      if (stateType == "loopDiv") {
-        startPoint = {
-          x: stateData.transform.x,
-          y: stateData.transform.y + stateHeight / 2 + 36,
-        };
-      } else {
-        startPoint = {
-          x: stateData.transform.x + 79,
-          y: stateData.transform.y + 56,
-        };
+      let currentThread = store.stateData.threadAry[this.threadIndex]
+      
+      // 用于深度搜索stateId的方法，寻找到的state存储在result内
+      let result = []
+      function traverse(stateAry) {
+        for (let i in stateAry){
+            if (stateAry[i].stateId === stateData.stateId){
+            result.push(stateAry[i]);
+            return result
+            }
+          traverse(stateAry[i].children);
+          }
+      };
+      traverse(currentThread.stateAry);
+      let currentState
+      if(!stateData.stateId){
+        currentState = stateData
       }
-      this.drawUpdateOutputLine(startPoint, curLine, line_radius);
+      else{
+        currentState = result[0]
+      }
+      let stateType = currentState.stateType
+      let stateHeight = parseInt(translatePX2Num(currentState.height)/ 2, 10)
+      // 用于计算往左边模块连线时的被连线模块的高度
+      let inputStateHeight
+      inputStateHeight = parseInt(window.localStorage.getItem("heightForCalc"), 10)
+      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
+      let copiedStateData = Tools.deepCopy(stateData);
+      while(copiedStateData.data){
+        copiedStateData = copiedStateData.data
+      }
+      let startPoint;
+      //需要再添加一个条件来判断多层嵌套状态下传入的数据
+      if(!stateData.data){
+        //多层嵌套下时套用这个起始位置的数据
+        if(stateData.inLoop){
+          if (stateType == "loopDiv") {
+          startPoint = {
+            x: stateData.statePos.x + stateWidth + 2,
+            y: stateData.statePos.y + stateHeight,
+          };
+          } else {
+            startPoint = {
+              x: stateData.statePos.x + stateWidth,
+              y: stateData.statePos.y + stateHeight,
+            };
+          }
+        }
+        //无嵌套情况下套用这个位置的数据
+        else{
+          if (stateType == "loopDiv") {
+          startPoint = {
+            x: stateData.transform.x + stateWidth + 2,
+            y: stateData.transform.y + stateHeight + 36,
+          };
+          } else {
+            startPoint = {
+              x: stateData.transform.x + 79,
+              y: stateData.transform.y + 56,
+            };
+          }
+        }
+    
+      }
+      else{
+        //单层嵌套下套用这个起始位置的数据
+        if (stateType == "loopDiv") {
+          startPoint = {
+            x: copiedStateData.AbsolutePosition.x + stateWidth + 2,
+            y: copiedStateData.AbsolutePosition.y + stateHeight + 1,
+          };
+        } else {
+          startPoint = {
+            x: copiedStateData.AbsolutePosition.x + 79,
+            y: copiedStateData.AbsolutePosition.y + 20,
+          };
+        }
+      }
+      this.drawUpdateOutputLine(startPoint, inputStateHeight, curLine, line_radius);
     },
     startResize(e) {
       this.showVirtualBox = true;
@@ -788,6 +1180,16 @@ export default {
       });
       this._lastHeight = this.thread.height;
     },
+
+
+    /**
+     * TODO:自动布局
+     *
+     */
+     autoPosition(){
+       var style = document.getElementsByClassName("thread")[this.threadIndex].getAttribute("style");
+       var depth;
+     },
   },
 
   mounted() {
@@ -856,6 +1258,7 @@ div.thread {
     border-radius: 4px;
   }
 }
+
 h4.title {
   margin: 0;
   width: 100%;
@@ -863,11 +1266,41 @@ h4.title {
   padding-left: 15px;
   line-height: 35px;
   color: #ffffff;
+  background-color: rgba(72, 122, 254, 0.42);
   // background-color: rgba(0, 219, 255, 0.42);
-  background-color: rgba(72, 122, 254, 0.6);
     // background-color: #487afe;
     // background-image: linear-gradient(100deg, #82FDFF, #7898F9);
 }
+.operating, .pausing, .stopping{
+  margin: 0;
+  line-height: 35px;
+  height: 35px;
+  padding-right: 15px;
+  font-size: 15px;
+  text-align: center;
+  float:right;
+  img{
+    position: relative;
+    top: 5px;
+    right: 3px;
+  }
+}
+
+/*
+.operating{
+  margin: 0;
+  right:15%;
+  line-height: 35px;
+  height: 35px;
+  color: rgb(26,250,41);
+  font-size: 15px;
+  text-align: center;
+  background-color: rgba(72, 122, 254, 0.42);
+}
+img{
+  position: relative;
+  top: 4px;
+}*/
 .thread-body {
   position: relative;
   height: calc(100% - 35px);

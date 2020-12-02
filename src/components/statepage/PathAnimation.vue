@@ -1,21 +1,23 @@
 <template>
-      <g :id="lineId + '-animation'" v-show=isLineId>
-        <path id="calc" :d="getAnimationPath(this.lineId)" :style="{fill:'none'}"/>
-        <rect width="10" height="10" fill="#00ffff">
-          <animateMotion begin="0s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc"></mpath>
-          </animateMotion>
-        </rect>
-        <rect width="10" height="10" fill="#00ffff">
-          <animateMotion begin="0.1s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc"></mpath>
-          </animateMotion>
-        </rect>
-        <rect width="10" height="10" fill="#00ffff">
-          <animateMotion  begin="0.2s" dur="1.2s" repeatCount="indefinite">
-            <mpath xlink:href="#calc"></mpath>
-          </animateMotion>
-        </rect>
+      <g>
+        <path id="calc" :d="linePath" :style="{fill:'none'}"/>
+
+          <rect width="10" height="10" fill="#00ffff">
+            <animateMotion begin="0s" dur="1.2s" repeatCount="indefinite">
+              <mpath xlink:href="#calc"></mpath>
+            </animateMotion>
+          </rect>
+          <rect width="10" height="10" fill="#00ffff">
+            <animateMotion begin="0.1s" dur="1.2s" repeatCount="indefinite">
+              <mpath xlink:href="#calc"></mpath>
+            </animateMotion>
+          </rect>
+          <rect width="10" height="10" fill="#00ffff">
+            <animateMotion begin="0.2s" dur="1.2s" repeatCount="indefinite">
+              <mpath xlink:href="#calc"></mpath>
+            </animateMotion>
+          </rect>
+
       </g>
 </template>
 
@@ -23,34 +25,23 @@
 export default {
   
   name: "pathAnimation",
-  props: ['lineId'],
+  props: ['runningLineId'],
   data() {
     return {
-      isLineId: true,
     };
   },
   methods:{
-    /**
-     * 
-     * 计算用于显示动画运行时箭头的路径
-     * 
-     */
-    getLinePath(lineId){
-      if(!document.getElementById(lineId)){
-        this.isLineId = false
-        return
-      }
-      return document.getElementById(lineId).getAttribute('d')
-    },
+
     /**
      * 计算用于运行时动画的动画路径
+     * 
      * @param {lineId}
      * 
      */
     getAnimationPath(lineId){
       if(!document.getElementById(lineId)){
         this.isLineId = false
-        return
+        return 'm 0 0';
       }
       var dom = document.getElementById(lineId);
       let path = dom.getAttribute("d");
@@ -66,8 +57,13 @@ export default {
       let startPoint = path.match(startReg)[0];
       // 获取动画圆角拐点位置
       let curveList = path.match(curveReg);
-      if(curveList){
+      if(curveList && curveList.length == 2){
         for(let i = 0; i < 2; i++){
+          curveList[i].replace(/\s\s+/,"")
+        }
+      }
+      if(curveList && curveList.length == 4){
+        for(let i = 0; i < 4; i++){
           curveList[i].replace(/\s\s+/,"")
         }
       }
@@ -92,10 +88,27 @@ export default {
         let secondCurve = curveList[1].split(" ").slice(6,9);
         let secondCurveX = parseInt(secondCurve[0], 10);
         let secondCurveY = parseInt(secondCurve[1], 10);
-        path = path.replace(firstCurveX, firstCurveX - 5);
-        path = path.replace(firstCurveY, firstCurveY - 5);
-        path = path.replace(secondCurveX, secondCurveX - 5);
-        path = path.replace(secondCurveY, secondCurveY - 5);
+        if(curveList.length == 2)
+          path = path.replace(firstCurveX, firstCurveX - 5);
+          path = path.replace(firstCurveY, firstCurveY - 5);
+          path = path.replace(secondCurveX, secondCurveX - 5);
+          path = path.replace(secondCurveY, secondCurveY - 5);
+        if(curveList.length == 4){
+          path = path.replace(firstCurveX, firstCurveX - 5);
+          path = path.replace(firstCurveY, firstCurveY -5);
+          path = path.replace(secondCurveX, secondCurveX);
+          path = path.replace(secondCurveY, secondCurveY);
+          let thirdCurve = curveList[2].split(" ").slice(6,9);
+          let thirdCurveX = parseInt(thirdCurve[0], 10);
+          let thirdCurveY = parseInt(thirdCurve[1], 10);
+          let fourthCurve = curveList[3].split(" ").slice(6,9);
+          let fourthCurveX = parseInt(fourthCurve[0], 10);
+          let fourthCurveY = parseInt(fourthCurve[1], 10);
+          path = path.replace(thirdCurveX, thirdCurveX -5);
+          path = path.replace(thirdCurveY, thirdCurveY -5);
+          path = path.replace(fourthCurveX, fourthCurveX );
+          path = path.replace(fourthCurveY, fourthCurveY -5);
+        }
       }
       // 修改动画开始位置
       path = path.replace(startX, startX - 5);
@@ -108,6 +121,11 @@ export default {
       return path
     },
   },
+  computed: {
+      linePath: function(){
+          return this.getAnimationPath(this.runningLineId);
+      }
+  }
 };
 </script>
 

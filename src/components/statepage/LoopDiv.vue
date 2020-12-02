@@ -1,7 +1,8 @@
 <template>
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
-  <div :index="index" :class="['state-div', { 'is-dragging': isDragging }]">
+  <div :index="index" :class="['state-div', { 'is-dragging': isDragging }, { 'active': isActive }, {'selected': isSelected}]" 
+       @click="activeLines">
     <span class="icon" :style="{ backgroundImage: `url( ${loopIcon})` }"></span>
     <el-input
       v-if="showInput"
@@ -12,7 +13,7 @@
       @blur="hideInput"
     ></el-input>
     <p v-else :title="stateData.name" @dblclick="rename">
-      {{ stateData.name }}
+      {{ stateData.name.length > 8 ? stateData.name.slice(0,8) + '...' : stateData.name }}
     </p>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
     <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
@@ -45,7 +46,8 @@
         </li>
       </ul>
     </div>
-    <div class="connect-point in"></div>
+    <div 
+      class="connect-point in loop-start-point"></div>
     <div
       class="connect-point out"
       @mousedown="onConnectPointMousedown"
@@ -73,6 +75,8 @@ export default {
       loopIcon: "../../../static/imgs/loop-blue.png",
       showInput: false,
       isDragging: false,
+      isActive: false,
+      isSelected: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
       showInputAry: false,
@@ -80,6 +84,32 @@ export default {
     };
   },
   methods: {
+    activeLines(){
+      this.isSelected = !this.isSelected
+      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
+      //遍历被选中的state的连线输入和连线输出
+      //TODO
+      let curLine;
+      if(this.stateData.inputAry){
+        this.stateData.inputAry.forEach((inputLine) => {
+          curLine = currentLineAry.find((line) => {
+            //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
+            return line.lineId === inputLine.lineId;
+          });
+
+          curLine.isActive = this.isSelected
+        })
+      }
+      if(this.stateData.outputAry){
+        this.stateData.outputAry.forEach((outputLine) => {
+          curLine = currentLineAry.find((line) => {
+            //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
+            return line.lineId === outputLine.lineId;
+          });
+          curLine.isActive = this.isSelected
+        })
+      }
+    },
     genId() {
       return window.genId("state");
     },
@@ -90,8 +120,10 @@ export default {
     },
     isConnectPoint(dom) {
       let connectPointReg = /connect-point/;
+      let loopStartPointReg = /loop-start-point/;
+      let loopContinuePointReg = /loop-continue-point/;
       let classStr = dom.getAttribute("class");
-      if (connectPointReg.test(classStr)) {
+      if (connectPointReg.test(classStr) || loopStartPointReg.test(classStr) || loopContinuePointReg.test(classStr)) {
         return true;
       }
       return false;
@@ -107,6 +139,7 @@ export default {
      * 鼠标在连接点按下
      */
     onConnectPointMousedown(e) {
+      debugger;
       // this.operate = IS_CONNECTING;
       window.stateManage.isConnecting = true;
       let boundingRect = e.target.getBoundingClientRect();
@@ -131,7 +164,6 @@ export default {
         y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
       };
     },
-
 
     onMouseup(e) {
         stateManage.isConnecting = false;
@@ -212,6 +244,8 @@ export default {
       // this.$emit('resizeSvg', needResizeInfo);
     },
     updatePosition(dom) {
+      // 获取当前线程框的绝对位置
+      let threadPos = document.getElementsByClassName("thread")[this.threadIndex].getBoundingClientRect()
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
@@ -233,6 +267,12 @@ export default {
           y: cy,
         },
         index: this.index,
+        stateId: this.stateData.stateId,
+        // 相对于当前线程框的绝对位置
+        AbsolutePosition:{
+          x: dom.getBoundingClientRect().left - threadPos.left,
+          y: dom.getBoundingClientRect().top - threadPos.top
+        }
       });
     },
     getStyleTransform(dom) {
@@ -369,6 +409,9 @@ export default {
   color: #ce5050;
   border-color: #ce5050;
 }
+.state-div.selected{
+  border-color: @qkmOrange
+}
 span.icon {
   position: absolute;
   display: inline-block;
@@ -435,6 +478,7 @@ span.icon {
 .connect-point.out {
   transform: translate(50%, -50%);
 }
+
 .is-dragging {
   cursor: move;
 }

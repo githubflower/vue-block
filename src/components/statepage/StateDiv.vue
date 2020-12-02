@@ -1,24 +1,33 @@
 <template>
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
-  <div :index="index" :class="['state-div', { 'is-dragging': isDragging }]">
-    <el-input
-      v-if="showInput"
-      class="state-name-input"
-      v-model="stateData.name"
-      style="position: relative; top: 4px"
-      @keyup.enter.native="hideInput"
-      @blur="hideInput"
-    ></el-input>
-    <p v-else :title="stateData.name" @dblclick="rename">
-      {{ stateData.name }}
-    </p>
+  <div :index="index" 
+       :class="['state-div', { 'is-dragging': isDragging },{'selected': isSelected}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
+       
+       @click.prevent=activeLines>
+
+    <div :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus +'-animation' : '']" :v-show="runningStateData.runningStatus">
+    </div>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
     <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
+      <el-input
+        v-if="showInput"
+        :class="['state-name-input']"
+        v-model="stateData.name"
+        style="position: relative; top: 4px"
+        @keyup.enter.native="hideInput"
+        @blur="hideInput"
+      ></el-input>
+      <p 
+        :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
+        v-else :title="stateData.name" 
+        @dblclick="rename">
+        {{ stateData.name.length > 5 ? stateData.name.slice(0,5) + '...' : stateData.name }}
+      </p>
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
-      @click="showInputAry = !showInputAry"
+      @click.stop="showInputAry = !showInputAry"
     >
       {{ stateData.inputAry.length }}
       <ul class="input-list" v-show="showInputAry">
@@ -30,7 +39,7 @@
     <div
       v-show="stateData.outputAry && stateData.outputAry.length"
       class="out event-count"
-      @click="showOutputAry = !showOutputAry"
+      @click.stop="showOutputAry = !showOutputAry"
     >
       {{ stateData.outputAry.length }}
       <ul class="output-list" v-show="showOutputAry">
@@ -64,11 +73,12 @@ const isNumber = (str) => {
 };
 export default {
   name: "StateDiv",
-  props: ["stateData", "index", "threadIndex"],
+  props: ["stateData", "index", "threadIndex", "runningStateData"],
   data() {
     return {
       showInput: false,
       isDragging: false,
+      isSelected: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
       showInputAry: false,
@@ -76,6 +86,32 @@ export default {
     };
   },
   methods: {
+    stateStyle(){
+      return `height: ${this.stateData.height}px; width: ${this.stateData.width}px`
+    },
+    activeLines(){
+      this.isSelected = !this.isSelected
+      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
+      let curLine;
+      if(this.stateData.inputAry){
+        this.stateData.inputAry.forEach((inputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === inputLine.lineId;
+          });
+
+          curLine.isActive = this.isSelected
+        })
+      }
+      if(this.stateData.outputAry){
+        this.stateData.outputAry.forEach((outputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === outputLine.lineId;
+          });
+          curLine.isActive = this.isSelected
+        })
+      }
+      store.demoStateData = this.stateData
+    },
     genId() {
       return window.genId("state");
     },
@@ -202,6 +238,8 @@ export default {
       // this.$emit('resizeSvg', needResizeInfo);
     },
     updatePosition(dom) {
+      // 获取当前线程框的绝对位置
+      let threadPos = document.getElementsByClassName("thread")[this.threadIndex].getBoundingClientRect()
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
@@ -223,6 +261,12 @@ export default {
           y: cy,
         },
         index: this.index,
+        stateId: this.stateid,
+        // 相对于当前线程框的绝对位置
+        AbsolutePosition:{
+          x: dom.getBoundingClientRect().left - threadPos.left,
+          y: dom.getBoundingClientRect().top - threadPos.top
+        }
       });
     },
     getStyleTransform(dom) {
@@ -272,6 +316,7 @@ export default {
       return line.desc;
     },
     activeLine(lineId) {
+      debugger;
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
@@ -337,11 +382,10 @@ export default {
 
 <style scoped>
 .state-div {
-  width: 76px;
-  height: 40px;
+  width: 100%;
+  height: 100%;
   border: 1px solid #aaaaaa;
   box-shadow: 1px 1px 3px 0px #aaaaaa;
-  /* background-color: #ccdd00; */
   border-radius: 5px;
   color: #aaaaaa;
 }
@@ -349,7 +393,87 @@ export default {
   color: #ffffff;
   border-color: #ffffff;
 }
-.state-div > p {
+.state-div.active{
+  border-color:rgb(112, 255, 255);
+  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+}
+.state-div.selected{
+  border-color:rgb(112, 255, 255);
+  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+}
+.active-animation{
+  width: 7px;
+  height: 7px;
+  top: -3.5px;
+  left: -3.5px;
+  border-radius: 2px;
+  background:rgb(112, 255, 255);
+  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+  position: relative;
+  float: left;
+  animation-name: activeMove;
+  animation-duration:1.2s;
+  animation-timing-function:linear;
+  animation-iteration-count:infinite;
+  animation-play-state:running;
+}
+ @keyframes activeMove
+  {
+    0%   {left:-3.5px; top:-3.5px;}
+    25%  {left:72.5px; top:-3.5px;}
+    50%  {left:72.5px; top:36.5px;}
+    75%  {left:-3.5px; top:36.5px;}
+    100% {left:-3.5px; top:-3.5px;}
+  }
+.state-div.error{
+  border-color:rgba(232, 62, 62, 0.80);
+  box-shadow: 1px 1px 3px 0px rgba(232, 62, 62, 0.80);
+}
+.error-animation{
+  width: 98%;
+  height: 98%;
+  border: 4px solid rgb(232 ,62, 62);
+  float: left;
+  border-radius: 2px;
+  top: -10px;
+  left: -20px;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+.state-div.warning{
+  border-color:rgb(241,135,19, 0.80);
+  box-shadow: 1px 1px 3px 0px rgba(241,135,19, 0.80);
+}
+.warning-animation{
+  width: 98%;
+  height: 98%;
+  border: 4px solid rgb(241,135,19);
+  float: left;
+  border-radius: 2px;
+  top: -10px;
+  left: -20px;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+@keyframes errorWarningMove{
+  0% {opacity: 1}
+  25% {opacity: 0.7}
+  50% {opacity: 0.35}
+  75% {opacity: 0.7}
+  100% {opacity: 1}
+}
+
+p{
   display: -webkit-box;
   position: relative;
   top: 50%;
@@ -360,6 +484,33 @@ export default {
   text-overflow: ellipsis;
   overflow: hidden;
   font-size: 14px;
+  filter: none;
+  background: inherit;
+}
+p.active{
+  float: left;
+  position: absolute;
+  top: 21px;
+  right: 4px;
+  text-align: center;
+}
+
+p.error{
+  float: left;
+  position: absolute;
+  background: inherit;
+  bottom:1px;
+  left: 5px;
+  text-align: center;
+}
+
+p.warning{
+  float: left;
+  position: absolute;
+  background: inherit;
+  bottom:1px;
+  left: 5px;
+  text-align: center;
 }
 .event-count {
   width: 20px;
@@ -396,8 +547,12 @@ export default {
   border: 2px solid #ff0000 !important;
   cursor: default;
 }
-.state-div:hover .connect-point {
+.state-div:hover .connect-point.in {
   border: 2px solid blue;
+  cursor: default;
+}
+.state-div:hover .connect-point.out {
+  border: 2px solid rgb(251, 255, 0);
   cursor: default;
 }
 .connect-point.in {

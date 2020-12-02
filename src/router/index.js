@@ -47,7 +47,6 @@ export default new Router({
           name: 'state',
           component: StatePage,
           beforeRouteLeave(to, from, next) {
-            alert(to + '\n' + from);
             next();
           }
         },
@@ -56,7 +55,6 @@ export default new Router({
           name: 'blockly',
           component: BlocklyPage,
           beforeRouteLeave(to, from, next){
-            alert(to + '\n' + from);
             next();
           }
         },

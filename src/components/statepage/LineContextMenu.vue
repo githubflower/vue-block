@@ -20,15 +20,17 @@
       style="
         background-color: #ffffff;
         width: 400px;
-        padding: 5px;
-        border-radius: 4px;
+        border-radius: 5px;
       "
     >
-      <el-form-item label="事件描述">
+      <el-form-item label="事件描述" 
+        style="
+        padding: 5px;
+        ">
         <el-input type="textarea" v-model="form.desc"></el-input>
       </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="onSubmit">确定</el-button>
+      <el-form-item style="padding: 5px;">
+        <el-button type="primary" @click="onSubmit" >确定</el-button>
         <el-button @click="onCancelClick">取消</el-button>
       </el-form-item>
     </el-form>
@@ -155,5 +157,9 @@ export default {
 .line-context-menu li:hover {
   background-color: #e6f7ff;
   cursor: pointer;
+}
+
+.el-textarea .el-textarea__inner{
+  resize: none;
 }
 </style>

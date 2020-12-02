@@ -38,11 +38,10 @@ let deepCopy = (obj) => {
             }
         }
     }
-
     return ret;
 }
 
 export default {
     downloadFlie: downloadFlie,
-    deepCopy: deepCopy
+    deepCopy: deepCopy,
 }
