@@ -46,13 +46,18 @@
               @updateTempLineData="updateTempLineData"
               @updateMoveData="updateMoveData"
               @stopMoving="stopMoving"
+              @disActivatePrevState="disActivatePrevState"
             />
           </div>
         </foreignObject>
       </g>
-      <!--  <g v-show="showTempLine">
-                <path d="" class="templine"></path>
-      </g>-->
+      <defs>
+        <filter id="f1" x="0" y="0" width="200%" height="200%">
+          <feOffset result="offOut" in="SourceGraphic" dx="1.5" dy="1.5" />
+          <feGaussianBlur result="blurOut" in="offOut" stdDeviation="3" />
+          <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+        </filter>
+      </defs>
       <line-svg
         v-show="showTempLine"
         :lineClass="tempLineClass"
@@ -63,12 +68,12 @@
         :key="index2"
         :line="line"
         :threadIndex="threadIndex"
-        
       />
       <path-animation
         v-if="isInCurrentThread(runningLineId)"
         :runningLineId="runningLineId">
       </path-animation>
+      
     </svg>
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
     <i
@@ -94,6 +99,7 @@ import Tools from "@/Tools.js";
 const line_h = lineCfg.line_h;
 const line_v = lineCfg.line_v;
 const line_radius = lineCfg.line_radius;
+const highlight_limit = lineCfg.highlight_limit
 const deepCopy = (obj) => {
   if (typeof obj !== "object") {
     return obj;
@@ -136,10 +142,10 @@ export default {
       arrowImg: "../../../static/imgs/startActive.png",
       showVirtualBox: false,
       showTempLine: false,
-      componentKey: 0,
       //线程的运行状态：只能为operating, pausing, stopping中的其中一个
       operationStatus:"",
       tempLineClass: "templine",
+      activeStates:[],
       tempLineData: {
         startState: null,
         endState: null,
@@ -152,7 +158,6 @@ export default {
           y: 0,
         },
         d: "",
-        isActive: false,
       },
       threadCount: 1,
       titleHeight: 35,
@@ -178,7 +183,31 @@ export default {
       }
       return false
     },
-
+    disActivatePrevState(selectedData){
+      //若超出的高亮块的限制，将存储在activeStates内的块全部取消高亮
+      if(selectedData.state.selected == false){
+        return;
+      }
+      else{
+        if(this.activeStates.length + 1> highlight_limit){
+          while(this.activeStates.length > 0){
+            let currentData = this.activeStates.pop()
+            currentData.state.selected = false;
+            for (let i=0; i<currentData.lines.length; i++){
+              //取消高亮的块与下一个高亮的块的连线重叠的情况
+              if(currentData.lines[i].startState.stateId == selectedData.state.stateId || currentData.lines[i].endState.stateId == selectedData.state.stateId){
+                continue;
+              }
+              else{
+                currentData.lines[i].active = false;
+              }
+              
+            }
+          }
+        }
+        this.activeStates.push(selectedData)
+      }
+    },
     /**
      * 拖拽缩放部分
      */
@@ -246,6 +275,7 @@ export default {
 
     /*
      * 绘制临时连线
+     * 需要修改以对应判断重复连线的方法
      */
     drawOnConnectingLine(startPoint, endPoint, lineRadius) {
       let tempRadius = lineRadius;
@@ -398,20 +428,20 @@ export default {
       return deepCopy(obj);
     },
     /**
-     *  判断两根连线是否相同,如果连线1的开始状态==连线2的开始状态，且连线1的结束状态==连线2的结束状态，说明是同一根连线
+     * 判断两根连线是否相同,如果连线1的开始状态==连线2的开始状态，且连线1的结束状态==连线2的结束状态，说明是同一根连线
+     * 因为鼠标松开之前无法更新连线的endstate,手动获取endstate用于判断
      * @return Boolean
      */
-    isSameLine(line1, line2) {
+    isSameLine(line1, line2, endState) {
       return (
-        line1.startState === line2.startState &&
-        line1.endState === line2.endState
+        (line1.startState.stateId == line2.startState.stateId) && (line1.endState.stateId == endState.stateId)
       );
     },
-    isDuplicateLine(line) {
+    isDuplicateLine(line,endState) {
       let dupFlag = false;
       let currentThread = store.stateData.threadAry[this.threadIndex]
       currentThread.lineAry.forEach((item) => {
-        if (this.isSameLine(item, line)) {
+        if (this.isSameLine(item, line, endState)) {
           dupFlag = true;
           return false;
         }
@@ -473,7 +503,9 @@ export default {
       return point;
     },
     onMouseup(e) {
-      //debugger;
+      if(!stateManage.isConnecting){
+        this.showTempLine = false;
+      }
       if (stateManage.isConnecting) {
         //TODO 触发EventObj更新lineObj
         let curSvg = e.target.closest("svg");
@@ -481,9 +513,10 @@ export default {
         let target_class = e.target.getAttribute("class");
         let regIsConnectPoint = /connect-point/;
         let existedLine = false;
+        let endState = this.getEndState(e);
         if (regIsConnectPoint.test(target_class)) {
           //绘制连接线
-          existedLine = this.isDuplicateLine(this.tempLineData);
+          existedLine = this.isDuplicateLine(this.tempLineData, endState);
           if (existedLine) {
             return;
           } else {
@@ -513,7 +546,9 @@ export default {
           stateType: e.dataTransfer.getData("stateType"),
         };
         store.addState(data);
-      } else {
+      } 
+      
+      else {
         let theDragStateData = JSON.parse(
           e.dataTransfer.getData("theDragStateData")
         );
@@ -596,9 +631,11 @@ export default {
         setTimeout(() => {
           dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
         }, 10);
+
+        
       }
     },
-    // 需要修改成通过id寻找state
+
     updateStateData(stateData) {
       //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
@@ -628,8 +665,6 @@ export default {
         update(currentThread.stateAry, stateData);
         this.updateLines(stateData);
       } else {
-        //currentThread.stateAry[stateData.index].x = stateData.transform.x;
-        //currentThread.stateAry[stateData.index].y = stateData.transform.y;
         currentState.x = stateData.transform.x;
         currentState.y = stateData.transform.y;
         this.updateLines(stateData);
@@ -641,7 +676,6 @@ export default {
      * 
      */
     updateLines(stateData) {
-      //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
@@ -748,7 +782,7 @@ export default {
      * 当连线的结束点变化时，动态更新连线
      *
      * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
-     * TODO: 增加连线样式
+     * 
      */
     drawUpdateLine(curLine, stateHeight, endPoint, lineRadius) {
       //debugger
@@ -1027,47 +1061,25 @@ export default {
       if(!stateData.data){
         //多层嵌套下时套用这个起始位置的数据
         if(stateData.inLoop){
-          if (stateType == "loopDiv") {
           endPoint = {
             x: stateData.statePos.x,
             y: stateData.statePos.y + stateHeight,
           };
-          } else {
-          endPoint = {
-            x: stateData.statePos.x,
-            y: stateData.statePos.y + 20,
-            };
-          }
         }
         //无嵌套情况下套用这个位置的数据
         else{
-          if (stateType == "loopDiv") {
           endPoint = {
             x: stateData.transform.x,
             y: stateData.transform.y + stateHeight + 36,
-          };
-          } else {
-          endPoint = {
-            x: stateData.transform.x,
-            y: stateData.transform.y + 56,
-            };
-          }
-        
+          };       
         }
       }
       //单层嵌套下套用这个起始位置的数据
       else{
-        if (stateType == "loopDiv") {
           endPoint = {
             x: copiedStateData.AbsolutePosition.x,
             y: copiedStateData.AbsolutePosition.y + stateHeight,
           };
-        } else {
-          endPoint = {
-            x: copiedStateData.AbsolutePosition.x,
-            y: copiedStateData.AbsolutePosition.y + 20,
-          };
-        }
       }
       this.drawUpdateLine(curLine, stateHeight, endPoint, line_radius);
     },
@@ -1116,33 +1128,18 @@ export default {
       if(!stateData.data){
         //多层嵌套下时套用这个起始位置的数据
         if(stateData.inLoop){
-          if (stateType == "loopDiv") {
-          startPoint = {
-            x: stateData.statePos.x + stateWidth + 2,
-            y: stateData.statePos.y + stateHeight,
-          };
-          } else {
             startPoint = {
-              x: stateData.statePos.x + stateWidth,
+              x: stateData.statePos.x + stateWidth + 2,
               y: stateData.statePos.y + stateHeight,
             };
-          }
         }
         //无嵌套情况下套用这个位置的数据
         else{
-          if (stateType == "loopDiv") {
-          startPoint = {
-            x: stateData.transform.x + stateWidth + 2,
-            y: stateData.transform.y + stateHeight + 36,
-          };
-          } else {
             startPoint = {
-              x: stateData.transform.x + 79,
-              y: stateData.transform.y + 56,
+              x: stateData.transform.x + stateWidth + 3,
+              y: stateData.transform.y + stateHeight + 36,
             };
           }
-        }
-    
       }
       else{
         //单层嵌套下套用这个起始位置的数据
@@ -1153,8 +1150,8 @@ export default {
           };
         } else {
           startPoint = {
-            x: copiedStateData.AbsolutePosition.x + 79,
-            y: copiedStateData.AbsolutePosition.y + 20,
+            x: copiedStateData.AbsolutePosition.x + stateWidth + 3,
+            y: copiedStateData.AbsolutePosition.y + stateHeight,
           };
         }
       }
@@ -1356,4 +1353,5 @@ text {
   height: 100%;
   border: 1px dashed #ffffff;
 }
+
 </style>    

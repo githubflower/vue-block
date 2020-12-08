@@ -4,9 +4,11 @@
       <!-- <li v-show="isExpanded" class="power-on" :style="{ backgroundImage: `url(${ powerOnIcon })` }">上电</li> -->
       <!-- <li v-show="isExpanded" class="reset" :style="{ backgroundImage: `url(${ resetIcon })` }">回零</li> -->
       <!-- <li class="emergency-stop" :style="{ backgroundImage: `url(${ emergencyStopIcon })` }">急停</li> -->
-      <li class="emergency-stop" draggable="true">
-        <div class="shadow"></div>
+     <!--  <li class="emergency-stop" draggable="true">
         <span class="text">急停</span>
+      </li> -->
+      <li>
+         <el-button type="danger">急 停</el-button>
       </li>
     </ul>
     <!-- <span class="title">Robot控制</span> -->
@@ -22,8 +24,6 @@
       ]"
       @click="isExpanded = !isExpanded"
     ></i>
-
-    
   </div>
 </template>
 <script>
@@ -87,6 +87,7 @@ export default {
 }
 
 @menuHeight: 60px;
+@btnHeight: 40px;
 // @panelBgColor: #272B42;
 // @panelBgColor: #1B2143;
 @panelBgColor: #344b89;
@@ -151,19 +152,12 @@ export default {
 
 .inner-shadow {
   position: absolute;
-  top: 0;
+  top: -50px;
   right: 0;
 }
 .inner-shadow li {
   display: block;
-  width: 60px;
-  height: 60px;
-  line-height: 60px;
   text-align: center;
-  border-radius: 30px;
-  /*  border: 1px solid #00FFFF;
-    color: #00FFFF;
-    box-shadow: inset 0 0 25px 0px #00FFFF; */
   background-repeat: no-repeat;
   background-position: center center;
   cursor: pointer;
@@ -180,48 +174,30 @@ li.reset {
   box-shadow: inset 0 0 25px 0px #487afe;
 }
 li.emergency-stop {
-  border-radius: 5px;
-  position: relative;
-  padding: 5px;
-  border: 2px solid #ff0000;
-  border-radius: 42px;
-  /* animation: clockwiseRotate 8s linear infinite; */
-  /* box-shadow: inset 0 0 25px 0px #00FFFF; */
-}
-li.emergency-stop .shadow {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  top: 5px;
-  left: 5px;
-  line-height: 60px;
-  text-align: center;
-  border-radius: 30px;
-  border: 0px dashed #ff0000;
-  color: #ff2312;
-  /* box-shadow: inset 0 0 25px 0px #ff0000; */
-  box-shadow: 0 0 25px 0px #ff0000;
-  background-position: center center;
-  //   animation: anticlockwiseRotate 20s linear infinite;
-}
-li.emergency-stop .text {
-  width: 60px;
-  height: 60px;
-  text-align: center;
-  display: block;
-  position: absolute;
-  font-weight: bold;
-  top: 5px;
-  left: 5px;
-  /* transform: translate(-50%, -50%); */
-  color: #f7e016;
+  border-radius: 3px;
   background-color: #ff2312;
-  border-radius: 60px;
-  /* animation: anticlockwiseRotate360 8s linear infinite; */
-  z-index: 1;
-  transition: all 0.3s;
-  &:hover {
-    box-shadow: 0 0 25px 5px #ff0000;
+  .text {
+    display: block;
+    width: 60px;
+    height: @btnHeight;
+    line-height: @btnHeight;
+    text-align: center;
+    font-weight: bold;
+    color: #f7e016;
+    border: 1px solid #ff2312;
+    z-index: 1;
+    transition: all 0.3s;
+   /*  &:hover {
+      box-shadow: 0 0 25px 5px #ff0000;
+    } */
   }
+}
+.el-button--danger{
+  padding-left: 30px;
+  padding-right: 30px;
+  background-color: #ff2312;
+  border-color: #ff2312;
+  font-size: 16px;
+  font-weight: bold;
 }
 </style>

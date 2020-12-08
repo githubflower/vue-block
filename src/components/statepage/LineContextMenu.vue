@@ -158,7 +158,6 @@ export default {
   background-color: #e6f7ff;
   cursor: pointer;
 }
-
 .el-textarea .el-textarea__inner{
   resize: none;
 }

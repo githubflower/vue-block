@@ -26,14 +26,14 @@ window.store = {
   stateData: {
     threadAry: [
       {
-        name: "线程1",
+        name: "Main_thread",
         width: 1200,
         height: 500,
         stateAry: [],
         lineAry: [],
       },
     ],
-  //用于DEMO
+      //用于DEMO
   demoStateData: {}
   },
   addThread(obj) {
@@ -75,6 +75,7 @@ window.store = {
   },
   /**
    * 删除连线 
+   * TODO: 需要考虑嵌套时的情况
    * 参数：连线id， 线程索引（TODO:后续考虑修改为线程id）
    * @param {lineId, threadIndex} data
    */
@@ -90,11 +91,21 @@ window.store = {
         break;
       }
     }
+    //修改为深度搜索与选中连线相关的状态
+    function traverseLine(stateAry, lineState) {
+      for (var i in stateAry){
+          if (stateAry[i].stateId === lineState.stateId){
+          result.push(stateAry[i]);
+          return
+          }
+        traverseLine(stateAry[i].children, lineState);
+      } 
+    };
+    let result = [];
     //更新这条线的始末状态的outputAry inputAry信息
     let stateAry = this.stateData.threadAry[data.threadIndex].stateAry;
-    let startState = stateAry.find((item) => {
-      return item.stateId === line.startState.stateId;
-    });
+    traverseLine(stateAry, line.startState)
+    let startState = result.pop()
     let outputAry = startState.outputAry;
     outputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {
@@ -103,9 +114,8 @@ window.store = {
       }
     });
 
-    let endState = stateAry.find((item) => {
-      return item.stateId === line.endState.stateId;
-    });
+    traverseLine(stateAry, line.endState)
+    let endState = result.pop()
     let inputAry = endState.inputAry;
     inputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {

@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="[{active: line.isActive}]"
+        :class="[{active: line.active}]"
     >
         <path 
             :id="line.lineId"
@@ -98,12 +98,10 @@ export default {
                 }
             });
         },
-        //TODO: if line.isActive -> Active
+
         activeLineChange(){
-            this.line.isActive = !this.line.isActive
+            this.line.active = !this.line.active
         },
-
-
     },
     created(){
         this.$set(this.line, 'active', false);
@@ -115,7 +113,7 @@ export default {
         
     },
     watch: {
-        'line.isActive': function(v){
+        'line.active': function(v){
             if(v){
                 this.isActive = true;
             }else{

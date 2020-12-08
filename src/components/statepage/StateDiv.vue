@@ -2,9 +2,8 @@
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
   <div :index="index" 
-       :class="['state-div', { 'is-dragging': isDragging },{'selected': isSelected}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
-       
-       @click.prevent=activeLines>
+       :class="['state-div', stateData.mode, {'is-dragging': isDragging},{'selected': stateData.selected}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
+       @click.self="activeLines">
 
     <div :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus +'-animation' : '']" :v-show="runningStateData.runningStatus">
     </div>
@@ -27,7 +26,7 @@
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
-      @click.stop="showInputAry = !showInputAry"
+      @click="showInputAry = !showInputAry"
     >
       {{ stateData.inputAry.length }}
       <ul class="input-list" v-show="showInputAry">
@@ -39,7 +38,7 @@
     <div
       v-show="stateData.outputAry && stateData.outputAry.length"
       class="out event-count"
-      @click.stop="showOutputAry = !showOutputAry"
+      @click="showOutputAry = !showOutputAry"
     >
       {{ stateData.outputAry.length }}
       <ul class="output-list" v-show="showOutputAry">
@@ -86,20 +85,20 @@ export default {
     };
   },
   methods: {
-    stateStyle(){
-      return `height: ${this.stateData.height}px; width: ${this.stateData.width}px`
-    },
+    //TODO: 需要移动到threadSvg，选中状态的时候同时取消选中前一个被选中的状态
     activeLines(){
-      this.isSelected = !this.isSelected
+     
+      this.stateData.selected = !this.stateData.selected
       let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
+      let selectedLine = []
       let curLine;
       if(this.stateData.inputAry){
         this.stateData.inputAry.forEach((inputLine) => {
           curLine = currentLineAry.find((line) => {
             return line.lineId === inputLine.lineId;
           });
-
-          curLine.isActive = this.isSelected
+          curLine.active = this.stateData.selected
+          selectedLine.push(curLine)
         })
       }
       if(this.stateData.outputAry){
@@ -107,9 +106,16 @@ export default {
           curLine = currentLineAry.find((line) => {
             return line.lineId === outputLine.lineId;
           });
-          curLine.isActive = this.isSelected
+          curLine.active = this.stateData.selected
+          selectedLine.push(curLine)
         })
       }
+      let selectedData = {
+        state: this.stateData,
+        lines: selectedLine
+      }
+      this.$emit('disActivatePrevState', selectedData)
+      //Demo用
       store.demoStateData = this.stateData
     },
     genId() {
@@ -298,7 +304,10 @@ export default {
       // this.$el.child('.state-name-input')
       this.$nextTick(function () {
         // this.$el.firstChild.focus();
-        this.$el.firstChild.firstElementChild.focus();
+        var inputDom = this.$el.querySelector('.state-name-input');
+        if(inputDom){
+          inputDom.focus();
+        }
       });
     },
     hideInput() {
@@ -316,7 +325,6 @@ export default {
       return line.desc;
     },
     activeLine(lineId) {
-      debugger;
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
@@ -333,6 +341,7 @@ export default {
       line.active = false;
     },
   },
+  
   created() {
     this.stateId = this.stateData.stateId
       ? this.stateData.stateId
@@ -377,6 +386,15 @@ export default {
             }
         }; */
   },
+  watch: {
+    'stateData.selected': function(v){
+      if(v){
+          this.isSelected = true;
+      }else{
+          this.isSelected = false;
+      }
+    }
+  },
 };
 </script>
 
@@ -394,64 +412,48 @@ export default {
   border-color: #ffffff;
 }
 .state-div.active{
+  border: 2px solid;
   border-color:rgb(112, 255, 255);
-  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
 }
 .state-div.selected{
+  border: 2px solid;
   border-color:rgb(112, 255, 255);
-  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
 }
 .active-animation{
   width: 7px;
   height: 7px;
-  top: -3.5px;
-  left: -3.5px;
+  top: -4.5px;
+  left: -4.5px;
   border-radius: 2px;
   background:rgb(112, 255, 255);
-  box-shadow: 1px 1px 3px 0px rgb(112, 255, 255);
+  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
   position: relative;
   float: left;
   animation-name: activeMove;
-  animation-duration:1.2s;
+  animation-duration:2s;
   animation-timing-function:linear;
   animation-iteration-count:infinite;
   animation-play-state:running;
 }
  @keyframes activeMove
   {
-    0%   {left:-3.5px; top:-3.5px;}
-    25%  {left:72.5px; top:-3.5px;}
-    50%  {left:72.5px; top:36.5px;}
-    75%  {left:-3.5px; top:36.5px;}
-    100% {left:-3.5px; top:-3.5px;}
+    0%   {left:-4.5px; top:-4.5px;}
+    25%  {left:calc(100% - 4.5px); top:-4.5px;}
+    50%  {left:calc(100% - 4.5px); top:calc(100% - 4.5px);}
+    75%  {left:-4.5px; top:calc(100% - 4.5px);}
+    100% {left:-4.5px; top:-4.5px;}
   }
-.state-div.error{
-  border-color:rgba(232, 62, 62, 0.80);
-  box-shadow: 1px 1px 3px 0px rgba(232, 62, 62, 0.80);
-}
-.error-animation{
-  width: 98%;
-  height: 98%;
-  border: 4px solid rgb(232 ,62, 62);
-  float: left;
-  border-radius: 2px;
-  top: -10px;
-  left: -20px;
-  filter: blur(2px);
-  animation-name: errorWarningMove;
-  animation-delay: 0.5s;
-  animation-duration: 1s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-play-state: running;
-}
+
 .state-div.warning{
+  border: 2px solid;
   border-color:rgb(241,135,19, 0.80);
-  box-shadow: 1px 1px 3px 0px rgba(241,135,19, 0.80);
+  box-shadow: 2px 2px 4px 0px rgba(241,135,19, 0.80);
 }
 .warning-animation{
-  width: 98%;
-  height: 98%;
+  width: calc(99% - 1px);
+  height: calc(99% - 4px);
   border: 4px solid rgb(241,135,19);
   float: left;
   border-radius: 2px;
@@ -465,6 +467,60 @@ export default {
   animation-iteration-count: infinite;
   animation-play-state: running;
 }
+.nest .warning-animation{
+  width: 99%;
+  height: 99%;
+  border: 4px solid rgb(241,135,19);
+  float: left;
+  border-radius: 2px;
+  top: -10px;
+  left: -20px;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+.state-div.error{
+  border: 2px solid;
+  border-color:rgba(232, 62, 62, 0.80);
+  box-shadow: 2px 2px 4px 0px rgba(232, 62, 62, 0.80);
+}
+.error-animation{
+  width: calc(99% - 1px);
+  height: calc(99% - 4px);
+  border: 4px solid rgb(232 ,62, 62);
+  float: left;
+  border-radius: 2px;
+  top: -10px;
+  left: -20px;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+.nest .error-animation{
+  width: 99%;
+  height: 99%;
+  border: 4px solid rgb(232 ,62, 62);
+  float: left;
+  border-radius: 2px;
+  top: -10px;
+  left: -20px;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+
 @keyframes errorWarningMove{
   0% {opacity: 1}
   25% {opacity: 0.7}
@@ -487,31 +543,51 @@ p{
   filter: none;
   background: inherit;
 }
-p.active{
+.nest p{
+  display: -webkit-box;
+  position: relative;
+  top: 5%;
+  transform: translateY(-50%);
+  text-align: center;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 14px;
+  filter: none;
+  background: inherit;
+}
+.nest p.active{
+  float: left;
+  position: relative;
+  top:8%;
+  left:40%;
+  text-align: center;
+}
+.nest p.warning, .nest p.error{
+  float: left;
+  position: absolute;
+  top:8%;
+  left:40%;
+  text-align: center;
+}
+
+.normal p.active{
   float: left;
   position: absolute;
   top: 21px;
-  right: 4px;
+  right: 5.1px;
   text-align: center;
 }
 
-p.error{
+.normal p.warning, .normal p.error{
   float: left;
   position: absolute;
   background: inherit;
-  bottom:1px;
-  left: 5px;
+  left: 8px;
   text-align: center;
 }
 
-p.warning{
-  float: left;
-  position: absolute;
-  background: inherit;
-  bottom:1px;
-  left: 5px;
-  text-align: center;
-}
 .event-count {
   width: 20px;
   height: 20px;

@@ -29,6 +29,7 @@
       :index="index"
       :threadIndex="threadIndex"
       @updateTempLineData="updateTempLineData"
+      @disActivatePrevState="disActivatePrevState"
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -39,6 +40,7 @@
       :index="index"
       :threadIndex="threadIndex"
       @updateTempLineData="updateTempLineData"
+      @disActivatePrevState="disActivatePrevState"
     ></state-div>
     <!-- <div> -->
     <state-wrap
@@ -51,6 +53,7 @@
       :threadIndex="threadIndex"
       @updateStateData="updateStateData"
       @updateTempLineData="updateTempLineData"
+      @disActivatePrevState="disActivatePrevState"
     ></state-wrap>
     <!-- </div> -->
     <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
@@ -208,7 +211,7 @@ export default {
     
     dragStart(e) {
       //debugger;
-      console.log("--dragStart")
+      //console.log("--dragStart")
       if (this._isResizing) {
         return false;
       }
@@ -291,9 +294,10 @@ export default {
     },
     onDragenter(e) {},
     onDrop(e) {
-      //bug：初步测试是与父状态有关，需要获取父状态的绝对位置再进行transform，不然是相对于线程框进行的transform
+      //bug：每一次嵌套时计算位置时都会加上父状态的位置信息
       //TODO: 状态与状态模块嵌套的时候放大父状态
-      debugger;
+
+      //debugger;
       let theDragStateData = JSON.parse(
         e.dataTransfer.getData("theDragStateData")
       );
@@ -316,6 +320,7 @@ export default {
       };
       //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态
       let isTargetInParent = (el, e) => {
+        
         let inFlag = true;
         let info = el.getBoundingClientRect();
         if (
@@ -326,6 +331,7 @@ export default {
         ) {
           inFlag = false;
         }
+        
         return inFlag;
       };
 
@@ -335,17 +341,22 @@ export default {
         this.stateData.children
       );
       if (stateInChildrenFlag) {
-        let inFlag = isTargetInParent(this.$el, e);
-        if (inFlag) {
+        let TargetInFlag = isTargetInParent(this.$el, e);
+        if (TargetInFlag) {
           //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
           e.stopPropagation();
+        }
+        if(!TargetInFlag && this.stateData.children.length <= 1){
+          this.stateData.mode = 'normal';
+          this.stateData.width ="76px";
+          this.stateData.height = "40px"
         }
         //console.log("移动阶段：", theDragStateData)
         return false;
       }
 
-      let inFlag = isTargetInParent(this.$el, e);
-      if (!inFlag) {
+      let TargetInFlag = isTargetInParent(this.$el, e);
+      if (!TargetInFlag) {
         return;
       }
       let currentThread = store.stateData.threadAry[this.threadIndex]
@@ -368,12 +379,12 @@ export default {
         }
       }
       //console.log("嵌套阶段：", theDragStateData)
-      if(this.stateData.stateType == "stateDiv"){
-        //TODO: 变为nestingdiv
+      if(this.stateData.stateType == "stateDiv" && this.stateData.mode != 'nest'){
         this.stateData.mode = 'nest'
         this.stateData.width = "182px"
         this.stateData.height = "110px"
       }
+
       this.stateData.children.push(theDragStateData);
       let tI = statePageVue._dragData.indexAry.pop(); //线程索引
       let dragTargetParent = statePageVue.threadAry[tI].stateAry;
@@ -389,7 +400,6 @@ export default {
         //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
         dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
       }, 10);
-
       e.stopPropagation();
     },
 
@@ -551,6 +561,9 @@ export default {
     },
     updateTempLineData(data) {
       this.$emit("updateTempLineData", data);
+    },
+    disActivatePrevState(selectedData){
+      this.$emit("disActivatePrevState", selectedData);
     },
     updateStateData(data) {
       this.$emit("updateStateData", {

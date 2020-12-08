@@ -1,33 +1,27 @@
 <template>
-      <g>
+
+      <g id="animationComp">
         <path id="calc" :d="linePath" :style="{fill:'none'}"/>
-
-          <rect width="10" height="10" fill="#00ffff">
-            <animateMotion begin="0s" dur="1.2s" repeatCount="indefinite">
-              <mpath xlink:href="#calc"></mpath>
-            </animateMotion>
-          </rect>
-          <rect width="10" height="10" fill="#00ffff">
-            <animateMotion begin="0.1s" dur="1.2s" repeatCount="indefinite">
-              <mpath xlink:href="#calc"></mpath>
-            </animateMotion>
-          </rect>
-          <rect width="10" height="10" fill="#00ffff">
-            <animateMotion begin="0.2s" dur="1.2s" repeatCount="indefinite">
-              <mpath xlink:href="#calc"></mpath>
-            </animateMotion>
-          </rect>
-
+        <rect id="rec" v-for="item in rectCount" :key="item" width="10" height="10" :fill="fillColor(item)" x=0 y=0 filter="url(#f1)">
+          <animateMotion :id="genAnimateMotionId(item)" :begin="genBeginValue(item)" :dur="computedDur" :end="genEndValue(item)" :repeatCount="repeatCount">
+            <mpath xlink:href="#calc"></mpath>
+          </animateMotion>
+        </rect>
       </g>
 </template>
 
 <script>
+import { lineCfg } from "./graphCfg.js";
 export default {
-  
+
   name: "pathAnimation",
   props: ['runningLineId'],
   data() {
     return {
+      rectCount: lineCfg.rectCount,
+      dur: lineCfg.dur, //一次完整的动画持续的时间 毫秒
+      repeatCount: 1, // 'indefinite'
+      interval: lineCfg.interval, // 矩形物块开始动画的时间差 毫秒
     };
   },
   methods:{
@@ -120,15 +114,56 @@ export default {
       }
       return path
     },
+    genAnimateMotionId: function(index){
+      return 'animateMotion' + index;
+    },
+    genBeginValue: function(index){
+      var value = '';
+      if(index === 1){
+        value = 'animationComp.focus';
+      }else{
+        value = `animateMotion${index - 1}.begin+${this.interval}ms;`
+      }
+      return value;
+    },
+    genEndValue: function(index){
+      var value = '';
+      if(index === 1){
+        value = 'animationComp.blur';
+      }else{
+        value = `animateMotion${index - 1}.end+${this.interval}ms;`
+      }
+      return value;
+    },
+    fillColor: function(item){
+      const colorAry = ['#ff0000', '#00ff00', '#0000ff'];
+      // return colorAry[(item - 1) % 3];
+      return '#00FFFF';
+    }
   },
   computed: {
-      linePath: function(){
-          return this.getAnimationPath(this.runningLineId);
-      }
+    computedDur: function(){
+      return this.dur + 'ms';
+    },
+    
+    linePath: function(){
+      return this.getAnimationPath(this.runningLineId);
+    }
   }
 };
 </script>
 
-<style>
+<style lang="less">
+
+#animationComp{
+  outline: none;
+  rect{
+    display: none;
+  }
+  &:focus rect{
+    display: initial;
+  }
+  
+}
 
 </style>
