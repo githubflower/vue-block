@@ -7,6 +7,7 @@
     @dragover.prevent
     @mouseup="endResize"
     @mousemove="onMousemove"
+
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -42,11 +43,12 @@
               :index="index"
               :threadIndex="threadIndex"
               :runningStateData="runningStateData"
+              :activeStates="activeStates"
               @updateStateData="updateStateData"
               @updateTempLineData="updateTempLineData"
               @updateMoveData="updateMoveData"
+              @updateActiveState="updateActiveState"
               @stopMoving="stopMoving"
-              @disActivatePrevState="disActivatePrevState"
             />
           </div>
         </foreignObject>
@@ -174,6 +176,90 @@ export default {
     };
   },
   methods: {
+
+    updateActiveState(selectedState){
+      //处理添加高亮的状态块的个数
+      //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
+      let spliceIndex = 0
+      let inActiveStateIndex = function(state, activeStates){
+        for(let i = 0; i < activeStates.length; i++){
+          if(activeStates[i].stateId == state.stateId){
+            spliceIndex = i
+            return true
+          }
+        }
+        return false;
+      }
+      let inFlag = inActiveStateIndex(selectedState, this.activeStates)
+      if(inFlag){
+        let disactiveState = this.activeStates.splice(spliceIndex, 1)[0]
+        disactiveState.selected = false;
+        this.disHighlightLine(disactiveState)
+      }
+      //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
+      else{
+        this.activeStates.push(selectedState)
+        if(this.activeStates.length > highlight_limit){
+          let newActiveState = this.activeStates.pop()
+          while(this.activeStates.length > 0){
+            let disactiveState = this.activeStates.pop()
+            disactiveState.selected = false;
+            this.disHighlightLine(disactiveState)
+          }
+          this.activeStates.push(newActiveState)
+        }
+      }
+      //处理取消选中状态时同时取消连线高亮
+      for(let i=0; i<this.activeStates.length; i++){
+        if(this.activeStates[i].selected == false){
+          this.disHighlightLine(this.activeStates[i])
+        }
+        else{
+          this.disHighlightLine(this.activeStates[i])
+          this.highlightLine(this.activeStates[i])
+        }
+      }
+    },
+    highlightLine(state){
+      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
+      let curLine;
+      if(state.inputAry){
+        state.inputAry.forEach((inputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === inputLine.lineId;
+          });
+          curLine.active = true
+        })
+      }
+      if(state.outputAry){
+        state.outputAry.forEach((outputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === outputLine.lineId;
+          });
+          curLine.active = true
+        })
+      }
+    },
+    disHighlightLine(state){
+      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
+      let curLine;
+      if(state.inputAry){
+        state.inputAry.forEach((inputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === inputLine.lineId;
+          });
+          curLine.active = false
+        })
+      }
+      if(state.outputAry){
+        state.outputAry.forEach((outputLine) => {
+          curLine = currentLineAry.find((line) => {
+            return line.lineId === outputLine.lineId;
+          });
+          curLine.active = false
+        })
+      }
+    },
     isInCurrentThread(lineId){
       let currentThread = store.stateData.threadAry[this.threadIndex].lineAry;
       for (let i=0; i<currentThread.length; i++){
@@ -182,31 +268,6 @@ export default {
         }
       }
       return false
-    },
-    disActivatePrevState(selectedData){
-      //若超出的高亮块的限制，将存储在activeStates内的块全部取消高亮
-      if(selectedData.state.selected == false){
-        return;
-      }
-      else{
-        if(this.activeStates.length + 1> highlight_limit){
-          while(this.activeStates.length > 0){
-            let currentData = this.activeStates.pop()
-            currentData.state.selected = false;
-            for (let i=0; i<currentData.lines.length; i++){
-              //取消高亮的块与下一个高亮的块的连线重叠的情况
-              if(currentData.lines[i].startState.stateId == selectedData.state.stateId || currentData.lines[i].endState.stateId == selectedData.state.stateId){
-                continue;
-              }
-              else{
-                currentData.lines[i].active = false;
-              }
-              
-            }
-          }
-        }
-        this.activeStates.push(selectedData)
-      }
     },
     /**
      * 拖拽缩放部分
@@ -273,9 +334,163 @@ export default {
       return `translate(${(90 + gapX) * (index - 1)}, 40)`;
     }, */
 
+    //将绘制连线的方法拆分为以下方法
+    moveToStartPoint(lineStartPoint){
+      return `M ${lineStartPoint.x} ${lineStartPoint.y}`
+    },
+    //以配置好的连线长度绘制连线
+    drawHorizontalSetLine(){
+      return `h ${line_h}`
+    },
+    drawHorizontalLine(lineEndPointX){
+      return `H ${lineEndPointX}`
+    },
+    drawVerticalLine(lineEndPointY){
+      return `m 0 0 V ${lineEndPointY}`
+    },
+    drawLineToPoint(lineEndPointX, lineEndPointY){
+      return `m 0 0 L ${lineEndPointX} ${lineEndPointY}`
+    },
+    drawArc(radius, xRotation, sweepFlag, lineEndPointX, lineEndPointY){
+      return `m 0 0 A ${radius} ${radius} ${xRotation} 0 ${sweepFlag} ${lineEndPointX} ${lineEndPointY}`
+    },
+    drawArrow(lineEndPoint){
+      return `m -5 -5 L ${lineEndPoint.x} ${lineEndPoint.y} L ${lineEndPoint.x - 5} ${lineEndPoint.y + 5}`
+    },
+
+    //绘制现有的几种连线样式
+    drawStraightConnectLine(startPoint,endPoint,lineRadius){
+      let linePath = []
+      linePath.push(this.moveToStartPoint(startPoint))
+      linePath.push(this.drawHorizontalLine(endPoint.x))
+      linePath.push(this.drawArrow(endPoint))
+      return linePath.join(" ")
+    },
+    drawUpperBackConnectLine(startPoint,endPoint,lineRadius){
+      let linePath = []
+      linePath.push(this.moveToStartPoint(startPoint))
+      linePath.push(this.drawHorizontalSetLine())
+
+      let firstArcX = startPoint.x + line_h + lineRadius
+      let firstArcY = startPoint.y - lineRadius
+      linePath.push(this.drawArc(lineRadius, 1, 0, firstArcX, firstArcY))
+
+      let lineToSecondArc = endPoint.y - line_v + lineRadius - 20
+      linePath.push(this.drawVerticalLine(lineToSecondArc))
+
+      let secondArcX = startPoint.x + line_h
+      let secondArcY = endPoint.y - line_v - 20
+      linePath.push(this.drawArc(lineRadius, 0, 0, secondArcX, secondArcY))
+
+      let lineToThirdArcX = endPoint.x - 20 + lineRadius
+      let lineToThirdArcY = endPoint.y - line_v - 20
+      linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY))  
+
+      let thirdArcX = endPoint.x - 20
+      let thirdArcY = endPoint.y - line_v + lineRadius - 20
+      linePath.push(this.drawArc(lineRadius, 1, 0, thirdArcX, thirdArcY))
+
+      let lineToFourthArc = endPoint.y - lineRadius
+      linePath.push(this.drawVerticalLine(lineToFourthArc))
+
+      let fourthArcX = endPoint.x - 20 + lineRadius
+      let fourthArcY = endPoint.y
+      linePath.push(this.drawArc(lineRadius, 0, 0, fourthArcX, fourthArcY))
+
+      let lineToArrowX = endPoint.x
+      let lineToArrowY = endPoint.y
+      linePath.push(this.drawLineToPoint(lineToArrowX,lineToArrowY))
+      linePath.push(this.drawArrow(endPoint))
+
+      return linePath.join(" ")
+    },
+    drawLowerBackConnectLine(startPoint,endPoint,lineRadius){
+            let linePath = []
+      linePath.push(this.moveToStartPoint(startPoint))
+      linePath.push(this.drawHorizontalSetLine())
+
+      let firstArcX = startPoint.x + line_h + lineRadius
+      let firstArcY = startPoint.y + lineRadius
+      linePath.push(this.drawArc(lineRadius, 0, 1, firstArcX, firstArcY))
+
+      let lineToSecondArc = endPoint.y + line_v - line_radius + 20
+      linePath.push(this.drawVerticalLine(lineToSecondArc))
+
+      let secondArcX = startPoint.x + line_h
+      let secondArcY = endPoint.y + line_v + 20
+      linePath.push(this.drawArc(lineRadius, 0, 1, secondArcX, secondArcY))
+
+      let lineToThirdArcX = endPoint.x - 20 + line_radius
+      let lineToThirdArcY = endPoint.y + line_v + 20
+      linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY))  
+
+      let thirdArcX = endPoint.x - 20
+      let thirdArcY = endPoint.y + line_v - lineRadius + 20
+      linePath.push(this.drawArc(lineRadius, 0, 1, thirdArcX, thirdArcY))
+
+      let lineToFourthArc = endPoint.y + lineRadius
+      linePath.push(this.drawVerticalLine(lineToFourthArc))
+
+      let fourthArcX = endPoint.x - 20 + lineRadius
+      let fourthArcY = endPoint.y
+      linePath.push(this.drawArc(lineRadius, 0, 1, fourthArcX, fourthArcY))
+
+      let lineToArrowX = endPoint.x
+      let lineToArrowY = endPoint.y
+      linePath.push(this.drawLineToPoint(lineToArrowX,lineToArrowY))
+      linePath.push(this.drawArrow(endPoint))
+
+      return linePath.join(" ")
+    },
+    drawUpperConnectLine(startPoint,endPoint,lineRadius){
+      let linePath = []
+      linePath.push(this.moveToStartPoint(startPoint))
+      linePath.push(this.drawHorizontalSetLine())
+
+      let firstArcX = startPoint.x + line_h + lineRadius
+      let firstArcY = startPoint.y - lineRadius
+      linePath.push(this.drawArc(lineRadius, 0, 0, firstArcX, firstArcY))
+
+      let lineToSecondArc = endPoint.y + lineRadius
+      linePath.push(this.drawVerticalLine(lineToSecondArc))
+
+      let secondArcX = startPoint.x + line_h + 2 * lineRadius
+      let secondArcY = endPoint.y
+      linePath.push(this.drawArc(lineRadius, 0, 1, secondArcX, secondArcY))
+
+      let lineToArrowX = endPoint.x
+      let lineToArrowY = endPoint.y
+      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY))
+      linePath.push(this.drawArrow(endPoint))
+
+      return linePath.join(" ")
+    },
+    drawLowerConnectLine(startPoint,endPoint,lineRadius){
+      let linePath = []
+      linePath.push(this.moveToStartPoint(startPoint))
+      linePath.push(this.drawHorizontalSetLine())
+
+      let firstArcX = startPoint.x + line_h + lineRadius
+      let firstArcY = startPoint.y + lineRadius
+      linePath.push(this.drawArc(lineRadius, 0, 1, firstArcX, firstArcY))
+
+      let lineToSecondArc = endPoint.y - lineRadius
+      linePath.push(this.drawVerticalLine(lineToSecondArc))
+
+      let secondArcX = startPoint.x + line_h + 2 * lineRadius
+      let secondArcY = endPoint.y
+      linePath.push(this.drawArc(lineRadius, 0, 0, secondArcX, secondArcY))
+
+      let lineToArrowX = endPoint.x
+      let lineToArrowY = endPoint.y
+      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY))
+      linePath.push(this.drawArrow(endPoint))
+
+      return linePath.join(" ")
+    },
     /*
      * 绘制临时连线
-     * 需要修改以对应判断重复连线的方法
+     *
      */
     drawOnConnectingLine(startPoint, endPoint, lineRadius) {
       let tempRadius = lineRadius;
@@ -283,106 +498,62 @@ export default {
       if (endPoint.y == startPoint.y && endPoint.x > startPoint.x) {
         this.updateTempLineData({
           endPoint: endPoint,
-          d: `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${endPoint.y}
-          m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
+          d: this.drawStraightConnectLine(startPoint,endPoint,lineRadius)
         });
       } 
 
       // 鼠标在连接点左侧时
       // 在这里不对被连接的状态块的宽度进行计算，等到连线完成之后再更新一次
-      if ((endPoint.x - line_h - lineRadius < startPoint.x &&
-          endPoint.y < startPoint.y)) {
+      if ((endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y < startPoint.y)) {  
         this.updateTempLineData({
           endPoint: endPoint,
-          d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-          m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
-          m 0 0 V ${endPoint.y - line_v + lineRadius - 20}
-          m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h} ${endPoint.y - line_v - 20}
-          m 0 0 L ${endPoint.x - 20 + lineRadius} ${endPoint.y - line_v - 20}
-          m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${endPoint.x - 20} ${endPoint.y - line_v + lineRadius - 20}
-          m 0 0 V ${endPoint.y - lineRadius}
-          m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
-          m 0 0 L ${endPoint.x} ${endPoint.y}
-          m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
+          d: this.drawUpperBackConnectLine(startPoint, endPoint, lineRadius),
         });
       }
-      if (endPoint.x - line_h - lineRadius < startPoint.x &&
-          endPoint.y > startPoint.y){
-          this.updateTempLineData({
-            endPoint: endPoint,
-            d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
-            m 0 0 V ${endPoint.y + line_v - line_radius + 20}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h} ${endPoint.y + line_v + 20}
-            m 0 0 L ${endPoint.x - 20 + line_radius} ${endPoint.y + line_v + 20}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20} ${endPoint.y + line_v - lineRadius + 20}
-            m 0 0 V ${endPoint.y + lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y}
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
-          }) 
-          }
+
+      if (endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y > startPoint.y){
+        this.updateTempLineData({
+          endPoint: endPoint,
+          d: this.drawLowerBackConnectLine(startPoint,endPoint,lineRadius)
+        }) 
+      }
 
         // 当结束点的x, y坐标均大于起始点的时候 
-        if (
-          endPoint.x  > startPoint.x + line_h + lineRadius&&
-          endPoint.y > startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (endPoint.y - startPoint.y < 2 * tempRadius) {
-            let doubleRadius = endPoint.y - startPoint.y;
-            tempRadius = doubleRadius / 2;
-            this.updateTempLineData({
-              endPoint: endPoint,
-              d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + tempRadius} ${startPoint.y + tempRadius}
-              m 0 0 V ${endPoint.y - tempRadius}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} 
-              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            });
-          } else {
-            this.updateTempLineData({
-              endPoint: endPoint,
-              d: `M ${startPoint.x} ${startPoint.y} h ${line_h} 
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
-              m 0 0 V ${endPoint.y - lineRadius}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y}
-              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            });
-          }
+      if (endPoint.x  > startPoint.x + line_h + lineRadius && endPoint.y > startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (endPoint.y - startPoint.y < 2 * tempRadius) {
+          let doubleRadius = endPoint.y - startPoint.y;
+          tempRadius = doubleRadius / 2;
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawLowerConnectLine(startPoint,endPoint,tempRadius),
+          });
+        } 
+        else {
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawLowerConnectLine(startPoint,endPoint,lineRadius),
+          });
         }
+      }
         // 当结束点的x坐标大于起始点，y坐标小于起始点时
-        if (
-          endPoint.x > startPoint.x + line_h + lineRadius &&
-          endPoint.y < startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (startPoint.y - endPoint.y < 2 * tempRadius) {
-            let doubleRadius = startPoint.y - endPoint.y;
-            tempRadius = doubleRadius / 2;
-            this.updateTempLineData({
-              endPoint: endPoint,
-              d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + tempRadius} ${startPoint.y - tempRadius}
-              m 0 0 V ${endPoint.y + tempRadius}
-              m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} 
-              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            });
-          } else {
-            this.updateTempLineData({
-              endPoint: endPoint,
-              d: `M ${startPoint.x} ${startPoint.y} h ${line_h}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
-              m 0 0 V ${endPoint.y + lineRadius}
-              m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
-              m 0 0 L ${endPoint.x} ${endPoint.y} 
-              m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            });
-          }
+      if (endPoint.x > startPoint.x + line_h + lineRadius &&endPoint.y < startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (startPoint.y - endPoint.y < 2 * tempRadius) {
+          let doubleRadius = startPoint.y - endPoint.y;
+          tempRadius = doubleRadius / 2;
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawUpperConnectLine(startPoint,endPoint,tempRadius),
+          });
+        } 
+        else {
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawUpperConnectLine(startPoint,endPoint,lineRadius),
+          });
         }
+      }
       
     },
     onConnecting(e) {
@@ -635,7 +806,6 @@ export default {
         
       }
     },
-
     updateStateData(stateData) {
       //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
@@ -664,7 +834,8 @@ export default {
         };
         update(currentThread.stateAry, stateData);
         this.updateLines(stateData);
-      } else {
+      } 
+      else {
         currentState.x = stateData.transform.x;
         currentState.y = stateData.transform.y;
         this.updateLines(stateData);
@@ -777,129 +948,75 @@ export default {
         state = state.children
       }
     },
-
     /**
      * 当连线的结束点变化时，动态更新连线
-     *
-     * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
-     * 
      */
     drawUpdateLine(curLine, stateHeight, endPoint, lineRadius) {
       //debugger
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
-      if (endPoint.x > curLine.startPoint.x + line_h + lineRadius && endPoint.y == curLine.startPoint.y) {
-        linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} L ${endPoint.x} ${endPoint.y} 
-        m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
+      if (endPoint.x > curLine.startPoint.x + line_h + lineRadius && endPoint.y == curLine.startPoint.y){
+        linepath = this.drawStraightConnectLine(curLine.startPoint,endPoint,lineRadius);
         curLine.endPoint = endPoint;
         curLine.d = linepath;
         return;
       }
-
       
       // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
-      if ((endPoint.x - line_h - lineRadius < curLine.startPoint.x &&
-          endPoint.y < curLine.startPoint.y) || (endPoint.x < curLine.startPoint.x && endPoint.y == curLine.startPoint.y)){
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y - lineRadius}
-            m 0 0 V ${endPoint.y - line_v - stateHeight + lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h} ${endPoint.y - line_v - stateHeight}
-            m 0 0 L ${endPoint.x - 20 + lineRadius} ${endPoint.y - line_v - stateHeight}
-            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${endPoint.x - 20} ${endPoint.y - line_v - stateHeight + lineRadius}
-            m 0 0 V ${endPoint.y - lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y}
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-          }
+      if ((endPoint.x - line_h - lineRadius < curLine.startPoint.x && endPoint.y < curLine.startPoint.y) || (endPoint.x < curLine.startPoint.x && endPoint.y == curLine.startPoint.y)){
+        linepath = this.drawUpperBackConnectLine(curLine.startPoint, endPoint, lineRadius)
+        curLine.endPoint = endPoint;
+        curLine.d = linepath;
+        return;
+      }
       // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-      if (endPoint.x - line_h - lineRadius < curLine.startPoint.x &&
-          endPoint.y > curLine.startPoint.y){
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y + lineRadius}
-            m 0 0 V ${endPoint.y + line_v + stateHeight - line_radius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h} ${endPoint.y + line_v + stateHeight}
-            m 0 0 L ${endPoint.x - 20 + line_radius} ${endPoint.y + line_v + stateHeight}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20} ${endPoint.y + line_v + stateHeight - lineRadius}
-            m 0 0 V ${endPoint.y + lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${endPoint.x - 20 + lineRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y}
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`
-            curLine.endPoint = endPoint;
-            curLine.d = linepath
-            return
-          }
-      // 当结束点的x, y坐标均大于起始点的时候
+      if (endPoint.x - line_h - lineRadius < curLine.startPoint.x &&endPoint.y > curLine.startPoint.y){
+        linepath = this.drawLowerBackConnectLine(curLine.startPoint, endPoint, lineRadius)
+        curLine.endPoint = endPoint;
+        curLine.d = linepath
+        return
+      }
 
-        if (
-          endPoint.x > curLine.startPoint.x + line_h + lineRadius &&
-          endPoint.y > curLine.startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (endPoint.y - curLine.startPoint.y < 2 * tempRadius) {
-            let doubleRadius = endPoint.y - curLine.startPoint.y;
-            tempRadius = doubleRadius / 2;
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y } h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${curLine.startPoint.x + line_h + tempRadius} ${curLine.startPoint.y + tempRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * tempRadius} 
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${curLine.startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} 
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-          } else {
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y + lineRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y - 2 * lineRadius} 
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} 
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`;
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-          }
+      // 当结束点的x, y坐标均大于起始点的时候
+      if (endPoint.x > curLine.startPoint.x + line_h + lineRadius &&endPoint.y > curLine.startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (endPoint.y - curLine.startPoint.y < 2 * tempRadius) {
+          let doubleRadius = endPoint.y - curLine.startPoint.y;
+          tempRadius = doubleRadius / 2;
+          linepath = this.drawLowerConnectLine(curLine.startPoint, endPoint, tempRadius);
+          curLine.endPoint = endPoint;
+          curLine.d = linepath;
+          return;
+        } 
+        else {
+          linepath = this.drawLowerConnectLine(curLine.startPoint, endPoint, lineRadius);;
+          curLine.endPoint = endPoint;
+          curLine.d = linepath;
+          return;
         }
+      }
         //当结束点的x坐标大于起始点，y坐标小于起始点时
-        if (
-          endPoint.x > curLine.startPoint.x + line_h + lineRadius &&
-          endPoint.y < curLine.startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (curLine.startPoint.y - endPoint.y < 2 * tempRadius) {
-            let doubleRadius = curLine.startPoint.y - endPoint.y;
-            tempRadius = doubleRadius / 2;
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${curLine.startPoint.x + line_h + tempRadius} ${curLine.startPoint.y - tempRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y + 2 * tempRadius}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${curLine.startPoint.x + line_h + 2 * tempRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} 
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-          } else {
-            linepath = `M ${curLine.startPoint.x} ${curLine.startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.startPoint.x + line_h + lineRadius} ${curLine.startPoint.y - lineRadius}
-            m 0 0 v ${endPoint.y - curLine.startPoint.y + 2 * lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.startPoint.x + line_h + 2 * lineRadius} ${endPoint.y}
-            m 0 0 L ${endPoint.x} ${endPoint.y} 
-            m -5 -5 L ${endPoint.x} ${endPoint.y} L ${endPoint.x - 5} ${endPoint.y + 5}`,
-            curLine.endPoint = endPoint;
-            curLine.d = linepath;
-            return;
-          }
-        
+      if (endPoint.x > curLine.startPoint.x + line_h + lineRadius &&endPoint.y < curLine.startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (curLine.startPoint.y - endPoint.y < 2 * tempRadius) {
+          let doubleRadius = curLine.startPoint.y - endPoint.y;
+          tempRadius = doubleRadius / 2;
+          linepath = this.drawUpperConnectLine(curLine.startPoint, endPoint, tempRadius),
+          curLine.endPoint = endPoint;
+          curLine.d = linepath;
+          return;
+        } 
+        else {
+          linepath = this.drawUpperConnectLine(curLine.startPoint, endPoint, lineRadius),
+          curLine.endPoint = endPoint;
+          curLine.d = linepath;
+          return;
+        }     
       }
     },
     /**
      * 当连线的起始点发生变化时，动态更新连线
-     * 
-     * NOTE: 请勿改变下面绘制连线时的路径排版，否则用于计算动画路径的function会失效
-     * 
      */
     drawUpdateOutputLine(startPoint, stateHeight, curLine, lineRadius) {
       //debugger
@@ -907,107 +1024,61 @@ export default {
       let linepath;
       // y坐标相同，绘制直线
       if (curLine.endPoint.x > startPoint.x + line_h + lineRadius && curLine.endPoint.y == startPoint.y) {
-        linepath = `M ${startPoint.x} ${startPoint.y}v ${curLine.endPoint.y - startPoint.y} 
-        m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
-        m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
+        linepath = this.drawStraightConnectLine(startPoint,curLine.endPoint,lineRadius);
         curLine.startPoint = startPoint;
         curLine.d = linepath;
         return;
       } 
 
-      if ((curLine.endPoint.x - line_h - lineRadius < startPoint.x &&
-          curLine.endPoint.y < startPoint.y) || (curLine.endPoint.x < startPoint.x && curLine.endPoint.y == startPoint.y)){
-            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
-            m 0 0 V ${curLine.endPoint.y - line_v - stateHeight + lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h} ${curLine.endPoint.y - line_v - stateHeight}
-            m 0 0 L ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y - line_v - stateHeight}
-            m 0 0 A ${lineRadius} ${lineRadius} 1 0 0 ${curLine.endPoint.x - 20} ${curLine.endPoint.y - line_v - stateHeight + lineRadius}
-            m 0 0 V ${curLine.endPoint.y - lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y}
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return
-          }
-              // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-      if (curLine.endPoint.x - line_h - lineRadius < startPoint.x &&
-          curLine.endPoint.y > startPoint.y){
-            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
-            m 0 0 V ${curLine.endPoint.y + line_v + stateHeight - line_radius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h} ${curLine.endPoint.y + line_v + stateHeight}
-            m 0 0 L ${curLine.endPoint.x - 20 + line_radius} ${curLine.endPoint.y + line_v + stateHeight}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.endPoint.x - 20} ${curLine.endPoint.y + line_v + stateHeight - lineRadius}
-            m 0 0 V ${curLine.endPoint.y + lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${curLine.endPoint.x - 20 + lineRadius} ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y}
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return
-          }
+      if ((curLine.endPoint.x - line_h - lineRadius < startPoint.x &&curLine.endPoint.y < startPoint.y) || (curLine.endPoint.x < startPoint.x && curLine.endPoint.y == startPoint.y)){
+        linepath = this.drawUpperBackConnectLine(startPoint, curLine.endPoint, lineRadius)
+        curLine.startPoint = startPoint;
+        curLine.d = linepath;
+        return
+      }
+
+      // 当结束点的x坐标小于起始点时且y坐标大于起始点时
+      if (curLine.endPoint.x - line_h - lineRadius < startPoint.x &&curLine.endPoint.y > startPoint.y){
+        linepath = this.drawLowerBackConnectLine(startPoint, curLine.endPoint, lineRadius)
+        curLine.startPoint = startPoint;
+        curLine.d = linepath;
+        return
+      }
         // 当结束点的x, y坐标均大于起始点的时候
-        if (
-          curLine.endPoint.x > startPoint.x + line_h + lineRadius &&
-          curLine.endPoint.y > startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (curLine.endPoint.y - startPoint.y < 2 * tempRadius) {
-            let doubleRadius = curLine.endPoint.y - startPoint.y;
-            tempRadius = doubleRadius / 2;
-            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + tempRadius} ${startPoint.y + tempRadius}
-            m 0 0 v ${curLine.endPoint.y - startPoint.y - 2 * tempRadius} 
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + 2 * tempRadius} ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return;
-          } else {
-            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + lineRadius} ${startPoint.y + lineRadius}
-            m 0 0 v ${curLine.endPoint.y - startPoint.y - 2 * lineRadius} 
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + 2 * lineRadius} ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return;
-          }
+      if (curLine.endPoint.x > startPoint.x + line_h + lineRadius &&curLine.endPoint.y > startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (curLine.endPoint.y - startPoint.y < 2 * tempRadius) {
+          let doubleRadius = curLine.endPoint.y - startPoint.y;
+          tempRadius = doubleRadius / 2;
+          linepath = this.drawLowerConnectLine(startPoint, curLine.endPoint, tempRadius);
+          curLine.startPoint = startPoint;
+          curLine.d = linepath;
+          return;
+        } 
+        else {
+          linepath = this.drawLowerConnectLine(startPoint, curLine.endPoint, lineRadius);
+          curLine.startPoint = startPoint;
+          curLine.d = linepath;
+          return;
         }
+      }
         //当结束点的x坐标大于起始点，y坐标小于起始点时
-        if (
-          curLine.endPoint.x > startPoint.x + line_h + lineRadius &&
-          curLine.endPoint.y < startPoint.y
-        ) {
-          // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-          if (startPoint.y - curLine.endPoint.y < 2 * tempRadius) {
-            let doubleRadius = startPoint.y - curLine.endPoint.y;
-            tempRadius = doubleRadius / 2;
-            (linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 0 ${startPoint.x + line_h + tempRadius} ${startPoint.y - tempRadius}
-            m 0 0 v ${curLine.endPoint.y - startPoint.y + 2 * tempRadius}
-            m 0 0 A ${tempRadius} ${tempRadius} 0 0 1 ${startPoint.x + line_h + 2 * tempRadius} ${curLine.endPoint.y}
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`),
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return;
-          } else {
-            linepath = `M ${startPoint.x} ${startPoint.y} h ${line_h}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 0 ${startPoint.x + line_h + lineRadius} ${startPoint.y - lineRadius}
-            m 0 0 v ${curLine.endPoint.y - startPoint.y + 2 * lineRadius}
-            m 0 0 A ${lineRadius} ${lineRadius} 0 0 1 ${startPoint.x + line_h + 2 * lineRadius} ${curLine.endPoint.y}            
-            m 0 0 L ${curLine.endPoint.x} ${curLine.endPoint.y} 
-            m -5 -5 L ${curLine.endPoint.x} ${curLine.endPoint.y} L ${curLine.endPoint.x - 5} ${curLine.endPoint.y + 5}`;
-            curLine.startPoint = startPoint;
-            curLine.d = linepath;
-            return;
-          }
-        
+      if (curLine.endPoint.x > startPoint.x + line_h + lineRadius &&curLine.endPoint.y < startPoint.y){
+        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
+        if (startPoint.y - curLine.endPoint.y < 2 * tempRadius) {
+          let doubleRadius = startPoint.y - curLine.endPoint.y;
+          tempRadius = doubleRadius / 2;
+          linepath = this.drawUpperConnectLine(startPoint, curLine.endPoint, tempRadius);
+          curLine.startPoint = startPoint;
+          curLine.d = linepath;
+          return;
+        } 
+        else {
+          linepath = this.drawUpperConnectLine(startPoint, curLine.endPoint, lineRadius);;
+          curLine.startPoint = startPoint;
+          curLine.d = linepath;
+          return;
+        }
       }
     },
     /**

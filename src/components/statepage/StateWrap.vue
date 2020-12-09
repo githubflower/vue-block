@@ -12,6 +12,7 @@
       zIndex: zIndex,
     }"
     :draggable="draggable"
+    :activeStates="activeStates"
     @mousedown="onStateMousedown"
     @mouseup="onStateMouseup"
     @drag.stop="onDrag"
@@ -28,8 +29,9 @@
       :stateData="stateData"
       :index="index"
       :threadIndex="threadIndex"
+      :activeStates="activeStates"
       @updateTempLineData="updateTempLineData"
-      @disActivatePrevState="disActivatePrevState"
+
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -39,8 +41,10 @@
       :runningStateData="runningStateData"
       :index="index"
       :threadIndex="threadIndex"
+      :activeStates="activeStates"
       @updateTempLineData="updateTempLineData"
-      @disActivatePrevState="disActivatePrevState"
+      @updateActiveState="updateActiveState"
+
     ></state-div>
     <!-- <div> -->
     <state-wrap
@@ -51,9 +55,10 @@
       :runningStateData="runningStateData"
       :index="cIndex"
       :threadIndex="threadIndex"
+      :activeStates="activeStates"
       @updateStateData="updateStateData"
       @updateTempLineData="updateTempLineData"
-      @disActivatePrevState="disActivatePrevState"
+      @updateActiveState="updateActiveState"
     ></state-wrap>
     <!-- </div> -->
     <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
@@ -94,7 +99,7 @@ const isNumber = (str) => {
 };
 export default {
   name: "StateWrap",
-  props: ["stateData", "index", "threadIndex","runningStateData"],
+  props: ["stateData", "index", "threadIndex","runningStateData", "activeStates"],
   components: {
     LoopDiv,
     StateDiv,
@@ -295,8 +300,6 @@ export default {
     onDragenter(e) {},
     onDrop(e) {
       //bug：每一次嵌套时计算位置时都会加上父状态的位置信息
-      //TODO: 状态与状态模块嵌套的时候放大父状态
-
       //debugger;
       let theDragStateData = JSON.parse(
         e.dataTransfer.getData("theDragStateData")
@@ -562,8 +565,8 @@ export default {
     updateTempLineData(data) {
       this.$emit("updateTempLineData", data);
     },
-    disActivatePrevState(selectedData){
-      this.$emit("disActivatePrevState", selectedData);
+    updateActiveState(selectedData){
+      this.$emit("updateActiveState",selectedData);
     },
     updateStateData(data) {
       this.$emit("updateStateData", {

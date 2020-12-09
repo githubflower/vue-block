@@ -629,7 +629,7 @@ export default {
 
     //刷新iframe内容，从localstorage中读取blockly.xml,
     var blocklyXml = window.localStorage.getItem('blocklyXml');
-    alert(blocklyXml);
+    console.log(blocklyXml);
     var qblockJson = Util.blockly2state(blocklyXml);
     this.loadData(qblockJson);
   },

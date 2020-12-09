@@ -25,7 +25,6 @@ export default {
     };
   },
   methods:{
-
     /**
      * 计算用于运行时动画的动画路径
      * 
@@ -34,7 +33,6 @@ export default {
      */
     getAnimationPath(lineId){
       if(!document.getElementById(lineId)){
-        this.isLineId = false
         return 'm 0 0';
       }
       var dom = document.getElementById(lineId);

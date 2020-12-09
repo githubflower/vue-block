@@ -26,6 +26,10 @@ var Util = {
         return container;
     },
 
+    /**
+     * 创建注释块Dom
+     * @param {*} comment 
+     */
     createCommentDom(comment) {
         let commentDom = this.createEl('comment');
         commentDom.setAttribute('pinned', comment.pinned || false);
@@ -33,6 +37,11 @@ var Util = {
         return commentDom;
     },
 
+    /**
+     * 创建状态定义块Dom
+     * @param {*} state 
+     * @param {*} index 
+     */
     createStateDefBlock(state, index) {
         var valueDom = this.createEl('value');
         valueDom.setAttribute('name', 'ADD' + index);
@@ -50,6 +59,12 @@ var Util = {
         return valueDom;
     },
 
+    /**
+     * 创建连线Dom以及其连接的状态块的Dom - 触发事件描述采用通用的if-else结构 controls_if 
+     * ！此方法没有用到，代码暂时先放着
+     * @param {*} state 
+     * @param {*} thread 
+     */
     createNextStatesDom(state, thread){
         let nextDom, outputDom;
 
@@ -92,7 +107,11 @@ var Util = {
         return nextDom;
     },
 
-    // 触发事件描述采用独立的结构
+    /**
+     * 创建连线Dom以及其连接的状态块的Dom - 触发事件描述采用独立的结构 state_trigger_event
+     * @param {*} state 
+     * @param {*} thread 
+     */
     createNextStatesDom2(state, thread) {
         let triggerEventDom;
         let nextStatesDom;
@@ -112,6 +131,7 @@ var Util = {
                 triggerEventDom = this.createEl("block");
                 triggerEventDom.setAttribute("type", "state_trigger_event");
                 triggerEventDom.setAttribute("id", outputItem.lineId);
+                triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
                 let triggerEventStatement;
                 triggerEventStatement = this.createEl("statement");
@@ -124,6 +144,7 @@ var Util = {
                     return item.lineId === outputItem.lineId;
                 });
                 if (line) {
+                    triggerEventDom.setAttribute("d", line.d);
                     if (line.desc){
                         let commentDom = this.createCommentDom({
                             value: line.desc
@@ -134,6 +155,7 @@ var Util = {
                         return item.stateId === line.endState.stateId;
                     });
                     if (state) {
+                        triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
                         triggerEventStatement.appendChild(Util.state2dom(state, thread));
                     } else {
                         console.error("data error -^- ");
@@ -160,7 +182,46 @@ var Util = {
         }
         return ret;
     },
-
+    /**
+     * 保存状态块的位置信息到Dom中
+     * @param {*} el 新建的和状态对应的Dom节点
+     * @param {*} state 当前操作的状态
+     */
+    saveStateXY(el, state){
+        el.setAttribute("sx", state.x);
+        el.setAttribute("sy", state.y);
+    },
+    /**
+     * 保存状态块的数据到Dom中
+     * @param {*} el 新建的和状态对应的Dom节点
+     * @param {*} state 当前操作的状态
+     */
+    saveStateBlockDataInDom(el, state){
+        switch (state.stateType) {
+            case 'stateDiv': //状态执行
+                this.saveStateXY(el, state);
+                break;
+            case 'state_trigger_event': //连线
+                this.saveLineData(el, state);
+            default:
+                break;
+        }
+    },
+    /**
+     * 保存连线数据到Dom
+     * @param {*} el 新建的和状态对应的Dom节点
+     * @param {*} state 当前操作的状态
+     */
+    saveLineData(el, state){
+        el.setAttribute("d", state.d);
+        el.setAttribute("start_state", JSON.stringify(state.startState));
+        el.setAttribute("end_state", JSON.stringify(state.startState));
+    },
+    /**
+     * 将一个状态块转为Dom节点
+     * @param {*} rootState 
+     * @param {*} threadData 
+     */        
     state2dom(rootState, threadData){
         let rootEl = this.createEl("block");
         console.log(
@@ -173,7 +234,8 @@ var Util = {
         rootEl.setAttribute("id", rootState.stateId);
         // rootEl.setAttribute('type', rootState.type || 'state_run');
         rootEl.setAttribute("type", this.genBlockType(rootState.stateType));
-        rootEl.setAttribute("SX", 9999);
+        this.saveStateBlockDataInDom(rootEl, rootState);
+        
         
         let fieldDom = this.createFieldDom({
             id: rootState.stateId,
@@ -195,7 +257,11 @@ var Util = {
         }
         return rootEl;
     },
-
+    /**
+     * 创建线程定义块的Dom
+     * @param {*} thread 
+     * @param {*} threadProcedureId 线程的函数id
+     */
     createThreadDefDom(thread, threadProcedureId){
         /* <block type="thread_def" id="ISJ:}kp8l):hy~wr5{x5" x="-187" y="-87">
             <field name="NAME">thread</field>
@@ -233,7 +299,12 @@ var Util = {
 
         return threadDefDom;
     },
-
+    /**
+     * 创建线程函数定义块的Dom
+     * @param {*} thread 
+     * @param {*} threadProcedureId 
+     * @param {*} statesDom 所有连接的状态
+     */
     createThreadProcedureDom(thread, threadProcedureId, statesDom){
         console.log('---thread.name---' + thread.name);
         /* <block type="procedures_defnoreturn" id="aewyJ+/)D`VHlrJ$BgFT" x="463" y="-113">
@@ -259,7 +330,9 @@ var Util = {
         threadProcedureDom.appendChild(statementDom);
         return threadProcedureDom;
     },
-
+    /**
+     * 获取唯一id，同google blockly产生唯一id的方法
+     */
     genUid() {
         var length = 20;
         var soupLength = SOUP.length;
@@ -269,7 +342,10 @@ var Util = {
         }
         return id.join('');
     },
-
+    /**
+     * 将所有线程的数据（包括了状态和连线）转为Blockly可识别的xml数据
+     * @param {*} threadAry 线程数据
+     */
     state2blockly(threadAry) {
         /**
          * 1.找到线程中有开始标记的根状态
@@ -324,11 +400,16 @@ var Util = {
 
         return blocklyXml.outerHTML;
     },
-
+    /**
+     * 将Blockly数据转为状态图可识别的数据
+     */
     blockly2state(){
 
     },
-
+    /**
+     * 将Blockly数据复制到剪切板 - 调试时用
+     * @param {*} blocklyXml 
+     */
     copyBlocklyXml2Clipboard(blocklyXml){
         // window.stateDataXml = blocklyXml.outerHTML;
         let hiddenInput = document.createElement("input");

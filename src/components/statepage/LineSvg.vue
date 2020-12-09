@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="[{active: line.active}]"
+        :class="[{showdesc: line.showdesc}, {active: line.active}, line.type]"
     >
         <path 
             :id="line.lineId"
@@ -18,7 +18,6 @@
             v-if="line.desc"
             x="15"
             y="0"
-            :style="{fill: 'yellow'}"
         >
             <title>{{line.desc}}</title>
             <textPath
@@ -76,14 +75,6 @@ export default {
             midPointPath = `M ${startX + line_h} ${((startY + endY) / 2)} h 300`;
             return midPointPath
         },
-        // TODO: 鼠标移动到文字上时浮窗显示全部文字
-        showDesc(e){
-
-        },
-        hideDesc(e){
-
-        },
-
         genId(){
             return window.genId('line');
         },
@@ -105,6 +96,7 @@ export default {
     },
     created(){
         this.$set(this.line, 'active', false);
+        this.$set(this.line, 'showdesc', false);
         if(!this.line.lineId){
             this.line.lineId = this.genId();
         }
@@ -119,6 +111,14 @@ export default {
             }else{
                 this.isActive = false;
             }
+        },
+        'line.type': function(v){
+            if(v){
+                this.isShowDesc = true;
+            }
+            else{
+                this.isShowDesc = false;
+            }
         }
     },
     computed: {
@@ -130,26 +130,42 @@ export default {
 }
 </script>
 
-<style>
+<style lang="less">
+@qkmGrey: #aaaaaa;
+@qkmLightBlue: #70ffff;
+@qkmOrange:#ffaf3d;
+@qkmRed:#e83e3e;
+@qkmYellow: #f8f837;
 .connect-line{
-    stroke: #aaaaaa;
+    stroke: @qkmGrey;
     fill: none;
 }
 .connect-line:hover{
-    stroke:rgb(112, 255, 255);
+    stroke:@qkmLightBlue;
     fill: none;
     cursor:pointer;
 }
 .active .connect-line{
-    stroke:rgb(112, 255, 255);
+    stroke:@qkmLightBlue;
     fill: none;
 }
-
-
+.warning .connect-line{
+    stroke: @qkmOrange;
+    fill:none;
+}
+.error .connect-line{
+    stroke:@qkmRed;
+    fill:none;
+}
+.showdesc .connect-line{
+    stroke:@qkmYellow;
+    fill:none;
+}
 text{
     display: none;
+    fill: yellow;
 }
-.active text{
+.active text, .showdesc text{
     display: block;
     overflow: hidden; 
     text-overflow:ellipsis; 

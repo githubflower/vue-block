@@ -1,9 +1,10 @@
 <template>
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
-  <div :index="index" 
-       :class="['state-div', stateData.mode, {'is-dragging': isDragging},{'selected': stateData.selected}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
-       @click.self="activeLines">
+  <div 
+       :index="index"
+       :class="['state-div', stateData.mode, {'is-dragging': isDragging},{'selected': (stateData.selected && isInActiveStates(stateData))}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
+       @click="selectState(stateData)">
 
     <div :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus +'-animation' : '']" :v-show="runningStateData.runningStatus">
     </div>
@@ -26,11 +27,15 @@
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
-      @click="showInputAry = !showInputAry"
+      @click.stop="showInputDesc"
     >
       {{ stateData.inputAry.length }}
       <ul class="input-list" v-show="showInputAry">
-        <li v-for="(item, index) in stateData.inputAry" :key="index">
+        <li v-for="(item, index) in stateData.inputAry" 
+            :key="index"
+            @mouseenter="activeLine(item.lineId)"
+            @mouseleave="disActiveLine(item.lineId)"
+            >
           {{ getDesc(item.lineId) }}
         </li>
       </ul>
@@ -38,7 +43,7 @@
     <div
       v-show="stateData.outputAry && stateData.outputAry.length"
       class="out event-count"
-      @click="showOutputAry = !showOutputAry"
+      @click.stop="showOutputDesc"
     >
       {{ stateData.outputAry.length }}
       <ul class="output-list" v-show="showOutputAry">
@@ -72,12 +77,11 @@ const isNumber = (str) => {
 };
 export default {
   name: "StateDiv",
-  props: ["stateData", "index", "threadIndex", "runningStateData"],
+  props: ["stateData", "index", "threadIndex", "runningStateData", "activeStates", "showDescData"],
   data() {
     return {
       showInput: false,
       isDragging: false,
-      isSelected: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
       showInputAry: false,
@@ -85,38 +89,19 @@ export default {
     };
   },
   methods: {
-    //TODO: 需要移动到threadSvg，选中状态的时候同时取消选中前一个被选中的状态
-    activeLines(){
-     
-      this.stateData.selected = !this.stateData.selected
-      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
-      let selectedLine = []
-      let curLine;
-      if(this.stateData.inputAry){
-        this.stateData.inputAry.forEach((inputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === inputLine.lineId;
-          });
-          curLine.active = this.stateData.selected
-          selectedLine.push(curLine)
-        })
+    isInActiveStates(stateData){
+      for(let i=0; i<this.activeStates.length; i++){
+        if(stateData.stateId == this.activeStates[i].stateId){
+          return true;
+        }
       }
-      if(this.stateData.outputAry){
-        this.stateData.outputAry.forEach((outputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === outputLine.lineId;
-          });
-          curLine.active = this.stateData.selected
-          selectedLine.push(curLine)
-        })
-      }
-      let selectedData = {
-        state: this.stateData,
-        lines: selectedLine
-      }
-      this.$emit('disActivatePrevState', selectedData)
+    },
+    //选中被点击的状态块
+    selectState(stateData){
+      stateData.selected = !stateData.selected
+      this.$emit('updateActiveState', stateData)
       //Demo用
-      store.demoStateData = this.stateData
+      store.demoStateData = stateData
     },
     genId() {
       return window.genId("state");
@@ -146,7 +131,6 @@ export default {
      */
     onConnectPointMousedown(e) {
       // this.operate = IS_CONNECTING;
-
       window.stateManage.isConnecting = true;
       let boundingRect = e.target.getBoundingClientRect();
       let curSvg = e.target.closest("svg");
@@ -187,7 +171,6 @@ export default {
         return false;
       }
       e.dataTransfer.effectAllowed = "copyMove";
-
       this.isDragging = true;
       // this._startInfo = e.target.getBoundingClientRect();
       this._startInfo = {
@@ -324,30 +307,42 @@ export default {
         }) || {};
       return line.desc;
     },
+    showInputDesc(){
+      this.showInputAry = !this.showInputAry
+    },
+    showOutputDesc(){
+      this.showOutputAry = !this.showOutputAry
+    },
     activeLine(lineId) {
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-
-      line.active = true;
+        line.showdesc = true;
     },
     disActiveLine(lineId) {
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-
-      line.active = false;
+        line.showdesc = false;
     },
   },
-  
+
   created() {
     this.stateId = this.stateData.stateId
       ? this.stateData.stateId
       : this.genId();
   },
   mounted() {
+    document.addEventListener('click', () => {
+      if (this.showInputAry === true) {
+        this.showInputAry = false
+      }
+      if(this.showOutputAry === true){
+        this.showOutputAry = false
+      }
+    })
     /*
         var elm = this.$el;
         window.testVueObj = this;
@@ -386,50 +381,50 @@ export default {
             }
         }; */
   },
-  watch: {
-    'stateData.selected': function(v){
-      if(v){
-          this.isSelected = true;
-      }else{
-          this.isSelected = false;
-      }
-    }
-  },
+
 };
 </script>
 
-<style scoped>
+<style lang="less" scoped>
+@qkmGrey: #aaaaaa;
+@qkmLightBlue: #70ffff;
+@qkmWhite: #ffffff;
+@qkmWhiteTransparent: #ffffffaf;
+@qkmOrange: #ffaf3dcc;
+@qkmRed:#e83e3ecc;
+@qkmAnimationOrange:#ffaf3d;
+@qkmAnimationRed:#e83e3e;
 .state-div {
   width: 100%;
   height: 100%;
-  border: 1px solid #aaaaaa;
-  box-shadow: 1px 1px 3px 0px #aaaaaa;
+  border: 1px solid @qkmGrey;
+  box-shadow: 1px 1px 3px 0px @qkmGrey;
   border-radius: 5px;
-  color: #aaaaaa;
+  color: @qkmGrey;
 }
 .state-div:hover {
-  color: #ffffff;
-  border-color: #ffffff;
+  color: @qkmWhite;
+  border-color: @qkmWhite;
 }
 .state-div.active{
   border: 2px solid;
-  border-color:rgb(112, 255, 255);
-  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
+  border-color:@qkmLightBlue;
+  box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
 .state-div.selected{
   border: 2px solid;
-  border-color:rgb(112, 255, 255);
-  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
+  border-color:@qkmLightBlue;
+  box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
 .active-animation{
   width: 7px;
   height: 7px;
-  top: -4.5px;
-  left: -4.5px;
+  top: -3.5px;
+  left: -3.5px;
   border-radius: 2px;
-  background:rgb(112, 255, 255);
-  box-shadow: 2px 2px 4px 0px rgb(112, 255, 255);
-  position: relative;
+  background:@qkmLightBlue;
+  box-shadow: 2px 2px 4px 0px @qkmLightBlue;
+  position: absolute;
   float: left;
   animation-name: activeMove;
   animation-duration:2s;
@@ -439,26 +434,27 @@ export default {
 }
  @keyframes activeMove
   {
-    0%   {left:-4.5px; top:-4.5px;}
-    25%  {left:calc(100% - 4.5px); top:-4.5px;}
-    50%  {left:calc(100% - 4.5px); top:calc(100% - 4.5px);}
-    75%  {left:-4.5px; top:calc(100% - 4.5px);}
-    100% {left:-4.5px; top:-4.5px;}
+    0%   {left:-3.5px; top:-3.5px;}
+    25%  {left:calc(100% - 3.5px); top:-3.5px;}
+    50%  {left:calc(100% - 3.5px); top:calc(100% - 3.5px);}
+    75%  {left:-3.5px; top:calc(100% - 3.5px);}
+    100% {left:-3.5px; top:-3.5px;}
   }
 
 .state-div.warning{
   border: 2px solid;
-  border-color:rgb(241,135,19, 0.80);
-  box-shadow: 2px 2px 4px 0px rgba(241,135,19, 0.80);
+  border-color:@qkmOrange;
+  box-shadow: 2px 2px 4px 0px @qkmOrange
 }
 .warning-animation{
   width: calc(99% - 1px);
   height: calc(99% - 4px);
-  border: 4px solid rgb(241,135,19);
+  border: 8px solid @qkmAnimationOrange;
   float: left;
-  border-radius: 2px;
-  top: -10px;
-  left: -20px;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position:absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -470,11 +466,12 @@ export default {
 .nest .warning-animation{
   width: 99%;
   height: 99%;
-  border: 4px solid rgb(241,135,19);
+  border: 8px solid @qkmAnimationOrange;
   float: left;
-  border-radius: 2px;
-  top: -10px;
-  left: -20px;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position:absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -485,17 +482,18 @@ export default {
 }
 .state-div.error{
   border: 2px solid;
-  border-color:rgba(232, 62, 62, 0.80);
-  box-shadow: 2px 2px 4px 0px rgba(232, 62, 62, 0.80);
+  border-color:@qkmRed;
+  box-shadow: 2px 2px 4px 0px @qkmRed;
 }
 .error-animation{
   width: calc(99% - 1px);
   height: calc(99% - 4px);
-  border: 4px solid rgb(232 ,62, 62);
+  border: 8px solid @qkmAnimationRed;
   float: left;
-  border-radius: 2px;
-  top: -10px;
-  left: -20px;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position:absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -507,11 +505,12 @@ export default {
 .nest .error-animation{
   width: 99%;
   height: 99%;
-  border: 4px solid rgb(232 ,62, 62);
+  border: 8px solid @qkmAnimationRed;
   float: left;
-  border-radius: 2px;
-  top: -10px;
-  left: -20px;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position:absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -557,34 +556,17 @@ p{
   filter: none;
   background: inherit;
 }
-.nest p.active{
-  float: left;
-  position: relative;
-  top:8%;
-  left:40%;
-  text-align: center;
-}
-.nest p.warning, .nest p.error{
-  float: left;
-  position: absolute;
-  top:8%;
-  left:40%;
+
+.nest p.active, .nest p.warning, .nest p.error{
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-block;
   text-align: center;
 }
 
-.normal p.active{
-  float: left;
-  position: absolute;
-  top: 21px;
-  right: 5.1px;
-  text-align: center;
-}
-
-.normal p.warning, .normal p.error{
-  float: left;
-  position: absolute;
-  background: inherit;
-  left: 8px;
+.normal p.active, .normal p.warning, .normal p.error{
+  left: 4px;
+  display: inline-block;
   text-align: center;
 }
 
@@ -593,7 +575,7 @@ p{
   height: 20px;
   border-radius: 10px;
   background-color: rgba(0, 157, 218, 0.33);
-  color: #ffffff;
+  color: @qkmWhite;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -647,7 +629,7 @@ p{
   position: absolute;
   top: 20px;
   right: 20px;
-  background-color: #ffffff;
+  background-color: @qkmWhite;
   color: #000000;
   z-index: 1;
 }
