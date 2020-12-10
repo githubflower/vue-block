@@ -69,7 +69,9 @@
         v-for="(line, index2) in thread.lineAry"
         :key="index2"
         :line="line"
+        :activeLines="activeLines"
         :threadIndex="threadIndex"
+        @updateActiveLine="updateActiveLine"
       />
       <path-animation
         v-if="isInCurrentThread(runningLineId)"
@@ -148,6 +150,7 @@ export default {
       operationStatus:"",
       tempLineClass: "templine",
       activeStates:[],
+      activeLines:[],
       tempLineData: {
         startState: null,
         endState: null,
@@ -176,9 +179,12 @@ export default {
     };
   },
   methods: {
-
+    updateActiveLine(selectedLine){
+      
+    },
     updateActiveState(selectedState){
       //处理添加高亮的状态块的个数
+      //修改为通过activeLine来控制连线高亮
       //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
       let spliceIndex = 0
       let inActiveStateIndex = function(state, activeStates){
@@ -190,10 +196,9 @@ export default {
         }
         return false;
       }
-      let inFlag = inActiveStateIndex(selectedState, this.activeStates)
-      if(inFlag){
+      let alreadyInActiveState = inActiveStateIndex(selectedState, this.activeStates)
+      if(alreadyInActiveState){
         let disactiveState = this.activeStates.splice(spliceIndex, 1)[0]
-        disactiveState.selected = false;
         this.disHighlightLine(disactiveState)
       }
       //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
@@ -203,7 +208,6 @@ export default {
           let newActiveState = this.activeStates.pop()
           while(this.activeStates.length > 0){
             let disactiveState = this.activeStates.pop()
-            disactiveState.selected = false;
             this.disHighlightLine(disactiveState)
           }
           this.activeStates.push(newActiveState)
@@ -211,14 +215,26 @@ export default {
       }
       //处理取消选中状态时同时取消连线高亮
       for(let i=0; i<this.activeStates.length; i++){
-        if(this.activeStates[i].selected == false){
-          this.disHighlightLine(this.activeStates[i])
-        }
-        else{
-          this.disHighlightLine(this.activeStates[i])
-          this.highlightLine(this.activeStates[i])
-        }
+        this.disHighlightLine(this.activeStates[i])
+        this.highlightLine(this.activeStates[i])
       }
+    },
+
+    addActiveLines(state){
+      if(state.inputAry){
+        state.inputAry.forEach((inputLine) =>{
+          this.activeLines.push(inputLine.lineId)
+        })
+      }
+      if(state.outputAry){
+        state.outputAry.forEach((outputLine) =>{
+          this.activeLines.push(outputLine.lineId)
+        })
+      }
+      return
+    },
+    removeActiveLines(state){
+      this.activeLines = [];
     },
     highlightLine(state){
       let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
@@ -366,7 +382,7 @@ export default {
       linePath.push(this.drawArrow(endPoint))
       return linePath.join(" ")
     },
-    drawUpperBackConnectLine(startPoint,endPoint,lineRadius){
+    drawUpperBackConnectLine(startPoint,endPoint,lineRadius, stateHeight){
       let linePath = []
       linePath.push(this.moveToStartPoint(startPoint))
       linePath.push(this.drawHorizontalSetLine())
@@ -375,25 +391,25 @@ export default {
       let firstArcY = startPoint.y - lineRadius
       linePath.push(this.drawArc(lineRadius, 1, 0, firstArcX, firstArcY))
 
-      let lineToSecondArc = endPoint.y - line_v + lineRadius - 20
+      let lineToSecondArc = endPoint.y - line_v + lineRadius - stateHeight
       linePath.push(this.drawVerticalLine(lineToSecondArc))
 
       let secondArcX = startPoint.x + line_h
-      let secondArcY = endPoint.y - line_v - 20
+      let secondArcY = endPoint.y - line_v - stateHeight
       linePath.push(this.drawArc(lineRadius, 0, 0, secondArcX, secondArcY))
 
-      let lineToThirdArcX = endPoint.x - 20 + lineRadius
-      let lineToThirdArcY = endPoint.y - line_v - 20
+      let lineToThirdArcX = endPoint.x - line_h + lineRadius
+      let lineToThirdArcY = endPoint.y - line_v - stateHeight
       linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY))  
 
-      let thirdArcX = endPoint.x - 20
-      let thirdArcY = endPoint.y - line_v + lineRadius - 20
+      let thirdArcX = endPoint.x - line_h
+      let thirdArcY = endPoint.y - line_v + lineRadius - stateHeight
       linePath.push(this.drawArc(lineRadius, 1, 0, thirdArcX, thirdArcY))
 
       let lineToFourthArc = endPoint.y - lineRadius
       linePath.push(this.drawVerticalLine(lineToFourthArc))
 
-      let fourthArcX = endPoint.x - 20 + lineRadius
+      let fourthArcX = endPoint.x - line_h + lineRadius
       let fourthArcY = endPoint.y
       linePath.push(this.drawArc(lineRadius, 0, 0, fourthArcX, fourthArcY))
 
@@ -404,7 +420,7 @@ export default {
 
       return linePath.join(" ")
     },
-    drawLowerBackConnectLine(startPoint,endPoint,lineRadius){
+    drawLowerBackConnectLine(startPoint,endPoint,lineRadius,stateHeight){
             let linePath = []
       linePath.push(this.moveToStartPoint(startPoint))
       linePath.push(this.drawHorizontalSetLine())
@@ -413,25 +429,25 @@ export default {
       let firstArcY = startPoint.y + lineRadius
       linePath.push(this.drawArc(lineRadius, 0, 1, firstArcX, firstArcY))
 
-      let lineToSecondArc = endPoint.y + line_v - line_radius + 20
+      let lineToSecondArc = endPoint.y + line_v - line_radius + stateHeight
       linePath.push(this.drawVerticalLine(lineToSecondArc))
 
       let secondArcX = startPoint.x + line_h
-      let secondArcY = endPoint.y + line_v + 20
+      let secondArcY = endPoint.y + line_v + stateHeight
       linePath.push(this.drawArc(lineRadius, 0, 1, secondArcX, secondArcY))
 
-      let lineToThirdArcX = endPoint.x - 20 + line_radius
-      let lineToThirdArcY = endPoint.y + line_v + 20
+      let lineToThirdArcX = endPoint.x - line_h + line_radius
+      let lineToThirdArcY = endPoint.y + line_v + stateHeight
       linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY))  
 
-      let thirdArcX = endPoint.x - 20
-      let thirdArcY = endPoint.y + line_v - lineRadius + 20
+      let thirdArcX = endPoint.x - line_h
+      let thirdArcY = endPoint.y + line_v - lineRadius + stateHeight
       linePath.push(this.drawArc(lineRadius, 0, 1, thirdArcX, thirdArcY))
 
       let lineToFourthArc = endPoint.y + lineRadius
       linePath.push(this.drawVerticalLine(lineToFourthArc))
 
-      let fourthArcX = endPoint.x - 20 + lineRadius
+      let fourthArcX = endPoint.x - line_h + lineRadius
       let fourthArcY = endPoint.y
       linePath.push(this.drawArc(lineRadius, 0, 1, fourthArcX, fourthArcY))
 
@@ -446,7 +462,7 @@ export default {
       let linePath = []
       linePath.push(this.moveToStartPoint(startPoint))
       linePath.push(this.drawHorizontalSetLine())
-
+      
       let firstArcX = startPoint.x + line_h + lineRadius
       let firstArcY = startPoint.y - lineRadius
       linePath.push(this.drawArc(lineRadius, 0, 0, firstArcX, firstArcY))
@@ -492,7 +508,7 @@ export default {
      * 绘制临时连线
      *
      */
-    drawOnConnectingLine(startPoint, endPoint, lineRadius) {
+    drawOnConnectingLine(startPoint, endPoint, lineRadius,stateHeight=20) {
       let tempRadius = lineRadius;
       // y坐标相等时绘制直线
       if (endPoint.y == startPoint.y && endPoint.x > startPoint.x) {
@@ -504,19 +520,22 @@ export default {
 
       // 鼠标在连接点左侧时
       // 在这里不对被连接的状态块的宽度进行计算，等到连线完成之后再更新一次
-      if ((endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y < startPoint.y)) {  
+      if ((endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y < startPoint.y)) { 
+        if(endPoint.x - startPoint.x < line_h){}
         this.updateTempLineData({
           endPoint: endPoint,
-          d: this.drawUpperBackConnectLine(startPoint, endPoint, lineRadius),
+          d: this.drawUpperBackConnectLine(startPoint, endPoint, lineRadius,stateHeight),
         });
       }
 
       if (endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y > startPoint.y){
+        if(endPoint.x - startPoint.x < line_h){}
         this.updateTempLineData({
           endPoint: endPoint,
-          d: this.drawLowerBackConnectLine(startPoint,endPoint,lineRadius)
+          d: this.drawLowerBackConnectLine(startPoint,endPoint,lineRadius,stateHeight)
         }) 
       }
+
 
         // 当结束点的x, y坐标均大于起始点的时候 
       if (endPoint.x  > startPoint.x + line_h + lineRadius && endPoint.y > startPoint.y){
@@ -564,11 +583,38 @@ export default {
           stateManage.isConnecting = true;
           this.showTempLine = true;
           let endPoint = this.getEndPoint(e);
-          this.drawOnConnectingLine(
+          let endState = this.getEndState(e);
+          //修改画线方法
+          if(endState.stateId){
+            let result = []
+            let currentStateAry = store.stateData.threadAry[this.threadIndex].stateAry
+            // 用于深度搜索stateId的方法，寻找到的state存储在result内
+            function traverse(stateAry) {
+              for (var i in stateAry){
+                  if (stateAry[i].stateId === endState.stateId){
+                  result.push(stateAry[i]);
+                  return
+                  }
+                traverse(stateAry[i].children);
+              } 
+            };
+            traverse(currentStateAry)
+            let targetState = result.pop()
+            let targetStateHeight = parseInt(targetState.height.replace("px",""), 10) / 2
+            this.drawOnConnectingLine(
+              this.tempLineData.startPoint,
+              endPoint,
+              line_radius,
+              targetStateHeight
+            );
+          }
+          else{
+            this.drawOnConnectingLine(
             this.tempLineData.startPoint,
             endPoint,
             line_radius
-          );
+            );
+          }
         } else {
           stateManage.isConnecting = false;
           this.showTempLine = false;
@@ -583,7 +629,6 @@ export default {
     },
 
     drawConnectLine(e) {
-      //debugger;
       let endState = this.getEndState(e);
       let lineData = this.copy(this.tempLineData);
       lineData.endState = endState;
@@ -628,11 +673,9 @@ export default {
      * @return object { stateId: 状态块的stateid属性}
      */
     getEndState(e) {
-      //debugger;
       let stateId = null,
         clazz = ".state-wrap",
         stateIndex;
-      // debugger;
       if (e.target.closest(clazz)) {
         stateId = e.target.closest(clazz).getAttribute("stateid");
         stateIndex = parseInt(
@@ -646,7 +689,6 @@ export default {
       };
     },
     getEndPoint(e) {
-      //debugger;
       let curSvg = e.target.closest("svg");
       let curSvgRect = curSvg.getBoundingClientRect();
       let target_class = e.target.getAttribute("class");
@@ -706,6 +748,7 @@ export default {
      */
 
     drop(e) {
+      //debugger;
       if (e.dataTransfer.getData("operate") === "addState") {
         let threadPosInfo = e.target.getBoundingClientRect();
         let leftGap = e.dataTransfer.getData("mousedowntoleft")
@@ -807,7 +850,6 @@ export default {
       }
     },
     updateStateData(stateData) {
-      //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
@@ -843,11 +885,11 @@ export default {
     },
     /**
      * 更新某个状态块的所有输入连线和输出连线
-     * 
-     * 
      */
     updateLines(stateData) {
+      debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
+
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
       function traverse(stateAry) {
@@ -863,14 +905,9 @@ export default {
       let lineAry, curLine;
 
       // 判断传入的stateData是通过事件传入的还是递归传入的childrenData
-      let state
-      if(!stateData.stateId){
-        state = stateData
-      }
-      else{
-        state = result[0]
-      }
+      let state = result.pop()
 
+      //更新目标状态的连入连线和连出连线
       if (state.inputAry) {
         lineAry = currentThread.lineAry;
         state.inputAry.forEach((inputLine) => {
@@ -895,64 +932,60 @@ export default {
         });
       }
 
-      // 在更新stateData的连线状态时递归更新stateData的children的连线状态。
-      // 因为拖动父状态时嵌套在父状态内的子状态没有独立事件，所以使用childrenData来更新连线数据
-      let copiedStateData = Tools.deepCopy(stateData)
-      let copiedState = Tools.deepCopy(state)
-      while(copiedStateData.data){
-        copiedStateData = copiedStateData.data
-      };
-      
+      // 递归处理嵌套在父状态内的所有状态的连线，因为绘制连线需要用到一些属性，定义childrenData来将属性一层层传递
       while(state.children){
-        for (var i in state.children){
-          let copiedChildren = Tools.deepCopy(state.children[i]);
-          let childrenData;
-            //第一次计算嵌套组件的位置信息时调用if块
-            if(copiedStateData.AbsolutePosition){
-              childrenData = {
-                children: copiedChildren.children,
-                // 状态块的绝对位置
-                statePos: {
-                  x: copiedChildren.x + copiedStateData.AbsolutePosition.x,
-                  y: copiedChildren.y + copiedStateData.AbsolutePosition.y,
-                },
-                parentStatePos: copiedStateData.AbsolutePosition,
-                stateType: copiedChildren.stateType,
-                inputAry: copiedChildren.inputAry,
-                outputAry: copiedChildren.outputAry,
-                width: copiedChildren.width,
-                height: copiedChildren.height,
-                inLoop: true
-              }
-            }
-            //第二次以上计算嵌套组件的位置信息时调用else块
-            else{
-              childrenData = {
-                children: copiedChildren.children,
-                statePos: {
-                  x: copiedChildren.x + copiedStateData.statePos.x,
-                  y: copiedChildren.y + copiedStateData.statePos.y,
-                },
-                parentStatePos: copiedStateData.statePos,
-                stateType: copiedChildren.stateType,
-                inputAry: copiedChildren.inputAry,
-                outputAry: copiedChildren.outputAry,
-                width: copiedChildren.width,
-                height: copiedChildren.height,
-                inLoop: true
-              }
-            }
-          //}
+        for (var i=0; i<state.children.length; i++){
+          let childrenData = this.updateChildrenData(state.children[i],stateData)
           this.updateLines(childrenData)
         }
         state = state.children
       }
     },
+    //用于更新嵌套状态中子状态的连线的方法
+    updateChildrenData(stateChildren, stateData){
+      debugger;
+      //第一次计算嵌套组件的位置信息时调用if块
+      if(stateData.AbsolutePosition){
+        let childrenData = {
+          children: stateChildren.children,
+          // 使用状态块的绝对位置来判断连线的位置，因为连线现在是以绝对位置实现的，后续可能需要修改
+          statePos: {
+            x: stateChildren.x + stateData.AbsolutePosition.x,
+            y: stateChildren.y + stateData.AbsolutePosition.y,
+          },
+          stateType: stateChildren.stateType,
+          inputAry: stateChildren.inputAry,
+          outputAry: stateChildren.outputAry,
+          width: stateChildren.width,
+          height: stateChildren.height,
+          inLoop: true,
+          stateId: stateChildren.stateId
+        }
+        return childrenData
+      } else {
+        //第二次以上计算嵌套组件的位置信息时调用else块
+          let childrenData = {
+            children: stateChildren.children,
+            // 使用状态块的绝对位置来判断连线的位置，因为连线现在是以绝对位置实现的，后续可能需要修改
+            statePos: {
+              x: stateChildren.x + stateData.statePos.x,
+              y: stateChildren.y + stateData.statePos.y,
+            },
+            stateType: stateChildren.stateType,
+            inputAry: stateChildren.inputAry,
+            outputAry: stateChildren.outputAry,
+            width: stateChildren.width,
+            height: stateChildren.height,
+            inLoop: true,
+            stateId: stateChildren.stateId
+          }
+          return childrenData
+        }
+    },
     /**
      * 当连线的结束点变化时，动态更新连线
      */
     drawUpdateLine(curLine, stateHeight, endPoint, lineRadius) {
-      //debugger
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
@@ -965,14 +998,14 @@ export default {
       
       // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
       if ((endPoint.x - line_h - lineRadius < curLine.startPoint.x && endPoint.y < curLine.startPoint.y) || (endPoint.x < curLine.startPoint.x && endPoint.y == curLine.startPoint.y)){
-        linepath = this.drawUpperBackConnectLine(curLine.startPoint, endPoint, lineRadius)
+        linepath = this.drawUpperBackConnectLine(curLine.startPoint, endPoint, lineRadius, stateHeight)
         curLine.endPoint = endPoint;
         curLine.d = linepath;
         return;
       }
       // 当结束点的x坐标小于起始点时且y坐标大于起始点时
       if (endPoint.x - line_h - lineRadius < curLine.startPoint.x &&endPoint.y > curLine.startPoint.y){
-        linepath = this.drawLowerBackConnectLine(curLine.startPoint, endPoint, lineRadius)
+        linepath = this.drawLowerBackConnectLine(curLine.startPoint, endPoint, lineRadius, stateHeight)
         curLine.endPoint = endPoint;
         curLine.d = linepath
         return
@@ -1019,7 +1052,6 @@ export default {
      * 当连线的起始点发生变化时，动态更新连线
      */
     drawUpdateOutputLine(startPoint, stateHeight, curLine, lineRadius) {
-      //debugger
       let tempRadius = lineRadius;
       let linepath;
       // y坐标相同，绘制直线
@@ -1031,7 +1063,7 @@ export default {
       } 
 
       if ((curLine.endPoint.x - line_h - lineRadius < startPoint.x &&curLine.endPoint.y < startPoint.y) || (curLine.endPoint.x < startPoint.x && curLine.endPoint.y == startPoint.y)){
-        linepath = this.drawUpperBackConnectLine(startPoint, curLine.endPoint, lineRadius)
+        linepath = this.drawUpperBackConnectLine(startPoint, curLine.endPoint, lineRadius, stateHeight)
         curLine.startPoint = startPoint;
         curLine.d = linepath;
         return
@@ -1039,7 +1071,7 @@ export default {
 
       // 当结束点的x坐标小于起始点时且y坐标大于起始点时
       if (curLine.endPoint.x - line_h - lineRadius < startPoint.x &&curLine.endPoint.y > startPoint.y){
-        linepath = this.drawLowerBackConnectLine(startPoint, curLine.endPoint, lineRadius)
+        linepath = this.drawLowerBackConnectLine(startPoint, curLine.endPoint, lineRadius, stateHeight)
         curLine.startPoint = startPoint;
         curLine.d = linepath;
         return
@@ -1089,7 +1121,6 @@ export default {
      * 
      */
     updateLineData(curLine, stateData) {
-      //debugger;
       function translatePX2Num(str) {
         if (/px/.test(str)) {
           str = str.replace("px", "");
@@ -1099,28 +1130,30 @@ export default {
       let currentThread = store.stateData.threadAry[this.threadIndex]
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
-      function traverse(stateAry) {
+      function traverse(stateAry, targetStateId) {
         for (var i in stateAry){
-            if (stateAry[i].stateId === stateData.stateId){
+            if (stateAry[i].stateId === targetStateId){
             result.push(stateAry[i]);
             return
             }
-          traverse(stateAry[i].children);
+         traverse(stateAry[i].children, targetStateId);
           }
       };
-      traverse(currentThread.stateAry);
+      traverse(currentThread.stateAry, stateData.stateId);
       let currentState
       if(!stateData.stateId){
         currentState = stateData
       }
       else{
-        currentState = result[0]
+        currentState = result.pop()
       }
 
       let stateType = currentState.stateType
-      let stateHeight = parseInt(translatePX2Num(currentState.height) / 2, 10)
-      //TODO: 需要设计一下要如何储存这里的height
-      window.localStorage.setItem("heightForCalc", stateHeight);
+      let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2
+      //更新输出连线的高度
+      traverse(currentThread.stateAry, curLine.startState.stateId)
+      let outputState = result.pop()
+      let outputStateHeight = parseInt(translatePX2Num(outputState.height), 10) / 2
       let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
       let copiedStateData = Tools.deepCopy(stateData);
       let copiedTransform = copiedStateData.transform;
@@ -1152,11 +1185,16 @@ export default {
             y: copiedStateData.AbsolutePosition.y + stateHeight,
           };
       }
-      this.drawUpdateLine(curLine, stateHeight, endPoint, line_radius);
+      if(outputStateHeight > stateHeight){
+        this.drawUpdateLine(curLine, outputStateHeight, endPoint, line_radius);
+      }
+      else{
+        this.drawUpdateLine(curLine, stateHeight, endPoint, line_radius);
+      }
+      
     },
 
     updateOutputLineData(curLine, stateData) {
-      //debugger
       function translatePX2Num(str) {
         if (/px/.test(str)) {
           str = str.replace("px", "");
@@ -1167,28 +1205,30 @@ export default {
       
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
       let result = []
-      function traverse(stateAry) {
-        for (let i in stateAry){
-            if (stateAry[i].stateId === stateData.stateId){
+      function traverse(stateAry,targetStateId) {
+        for (let i=0; i<stateAry.length; i++){
+            if (stateAry[i].stateId === targetStateId){
             result.push(stateAry[i]);
-            return result
+            return
             }
-          traverse(stateAry[i].children);
+          traverse(stateAry[i].children, targetStateId);
           }
       };
-      traverse(currentThread.stateAry);
+      let targetStateId = stateData.stateId
+      traverse(currentThread.stateAry, targetStateId);
       let currentState
       if(!stateData.stateId){
         currentState = stateData
       }
       else{
-        currentState = result[0]
+        currentState = result.pop()
       }
       let stateType = currentState.stateType
-      let stateHeight = parseInt(translatePX2Num(currentState.height)/ 2, 10)
+      let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2
       // 用于计算往左边模块连线时的被连线模块的高度
-      let inputStateHeight
-      inputStateHeight = parseInt(window.localStorage.getItem("heightForCalc"), 10)
+      traverse(currentThread.stateAry, curLine.endState.stateId)
+      let inputState = result.pop()
+      let inputStateHeight = parseInt(translatePX2Num(inputState.height), 10) / 2
       let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
       let copiedStateData = Tools.deepCopy(stateData);
       while(copiedStateData.data){
@@ -1226,7 +1266,13 @@ export default {
           };
         }
       }
-      this.drawUpdateOutputLine(startPoint, inputStateHeight, curLine, line_radius);
+      if(inputStateHeight > stateHeight){
+        this.drawUpdateOutputLine(startPoint, inputStateHeight, curLine, line_radius);
+      }
+      else{
+        this.drawUpdateOutputLine(startPoint, stateHeight, curLine, line_radius);
+      }
+
     },
     startResize(e) {
       this.showVirtualBox = true;
@@ -1256,6 +1302,11 @@ export default {
      */
      autoPosition(){
        var style = document.getElementsByClassName("thread")[this.threadIndex].getAttribute("style");
+       console.log(style)
+       this.$nextTick(() =>{
+         console.log(style)
+       })
+       
        var depth;
      },
   },
@@ -1266,7 +1317,6 @@ export default {
     if (elm) {
       this.stateBlock = new PlainDraggable(elm);
     }
-
     /* var states = el.getElementsByClassName('state-div');
         var lineOption = {
             color: '#aaaaaa',

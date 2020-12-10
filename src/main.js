@@ -33,8 +33,6 @@ window.store = {
         lineAry: [],
       },
     ],
-      //用于DEMO
-  demoStateData: {}
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);

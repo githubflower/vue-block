@@ -24,9 +24,11 @@
       <!-- </span> -->
       <SwitchBtn/>
       <div class="demo">
+        <!--
         <el-button type="primary" plain @click="showDemo('active')">运行至当前状态</el-button>
         <el-button type="primary" plain @click="showDemo('warning')">运行至当前状态警告</el-button>
         <el-button type="primary" plain @click="showDemo('error')">运行至当前状态错误</el-button>
+        -->
         <el-button
           type="primary"
           plain
@@ -585,7 +587,8 @@ export default {
     },
 
     loadData(data){
-
+      this.threadAry[0].stateAry = data.stateAry;
+      this.threadAry[0].lineAry = data.lineAry;
     }
   },
 
@@ -629,8 +632,9 @@ export default {
 
     //刷新iframe内容，从localstorage中读取blockly.xml,
     var blocklyXml = window.localStorage.getItem('blocklyXml');
-    console.log(blocklyXml);
     var qblockJson = Util.blockly2state(blocklyXml);
+    console.log(qblockJson.stateAry);
+    debugger;
     this.loadData(qblockJson);
   },
   beforeDestroy(){

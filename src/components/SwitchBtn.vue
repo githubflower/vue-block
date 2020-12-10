@@ -1,7 +1,8 @@
 <template>
   <el-button-group class="switch-btn">
-    <el-button type="primary">
-      <router-link :to="{ name: 'state' }" tag="span">QBlock</router-link>
+    <el-button type="primary" @click="switch2QBlock">
+      <!-- <router-link :to="{ name: 'state' }" tag="span">QBlock</router-link> -->
+      QBlock
     </el-button>
 
     <el-button type="primary"
@@ -15,11 +16,21 @@
 </template>
 
 <script>
+import Util from "./statepage/util.js"
 export default {
   name: "SwitchBtn",
   data() {
     return {};
   },
+  methods: {
+    switch2QBlock(e){
+      var xmlText = Util.workspace2dom();
+      window.localStorage.setItem('blocklyXml', xmlText);
+      this.$router.push({
+          name: 'state'
+      });
+    }
+  }
 };
 </script>
 

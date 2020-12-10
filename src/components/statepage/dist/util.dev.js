@@ -377,6 +377,93 @@ var Util = {
 
     return id.join('');
   },
+  getDomChildren: function getDomChildren(dom) {
+    var ary = [];
+
+    if (dom.children) {
+      ary = Array.prototype.slice.call(dom.children);
+    }
+
+    return ary;
+  },
+  getStateXY: function getStateXY(stateDom, existStates) {
+    /**
+     * 1.获取这个Dom节点的sx, sy值，如果存在就使用这个值，如果不存在，则获取上一个状态的sx, sy值，然后查看这个stateDom处于上一个状态的outputAry中的第几个元素，假设是第3个，则
+     * XY的值为：  x: targetDom.sx + gap_x(水平方向间隔)  y: targetDom.sx + index * gap_y
+     */
+    var gap_x = 150;
+    var gap_y = 100;
+    var x = stateDom.getAttribute('sx');
+    var y = stateDom.getAttribute('sy');
+
+    function getLineDom(dom) {
+      var parent = dom.parent;
+
+      if (parent) {
+        if (parent.type === 'state_trigger_event') {
+          return parent;
+        } else {
+          parent = getLineDom(parent);
+        }
+      }
+
+      return parent;
+    }
+
+    function getPrevStateDom(dom) {
+      var parent = dom.parent;
+
+      if (parent) {
+        if (parent.type === 'state_opr') {
+          return parent;
+        } else {
+          parent = getPrevStateDom(parent);
+        }
+      }
+
+      return parent;
+    }
+
+    var prevLineId = getLineDom(stateDom) && getLineDom(stateDom).getAttribute('id');
+
+    if (!x || x === 'undefined') {
+      // x是未定义的则 y也是未定义的
+      var prevStateDom = getPrevStateDom(stateDom);
+
+      if (!prevStateDom) {
+        return {
+          x: 0,
+          y: 0
+        };
+      }
+
+      var prevX = prevStateDom.getAttribute('sx');
+      var prevY = prevStateDom.getAttribute('sy');
+
+      if (!prevX || prevX === 'undefined') {
+        prevX = 0;
+        prevY = 0;
+      }
+
+      x = prevX + gap_x;
+      var index = 0;
+      var prevState = existStates.find(function (item) {
+        return item.stateId === prevStateDom.getAttribute('id');
+      });
+      prevState.outputAry.forEach(function (item, i) {
+        if (item.lineId === prevLineId) {
+          index = i;
+          return false; // return false 结束forEach
+        }
+      });
+      y = prevY + index * gap_y;
+    }
+
+    return {
+      x: x,
+      y: y
+    };
+  },
 
   /**
    * 将所有线程的数据（包括了状态和连线）转为Blockly可识别的xml数据
@@ -434,7 +521,139 @@ var Util = {
   /**
    * 将Blockly数据转为状态图可识别的数据
    */
-  blockly2state: function blockly2state() {},
+  blockly2state: function blockly2state(xmlDom) {
+    if (typeof xmlDom === 'string') {
+      xmlDom = new DOMParser().parseFromString(xmlDom, 'text/xml');
+    }
+
+    var STATE_BLOCK = 'state_opr';
+    var stateAry = []; //所有的状态数据集合
+
+    var lineAry = []; //所有的连线数据集合
+
+    function extractStateAndLine(stateDom) {
+      if (stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
+        var dom2State = function dom2State(dom) {
+          return {
+            stateId: dom.getAttribute('id'),
+            stateType: STATE_BLOCK
+          };
+        };
+
+        var findOutputLinesOfStateDom = function findOutputLinesOfStateDom(stateDom, outputLines) {
+          // 如果stateDom中有next节点 且 next节点的children中有block.state_trigger_event 则将这个block.state_trigger_event push 到 outputLines
+          // 然后将这个block.state_trigger_event作为新的stateDom，查找其包含的block.state_trigger_event 这样遍历查找所有的block.state_trigger_event就找到了outputLines
+          var children = Util.getDomChildren(stateDom);
+          children.forEach(function (child) {
+            if (child.tagName === 'next') {
+              //所有next节点的children都只有1个
+              if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
+                var _lineDom = child.children[0];
+                var newLine = {
+                  lineId: _lineDom.getAttribute('id'),
+                  d: _lineDom.getAttribute('d'),
+                  startState: dom2State(stateDom),
+                  endState: dom2State(_lineDom.children[0].children[0]) //TODO 需保证代码健壮性
+
+                };
+                var existLineOfOutputLines = outputLines.find(function (item) {
+                  return item.lineId === _lineDom.getAttribute('id');
+                });
+
+                if (!existLineOfOutputLines) {
+                  outputLines.push(newLine);
+                }
+
+                var existLineOfLineAry = lineAry.find(function (item) {
+                  return item.lineId === _lineDom.getAttribute('id');
+                });
+
+                if (!existLineOfLineAry) {
+                  lineAry.push(newLine);
+                }
+
+                findOutputLinesOfStateDom(_lineDom.children[0].children[0], outputLines);
+              }
+            }
+          });
+          return outputLines;
+        };
+
+        var findInputLinesOfStateDom = function findInputLinesOfStateDom(stateDom, inputLines) {
+          //逐级往上寻找type === 'state_opr'的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
+          var parent = stateDom.parent && stateDom.parent.parent;
+
+          if (parent && parent.getAttribute('type') === 'state_trigger_event') {
+            var newLine = {
+              lineId: lineDom.getAttribute('id'),
+              d: lineDom.getAttribute('d'),
+              startState: dom2State(parent),
+              endState: dom2State(stateDom)
+            };
+            var existLineOfInputLines = inputLines.find(function (item) {
+              return item.lineId === newLine.lineId;
+            });
+
+            if (!existLineOfInputLines) {
+              inputLines.push(newLine);
+            }
+
+            var existLineOfLineAry = lineAry.find(function (item) {
+              return item.lineId === newLine.lineId;
+            });
+
+            if (!existLineOfLineAry) {
+              lineAry.push(newLine);
+            }
+          }
+
+          return inputLines;
+        };
+
+        var stateObj = {
+          stateId: stateDom.getAttribute('id'),
+          stateType: stateDom.getAttribute('type') === STATE_BLOCK ? 'stateDiv' : 'loopDiv',
+          bx: parseInt(stateDom.getAttribute('x'), 10),
+          // blockly中与此对应的图形块的x
+          by: parseInt(stateDom.getAttribute('y'), 10),
+          // blockly中与此对应的图形块的y
+          x: Util.getStateXY(stateDom).x,
+          //stateDom.getAttribute('sx'),
+          y: Util.getStateXY(stateDom).y,
+          width: '76px',
+          height: '40px',
+          name: stateDom.children[0].textContent,
+          inputAry: [],
+          outputAry: [],
+          children: [],
+          nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
+
+        };
+        findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
+        findInputLinesOfStateDom(stateDom, stateObj.inputAry);
+        var existStateInStateAry = stateAry.find(function (state) {
+          return state.stateId === stateObj.stateId;
+        });
+
+        if (!existStateInStateAry) {
+          stateAry.push(stateObj);
+        }
+      }
+
+      if (stateDom.children && stateDom.children.length) {
+        for (var j = 0; j < stateDom.children.length; j++) {
+          var child = stateDom.children[j];
+          extractStateAndLine(child);
+        }
+      }
+    }
+
+    extractStateAndLine(xmlDom);
+    return {
+      stateAry: stateAry,
+      lineAry: lineAry
+    };
+  },
 
   /**
    * 将Blockly数据复制到剪切板 - 调试时用
@@ -451,6 +670,20 @@ var Util = {
     hiddenInput.select();
     document.execCommand("copy");
     document.body.removeChild(hiddenInput);
+  },
+  workspace2dom: function workspace2dom() {
+    var xmlText = '';
+    var iframeDom = document.getElementById('blocklyIframe');
+
+    if (iframeDom) {
+      var win = iframeDom.contentWindow;
+      var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
+      xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
+    } else {
+      console.error('当前页面没有嵌入blockly');
+    }
+
+    return xmlText;
   }
 };
 var _default = Util;

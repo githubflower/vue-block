@@ -3,10 +3,10 @@
   <!-- :stateId="stateId"  -->
   <div 
        :index="index"
-       :class="['state-div', stateData.mode, {'is-dragging': isDragging}, {'selected': isInActiveStates()}, runningStatus]"
-       @click="selectState()">
+       :class="['state-div', stateData.mode, {'is-dragging': isDragging},{'selected': selectedFn}, stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
+       @click="selectState(stateData)">
 
-    <div :class="runningAnimation" :v-show="runningAnimation">
+    <div :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus +'-animation' : '']" :v-show="runningStateData.runningStatus">
     </div>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
     <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
@@ -19,7 +19,7 @@
         @blur="hideInput"
       ></el-input>
       <p 
-        :class="runningStatus"
+        :class="[stateData.stateId == runningStateData.stateId ? runningStateData.runningStatus : '']"
         v-else :title="stateData.name" 
         @dblclick="rename">
         {{ stateData.name.length > 5 ? stateData.name.slice(0,5) + '...' : stateData.name }}
@@ -77,7 +77,7 @@ const isNumber = (str) => {
 };
 export default {
   name: "StateDiv",
-  props: ["stateData", "index", "threadIndex", "activeStates", "showDescData", "runningStatus", "runningAnimation"],
+  props: ["stateData", "index", "threadIndex", "runningStateData", "activeStates", "showDescData"],
   data() {
     return {
       showInput: false,
@@ -86,20 +86,23 @@ export default {
       stateId: null,
       showInputAry: false,
       showOutputAry: false,
+      selectedFn: false,
     };
   },
   methods: {
-    isInActiveStates(){
+    isInActiveStates(stateData){
       for(let i=0; i<this.activeStates.length; i++){
-        if(this.stateData.stateId === this.activeStates[i].stateId){
+        if(stateData.stateId == this.activeStates[i].stateId){
           return true;
         }
       }
-      return false;
     },
     //选中被点击的状态块
-    selectState(){
-      this.$emit('updateActiveState', this.stateData)
+    selectState(stateData){
+      stateData.selected = !stateData.selected
+      this.$emit('updateActiveState', stateData)
+      //Demo用
+      store.demoStateData = stateData
     },
     genId() {
       return window.genId("state");
@@ -326,6 +329,20 @@ export default {
         line.showdesc = false;
     },
   },
+ /*  computed: {
+    selectedFn: function(){
+      console.log('--1');
+      return this.stateData.selected && this.isInActiveStates(this.stateData)
+    }
+  }, */
+  watch: {
+    'activeStates': function(nv, ov){
+      this.selectedFn = this.stateData.selected && this.isInActiveStates(this.stateData);
+      console.log('nv: ' + nv);
+      console.log('ov: ' + ov);
+    }
+  },
+
   created() {
     this.stateId = this.stateData.stateId
       ? this.stateData.stateId

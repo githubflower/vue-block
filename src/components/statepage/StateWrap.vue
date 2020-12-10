@@ -31,7 +31,6 @@
       :threadIndex="threadIndex"
       :activeStates="activeStates"
       @updateTempLineData="updateTempLineData"
-
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -42,9 +41,10 @@
       :index="index"
       :threadIndex="threadIndex"
       :activeStates="activeStates"
+      :runningStatus="runningStatus"
+      :runningAnimation="runningAnimation"
       @updateTempLineData="updateTempLineData"
       @updateActiveState="updateActiveState"
-
     ></state-div>
     <!-- <div> -->
     <state-wrap
@@ -53,6 +53,8 @@
       :key="cIndex"
       :stateData="item"
       :runningStateData="runningStateData"
+      :runningStatus="runningStatus"
+      :runningAnimation="runningAnimation"
       :index="cIndex"
       :threadIndex="threadIndex"
       :activeStates="activeStates"
@@ -78,7 +80,6 @@
       }"
       @mousedown.stop="onResizeIconMousedown"
       @mouseup.stop="onResizeIconMouseup"
-      @mouseleave.stop="onResizeIconMouseup"
     ></i>
   </div>
 </template>
@@ -119,6 +120,18 @@ export default {
     };
   },
   methods: {
+    StateRunningStatus(){
+      if(this.stateData.stateId === this.runningStateData.stateId){
+        return this.runningStateData.runningStatus
+      }
+      return ''
+    },
+    StateRunningAnimation(){
+      if(this.stateData.stateId === this.runningStateData.stateId){
+        return this.runningStateData.runningStatus + '-animation'
+      }
+      return ''
+    },
     getCompType(stateType) {
       return "StateWrap";
       // return stateType === 'loopDiv' ? 'LoopDiv' : 'StateDiv';
@@ -129,10 +142,25 @@ export default {
     /* generateStatePos(stateData){
             return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
         }, */
+    /**
+     * 将状态的位置信息转成像素字符串
+     */
+    getTransformNum(strOrNum){
+      var str;
+      if(typeof strOrNum === 'number'){
+        str = strOrNum + 'px';
+      }else if(typeof strOrNum === 'string'){
+        let reg = /px/;
+        if(!reg.test(strOrNum)){
+          str = strOrNum + 'px';
+        }else{
+          str = strOrNum;
+        }
+      }
+      return str;
+    },
     generateStatePos(stateData) {
-      return isNumber(stateData.x) && isNumber(stateData.y)
-        ? `translate(${stateData.x}px, ${stateData.y}px)`
-        : "translate(0, 0)";
+      return `translate(${this.getTransformNum(stateData.x)}, ${this.getTransformNum(stateData.y)})`;
     },
     getWidth(stateData) {
       return stateData.width
@@ -364,12 +392,15 @@ export default {
       }
       let currentThread = store.stateData.threadAry[this.threadIndex]
       // 无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
-      // 需要再减去父状态的绝对位置
+      // 需要处理从下往上移动的位置判断/处理鼠标移动的距离
       let x = e.pageX - this.$el.getBoundingClientRect().left;
       let y = e.pageY - this.$el.getBoundingClientRect().top;
 
-      theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
-      theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
+
+      theDragStateData.x = x
+      theDragStateData.y = y
+      //theDragStateData.x = 0 /* - statePageVue._dragData.mousedownPoint.x */;
+      //theDragStateData.y = 0 /*  - statePageVue._dragData.mousedownPoint.y */;
       let parentIndex = null;
       parentIndex = this.index; 
       theDragStateData.parent = parentIndex;
@@ -576,8 +607,11 @@ export default {
       });
     },
     onResizeIconMousedown(e) {
+      //debugger;
       this.draggable = false;
       this._isResizing = true;
+      //TODO:连线需要随着状态块放大缩小而更新
+      let resizingStateId = e.target.parentElement.getAttribute("stateid")
       this.$emit("updateMoveData", {
         operate: "resize-state",
         stateIndex: this.index,
@@ -595,6 +629,14 @@ export default {
       this.$emit("stopMoving");
       // this._lastHeight = this.thread.height;
     },
+  },
+  computed:{
+    runningStatus:function(){
+      return this.StateRunningStatus()
+    },
+    runningAnimation:function(){
+      return this.StateRunningAnimation()
+    }
   },
   // created(){
   //     this.stateId = this.stateData.stateId ? this.stateData.stateId : this.genId();

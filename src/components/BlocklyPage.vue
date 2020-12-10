@@ -40,6 +40,7 @@ export default {
       var win = e.target.contentWindow;
       var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
       var xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
+      alert(1);
       window.localStorage.setItem('blocklyXml', xmlText);
     }
   },

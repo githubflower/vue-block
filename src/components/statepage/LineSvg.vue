@@ -11,9 +11,9 @@
             :class="genClass()"
             :style="{strokeWidth: strokeWidth}">
         </path>
-        <path
+       <!--  <path
             :d="getTextPath(line)"
-            :id="line.lineId + '-textpath'"></path>
+            :id="line.lineId + '-textpath'"></path> -->
         <text
             v-if="line.desc"
             x="15"
@@ -37,7 +37,7 @@ const stroke_width = lineCfg.stroke_width
 const desc_limit = lineCfg.desc_limit
 export default {
     name: 'LineSvg',
-    props: ['line', 'threadIndex', 'lineClass'],
+    props: ['line', 'threadIndex', 'lineClass', 'activeLines'],
     data(){
         return {
             isActive: false,
@@ -47,6 +47,14 @@ export default {
         }
     },
     methods: {
+        isInActiveLines(){
+            for(let i=0; i<this.activeLines.length; i++){
+                if(this.line.lineId === this.activeLines[i].stateId){
+                return true;
+                }
+            }
+            return false;
+        },
         genClass(type){
             return this.lineClass ? this.lineClass : 'connect-line';
         },
@@ -92,6 +100,7 @@ export default {
 
         activeLineChange(){
             this.line.active = !this.line.active
+            this.$emit('updateActiveLine', this.line)
         },
     },
     created(){
