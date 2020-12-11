@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="[{showdesc: line.showdesc}, {active: line.active}, line.type]"
+        :class="[{showdesc: line.showdesc}, {'active': isInActiveLines()}, line.type]"
     >
         <path 
             :id="line.lineId"
@@ -37,19 +37,21 @@ const stroke_width = lineCfg.stroke_width
 const desc_limit = lineCfg.desc_limit
 export default {
     name: 'LineSvg',
-    props: ['line', 'threadIndex', 'lineClass', 'activeLines'],
+    props: ["line", "threadIndex", "lineClass", "activeLines"],
     data(){
         return {
-            isActive: false,
             isShowDesc: false,
             strokeWidth: stroke_width,
             descLimit: desc_limit,
         }
     },
     methods: {
+        activeLineChange(){
+            this.$emit('updateActiveLine', this.line.lineId)
+        },
         isInActiveLines(){
             for(let i=0; i<this.activeLines.length; i++){
-                if(this.line.lineId === this.activeLines[i].stateId){
+                if(this.line.lineId === this.activeLines[i]){
                 return true;
                 }
             }
@@ -97,11 +99,6 @@ export default {
                 }
             });
         },
-
-        activeLineChange(){
-            this.line.active = !this.line.active
-            this.$emit('updateActiveLine', this.line)
-        },
     },
     created(){
         this.$set(this.line, 'active', false);
@@ -114,13 +111,6 @@ export default {
         
     },
     watch: {
-        'line.active': function(v){
-            if(v){
-                this.isActive = true;
-            }else{
-                this.isActive = false;
-            }
-        },
         'line.type': function(v){
             if(v){
                 this.isShowDesc = true;

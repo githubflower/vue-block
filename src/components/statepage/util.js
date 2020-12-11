@@ -131,7 +131,7 @@ var Util = {
                 triggerEventDom = this.createEl("block");
                 triggerEventDom.setAttribute("type", "state_trigger_event");
                 triggerEventDom.setAttribute("id", outputItem.lineId);
-                triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
+                // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
                 let triggerEventStatement;
                 triggerEventStatement = this.createEl("statement");
@@ -231,8 +231,7 @@ var Util = {
             " --- " +
             rootState.stateType
         );
-        rootEl.setAttribute("id", rootState.stateId);
-        // rootEl.setAttribute('type', rootState.type || 'state_run');
+        // rootEl.setAttribute("id", rootState.stateId);
         rootEl.setAttribute("type", this.genBlockType(rootState.stateType));
         this.saveStateBlockDataInDom(rootEl, rootState);
 
@@ -342,26 +341,40 @@ var Util = {
         }
         return id.join('');
     },
-    getDomChildren(dom){
+    getDomChildren(dom) {
         var ary = [];
-        if(dom.children){
+        if (dom.children) {
             ary = Array.prototype.slice.call(dom.children);
         }
         return ary;
     },
-    getStateXY(stateDom, existStates){
+    toNum(str) {
+        return parseInt(str, 10);
+    },
+    getPrevStateDom(dom) {
+        var parent = dom.parentNode;
+        if (parent) {
+            if (parent.getAttribute('type') === 'state_opr') {
+                return parent;
+            } else {
+                parent = this.getPrevStateDom(parent);
+            }
+        }
+        return parent;
+    },
+    getStateXY(stateDom, existStates) {
         /**
          * 1.获取这个Dom节点的sx, sy值，如果存在就使用这个值，如果不存在，则获取上一个状态的sx, sy值，然后查看这个stateDom处于上一个状态的outputAry中的第几个元素，假设是第3个，则
          * XY的值为：  x: targetDom.sx + gap_x(水平方向间隔)  y: targetDom.sx + index * gap_y
          */
         const gap_x = 150;
         const gap_y = 100;
-        let x = stateDom.getAttribute('sx');
-        let y = stateDom.getAttribute('sy');
-        function getLineDom(dom){
-            var parent = dom.parent;
-            if (parent){
-                if (parent.type === 'state_trigger_event'){
+        let x = this.toNum(stateDom.getAttribute('sx'));
+        let y = this.toNum(stateDom.getAttribute('sy'));
+        function getLineDom(dom) {
+            var parent = dom.parentNode;
+            if (parent) {
+                if (parent.getAttribute && parent.getAttribute('type') === 'state_trigger_event') {
                     return parent;
                 } else {
                     parent = getLineDom(parent);
@@ -369,41 +382,31 @@ var Util = {
             }
             return parent;
         }
-        function getPrevStateDom(dom){
-            var parent = dom.parent;
-            if (parent) {
-                if (parent.type === 'state_opr'){
 
-                    return parent;
-                } else {
-                    parent = getPrevStateDom(parent);
-                }
-            }
-            return parent;
-        }
         let prevLineId = getLineDom(stateDom) && getLineDom(stateDom).getAttribute('id');
-        if(!x || x === 'undefined'){ // x是未定义的则 y也是未定义的
-            let prevStateDom = getPrevStateDom(stateDom);
-            if (!prevStateDom){
+        // 正常拼接的情况下这个prevLineId是一定存在的
+        if (!x || x === 'undefined') { // x是未定义的则 y也是未定义的
+            let prevStateDom = Util.getPrevStateDom(stateDom);
+            if (!prevStateDom) {
                 return {
                     x: 0,
                     y: 0
                 }
             }
-            let prevX = prevStateDom.getAttribute('sx');
-            let prevY = prevStateDom.getAttribute('sy');
-            if (!prevX || prevX === 'undefined'){
+            let prevX = this.toNum(prevStateDom.getAttribute('sx'));
+            let prevY = this.toNum(prevStateDom.getAttribute('sy'));
+            if (!prevX || prevX === 'undefined') {
                 prevX = 0;
                 prevY = 0;
             }
             x = prevX + gap_x;
             var index = 0;
             var prevState = existStates.find(item => {
-                return item.stateId === prevStateDom.getAttribute('id')
+                return item.stateId === Util.getEntityStateId(prevStateDom); 
             })
 
             prevState.outputAry.forEach((item, i) => {
-                if (item.lineId === prevLineId){
+                if (item.lineId === prevLineId) {
                     index = i;
                     return false; // return false 结束forEach
                 }
@@ -414,6 +417,9 @@ var Util = {
             x: x,
             y: y
         }
+    },
+    getEntityStateId(stateDom) {
+        return stateDom.children[0].getAttribute('id');
     },
     /**
      * 将所有线程的数据（包括了状态和连线）转为Blockly可识别的xml数据
@@ -477,7 +483,7 @@ var Util = {
      * 将Blockly数据转为状态图可识别的数据
      */
     blockly2state(xmlDom) {
-        if(typeof xmlDom === 'string'){
+        if (typeof xmlDom === 'string') {
             xmlDom = new DOMParser().parseFromString(xmlDom, 'text/xml');
         }
 
@@ -485,14 +491,17 @@ var Util = {
         let stateAry = []; //所有的状态数据集合
         let lineAry = []; //所有的连线数据集合
         function extractStateAndLine(stateDom) {
+            {/* <block type="state_opr" id="0eRjWo`*LW!O%5)$3!bj" sx="394" sy="201">
+                <field name="field_state" id="state-1607658086399">状态描述0</field>
+            </block> */}
             if (stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
                 let stateObj = {
-                    stateId: stateDom.getAttribute('id'),
+                    stateId: Util.getEntityStateId(stateDom), //!!!这里的id不是block.state_opr的 id 哟，而是它下面的field.field_state的id
                     stateType: stateDom.getAttribute('type') === STATE_BLOCK ? 'stateDiv' : 'loopDiv',
                     bx: parseInt(stateDom.getAttribute('x'), 10), // blockly中与此对应的图形块的x
                     by: parseInt(stateDom.getAttribute('y'), 10), // blockly中与此对应的图形块的y
-                    x: Util.getStateXY(stateDom).x, //stateDom.getAttribute('sx'),
-                    y: Util.getStateXY(stateDom).y,
+                    x: Util.getStateXY(stateDom, stateAry).x, //stateDom.getAttribute('sx'),
+                    y: Util.getStateXY(stateDom, stateAry).y,
                     width: '76px',
                     height: '40px',
                     name: stateDom.children[0].textContent,
@@ -502,9 +511,15 @@ var Util = {
                     nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
                 }
 
+                
+
                 function dom2State(dom) {
+                    let stateId = dom.getAttribute('id');
+                    if (dom.getAttribute('type') === STATE_BLOCK) {
+                        stateId = Util.getEntityStateId(dom);
+                    }
                     return {
-                        stateId: dom.getAttribute('id'),
+                        stateId: stateId,
                         stateType: STATE_BLOCK
                     };
                 }
@@ -536,7 +551,7 @@ var Util = {
                                 if (!existLineOfLineAry) {
                                     lineAry.push(newLine);
                                 }
-                                findOutputLinesOfStateDom(lineDom.children[0].children[0], outputLines);
+                                findOutputLinesOfStateDom(lineDom, outputLines);
                             }
                         }
                     })
@@ -545,12 +560,12 @@ var Util = {
 
                 function findInputLinesOfStateDom(stateDom, inputLines) {
                     //逐级往上寻找type === 'state_opr'的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
-                    let parent = stateDom.parent && stateDom.parent.parent;
-                    if (parent && parent.getAttribute('type') === 'state_trigger_event') {
+                    let lineDom = stateDom.parentNode && stateDom.parentNode.parentNode;
+                    if (lineDom && lineDom.getAttribute('type') === 'state_trigger_event') {
                         let newLine = {
                             lineId: lineDom.getAttribute('id'),
                             d: lineDom.getAttribute('d'),
-                            startState: dom2State(parent),
+                            startState: dom2State(Util.getPrevStateDom(lineDom)),
                             endState: dom2State(stateDom)
                         };
 
@@ -610,15 +625,15 @@ var Util = {
         document.execCommand("copy");
         document.body.removeChild(hiddenInput);
     },
-    workspace2dom(){
+    workspace2dom() {
         var xmlText = '';
         var iframeDom = document.getElementById('blocklyIframe');
         if (iframeDom) {
             var win = iframeDom.contentWindow;
             var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
             xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
-            
-        }else{
+
+        } else {
             console.error('当前页面没有嵌入blockly');
         }
         return xmlText;

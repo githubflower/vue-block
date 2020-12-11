@@ -2,7 +2,9 @@
   <div id="statePage" class="main" @mousemove="onMouseMove">
     <div class="toolbox">
       <!-- <el-button type="primary" plain @click="addThread">线程</el-button> -->
-      <div class="template-thread el-icon-circle-plus" @click="addThread">新建线程</div>
+      <div class="template-thread el-icon-circle-plus" @click="addThread">
+        新建线程
+      </div>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
       <span
         draggable="true"
@@ -19,10 +21,10 @@
         @dragstart="dragStart"
         @dragend="dragEnd"
       > -->
-        <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
-        <!-- <div class="template-loop" stateType="loopDiv">循环</div> -->
+      <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
+      <!-- <div class="template-loop" stateType="loopDiv">循环</div> -->
       <!-- </span> -->
-      <SwitchBtn/>
+      <SwitchBtn />
       <div class="demo">
         <!--
         <el-button type="primary" plain @click="showDemo('active')">运行至当前状态</el-button>
@@ -35,6 +37,27 @@
           @click="state2blockly"
           title="生成blockly.xml"
           >生成blockly.xml</el-button
+        >
+        <el-button
+          type="primary"
+          plain
+          @click="clearBlocklyXmlOfLocalStorage"
+          title="清空localStorage中blocklyXml数据"
+          >清空localStorage中blocklyXml数据</el-button
+        >
+        <el-button
+          type="primary"
+          plain
+          @click="reloadBlocklyXmlOfLocalStorage"
+          title="reload localStorage中blocklyXml数据"
+          >reload localStorage中blocklyXml数据</el-button
+        >
+        <el-button
+          type="primary"
+          plain
+          @click="saveQBlock2BlocklyXml"
+          title="save qblock2localStorage"
+          >save qblock2localStorage</el-button
         >
       </div>
       <!-- <el-button type="primary" plain @click="save">保存</el-button> -->
@@ -52,7 +75,7 @@
         title="将当前图面数据以文件形式导出"
         >导出</el-button
       > -->
-      
+
       <!-- <el-button
         type="primary"
         plain
@@ -102,11 +125,7 @@
         >
       </el-button-group> -->
     </div>
-    <div
-      v-show="activeName === 'statePage'"
-      class="content"
-      @click="hideMenus"
-    >
+    <div v-show="activeName === 'statePage'" class="content" @click="hideMenus">
       <line-context-menu
         ref="lineContextMenu"
         v-show="lineContextMenuData.show"
@@ -134,7 +153,6 @@
         :runningLineId="runningLineId"
         :runningStateData="runningStateData"
       ></thread-svg>
-      
     </div>
     <!--  <iframe
       v-show="activeName === 'blocklyPage'"
@@ -148,13 +166,13 @@
 </template>
 
 <script>
-import SwitchBtn from "@/components/SwitchBtn"
+import SwitchBtn from "@/components/SwitchBtn";
 import ThreadSvg from "./ThreadSvg";
 import StateDiv from "./StateDiv";
 import LineContextMenu from "./LineContextMenu";
 import StateContextMenu from "./StateContextMenu";
 import Tools from "@/Tools.js";
-import Util from "./util.js"
+import Util from "./util.js";
 import { lineCfg } from "./graphCfg.js";
 export default {
   name: "StatePage",
@@ -163,7 +181,7 @@ export default {
     StateDiv,
     LineContextMenu,
     StateContextMenu,
-    SwitchBtn
+    SwitchBtn,
   },
   data() {
     return {
@@ -175,7 +193,7 @@ export default {
       // activeName: "statePage", //'statePage'
       runningLineId: "",
       //传入的runningStatus必须为active, warning, error中的任意一个
-      runningStateData:{},
+      runningStateData: {},
       showTempLine: false,
       showDeleteStateMenu: false,
       contextmenuXY: {
@@ -200,19 +218,18 @@ export default {
     };
   },
   methods: {
-    showDemo(runningStatus){
+    showDemo(runningStatus) {
       let demoData = {
-          stateId: store.demoStateData.stateId,
-          runningStatus: runningStatus
-      }
-      let demoStateData = store.demoStateData
-      
-      if(store.demoStateData.inputAry[0]){
-        let demoLineId = store.demoStateData.inputAry[0].lineId
-        this.highlight(demoLineId, demoStateData, runningStatus)
-      }
-      else{
-        this.highlightState(demoData)
+        stateId: store.demoStateData.stateId,
+        runningStatus: runningStatus,
+      };
+      let demoStateData = store.demoStateData;
+
+      if (store.demoStateData.inputAry[0]) {
+        let demoLineId = store.demoStateData.inputAry[0].lineId;
+        this.highlight(demoLineId, demoStateData, runningStatus);
+      } else {
+        this.highlightState(demoData);
       }
     },
     addThread() {
@@ -221,7 +238,7 @@ export default {
         width: 1200,
         height: 500,
         stateAry: [],
-        lineAry:[],
+        lineAry: [],
       });
     },
     deleteState(data) {
@@ -232,7 +249,7 @@ export default {
       this.showDeleteStateMenu = true;
       this._deleteStateData = data;
     },
-    
+
     deleteStateFn() {
       let data = this._deleteStateData;
       let tI = data.indexAry.pop(); //线程索引
@@ -243,37 +260,37 @@ export default {
       }
 
       //用于删除状态时同时删除与状态相连的连线
-      let deleteStateLine = (state, tI) =>{
+      let deleteStateLine = (state, tI) => {
         let stateInputLineAry = state.inputAry;
         let stateOutputLineAry = state.outputAry;
         let currentLine;
-        while(stateInputLineAry.length > 0){
-          currentLine = stateInputLineAry.pop()
-          store.deleteLine({lineId: currentLine.lineId,threadIndex: tI})
+        while (stateInputLineAry.length > 0) {
+          currentLine = stateInputLineAry.pop();
+          store.deleteLine({ lineId: currentLine.lineId, threadIndex: tI });
         }
-        while(stateOutputLineAry.length > 0){
-          currentLine = stateOutputLineAry.pop()
-          store.deleteLine({lineId: currentLine.lineId,threadIndex: tI})
+        while (stateOutputLineAry.length > 0) {
+          currentLine = stateOutputLineAry.pop();
+          store.deleteLine({ lineId: currentLine.lineId, threadIndex: tI });
         }
-      }
+      };
 
-      let copiedIndex = Tools.deepCopy(data.indexAry)
+      let copiedIndex = Tools.deepCopy(data.indexAry);
       let targetIndex = copiedIndex.pop();
       let targetState = target[targetIndex];
       deleteStateLine(targetState, tI);
 
       //处理删除嵌套状态时，同时删除父状态内部的状态与连线
-      let deleteStateChildren = (stateChildren, tI) =>{
-        for(let index = 0; index<stateChildren.length; index++){
-          deleteStateLine(stateChildren[index], tI)
-          if(stateChildren[index].children){
-            deleteStateChildren(stateChildren[index].children, tI)
+      let deleteStateChildren = (stateChildren, tI) => {
+        for (let index = 0; index < stateChildren.length; index++) {
+          deleteStateLine(stateChildren[index], tI);
+          if (stateChildren[index].children) {
+            deleteStateChildren(stateChildren[index].children, tI);
           }
         }
-      }
+      };
 
-      let targetChildren = targetState.children
-      deleteStateChildren(targetChildren, tI)
+      let targetChildren = targetState.children;
+      deleteStateChildren(targetChildren, tI);
 
       target.splice(data.indexAry.pop(), 1);
       this.showDeleteStateMenu = false;
@@ -294,13 +311,37 @@ export default {
       let stateType = e.target.firstElementChild.getAttribute("stateType");
       let leftGap;
       let topGap;
-      if (e.target.getElementsByClassName("template-state")[0]){
-        leftGap = e.pageX - Math.round(e.target.getElementsByClassName("template-state")[0].getBoundingClientRect().left)
-        topGap = e.pageY - Math.round(e.target.getElementsByClassName("template-state")[0].getBoundingClientRect().top)
+      if (e.target.getElementsByClassName("template-state")[0]) {
+        leftGap =
+          e.pageX -
+          Math.round(
+            e.target
+              .getElementsByClassName("template-state")[0]
+              .getBoundingClientRect().left
+          );
+        topGap =
+          e.pageY -
+          Math.round(
+            e.target
+              .getElementsByClassName("template-state")[0]
+              .getBoundingClientRect().top
+          );
       }
-      if (e.target.getElementsByClassName("template-loop")[0]){
-        leftGap = e.pageX - Math.round(e.target.getElementsByClassName("template-loop")[0].getBoundingClientRect().left)
-        topGap = e.pageY - Math.round(e.target.getElementsByClassName("template-loop")[0].getBoundingClientRect().top)
+      if (e.target.getElementsByClassName("template-loop")[0]) {
+        leftGap =
+          e.pageX -
+          Math.round(
+            e.target
+              .getElementsByClassName("template-loop")[0]
+              .getBoundingClientRect().left
+          );
+        topGap =
+          e.pageY -
+          Math.round(
+            e.target
+              .getElementsByClassName("template-loop")[0]
+              .getBoundingClientRect().top
+          );
       }
 
       e.dataTransfer.setData("operate", "addState");
@@ -311,7 +352,7 @@ export default {
     dragEnd() {
       // console.log("dragend");
     },
-    
+
     onMouseMove(e) {
       if (this.operate === "resize-thread") {
         // default, resize-thread,
@@ -547,48 +588,62 @@ export default {
     },
     /**
      * 将后台获取到的lineId传入runningLineId，提供给PathAnimation以运行动画
-     * 
+     *
      */
-    highlightLine(lineId){
+    highlightLine(lineId) {
       this.runningStateData = {};
       this.runningLineId = lineId;
       const interval = lineCfg.interval; // @PathAnimation.vue > interval
       const during = lineCfg.dur; // @PathAnimation.vue > dur
       const rectCount = lineCfg.rectCount; // @PathAnimation.vue > rectCount
-      setTimeout(function(){
-        let triggerAnimationDom = document.getElementById('animationComp');
+      setTimeout(function () {
+        let triggerAnimationDom = document.getElementById("animationComp");
         triggerAnimationDom.focus();
-        setTimeout(() =>{
+        setTimeout(() => {
           window.triggerAnimationDom = triggerAnimationDom;
           triggerAnimationDom.blur();
-        },during + interval * (rectCount - 1))
+        }, during + interval * (rectCount - 1));
       }, 0);
     },
 
     //将后台获取到的stateId传入，提供给stateDiv运行动画
-    highlightState(stateData){
-      this.runningStateData = stateData
+    highlightState(stateData) {
+      this.runningStateData = stateData;
     },
 
     //封装过后的高亮连线与状态的方法
-    highlight(lineId, state, runningStatus){
+    highlight(lineId, state, runningStatus) {
       const interval = lineCfg.interval; // @PathAnimation.vue > interval
       const during = lineCfg.dur; // @PathAnimation.vue > dur
       const rectCount = lineCfg.rectCount; // @PathAnimation.vue > rectCount
       let stateData = {
         stateId: state.stateId,
-        runningStatus: runningStatus
-      }
-      
-      this.highlightLine(lineId)
-      setTimeout(() =>{
-        this.highlightState(stateData)
-      },during + interval * (rectCount - 1))
+        runningStatus: runningStatus,
+      };
+
+      this.highlightLine(lineId);
+      setTimeout(() => {
+        this.highlightState(stateData);
+      }, during + interval * (rectCount - 1));
     },
 
-    loadData(data){
+    loadData(data) {
       this.threadAry[0].stateAry = data.stateAry;
       this.threadAry[0].lineAry = data.lineAry;
+    },
+    clearBlocklyXmlOfLocalStorage() {
+      window.localStorage.setItem("blocklyXml", "");
+      window.location.reload();
+    },
+    reloadBlocklyXmlOfLocalStorage() {
+      var blocklyXml = window.localStorage.getItem("blocklyXml");
+      var qblockJson = Util.blockly2state(blocklyXml);
+      debugger;
+      this.loadData(qblockJson);
+    },
+    saveQBlock2BlocklyXml(){
+      var blocklyXml = Util.state2blockly(this.threadAry);
+      window.localStorage.setItem("blocklyXml", blocklyXml);      
     }
   },
 
@@ -631,18 +686,16 @@ export default {
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度 */
 
     //刷新iframe内容，从localstorage中读取blockly.xml,
-    var blocklyXml = window.localStorage.getItem('blocklyXml');
+    var blocklyXml = window.localStorage.getItem("blocklyXml");
     var qblockJson = Util.blockly2state(blocklyXml);
-    console.log(qblockJson.stateAry);
     debugger;
     this.loadData(qblockJson);
   },
-  beforeDestroy(){
+  beforeDestroy() {
     //将Blockly图面数据更新到localstorage的blockly.xml
-    var blocklyXml = Util.state2blockly(this.threadAry);
-    window.localStorage.setItem('blocklyXml', blocklyXml);
-  }
-  
+    // var blocklyXml = Util.state2blockly(this.threadAry);
+    // window.localStorage.setItem("blocklyXml", blocklyXml);
+  },
 };
 </script>
 
@@ -667,13 +720,13 @@ export default {
     padding: 10px 0;
     // border: 1px solid #ebebeb;
     border-radius: 3px;
-    background-color: #0A0B44;
+    background-color: #0a0b44;
     border-bottom: 1px solid #243992;
     z-index: 1;
   }
   .content {
     padding-top: 54px;
-    background-color: #0A0B44;
+    background-color: #0a0b44;
     // text-align: center;
     > svg {
       /* width: 100%;  */
@@ -762,13 +815,13 @@ export default {
     border-color: @qkmPink;
     box-shadow: inset 0 0 5px 1px @qkmPink;
   }
-  .demo{
-    position:absolute;
-    top:150px;
-    right:200px;
-    .el-button{
+  .demo {
+    position: absolute;
+    top: 150px;
+    right: 200px;
+    .el-button {
       display: block;
-      margin:20px;
+      margin: 20px;
     }
   }
 }

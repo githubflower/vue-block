@@ -64,6 +64,7 @@
         v-show="showTempLine"
         :lineClass="tempLineClass"
         :line="tempLineData"
+        :activeLines="activeLines"
       />
       <line-svg
         v-for="(line, index2) in thread.lineAry"
@@ -180,26 +181,21 @@ export default {
   },
   methods: {
     updateActiveLine(selectedLine){
-      
+      //处理连线的高亮，逻辑比高亮状态块要简单
+      let lineIndex = this.activeLines.indexOf(selectedLine)
+      if(lineIndex !== -1){
+        this.activeLines.splice(lineIndex,1)
+      } else{
+        this.activeLines.push(selectedLine)
+      }
     },
     updateActiveState(selectedState){
-      //处理添加高亮的状态块的个数
-      //修改为通过activeLine来控制连线高亮
       //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
-      let spliceIndex = 0
-      let inActiveStateIndex = function(state, activeStates){
-        for(let i = 0; i < activeStates.length; i++){
-          if(activeStates[i].stateId == state.stateId){
-            spliceIndex = i
-            return true
-          }
-        }
-        return false;
-      }
-      let alreadyInActiveState = inActiveStateIndex(selectedState, this.activeStates)
-      if(alreadyInActiveState){
+      let spliceIndex = this.activeStates.indexOf(selectedState)
+      //let alreadyInActiveState = inActiveStateIndex(selectedState, this.activeStates)
+      if(spliceIndex !== -1){
         let disactiveState = this.activeStates.splice(spliceIndex, 1)[0]
-        this.disHighlightLine(disactiveState)
+        this.disHighlightLines(disactiveState)
       }
       //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
       else{
@@ -208,73 +204,56 @@ export default {
           let newActiveState = this.activeStates.pop()
           while(this.activeStates.length > 0){
             let disactiveState = this.activeStates.pop()
-            this.disHighlightLine(disactiveState)
+            this.disHighlightLines(disactiveState)
           }
           this.activeStates.push(newActiveState)
         }
       }
       //处理取消选中状态时同时取消连线高亮
       for(let i=0; i<this.activeStates.length; i++){
-        this.disHighlightLine(this.activeStates[i])
-        this.highlightLine(this.activeStates[i])
+        this.disHighlightLines(this.activeStates[i])
+        this.highlightLines(this.activeStates[i])
       }
     },
 
-    addActiveLines(state){
+    highlightLines(state){
+      debugger;
       if(state.inputAry){
         state.inputAry.forEach((inputLine) =>{
-          this.activeLines.push(inputLine.lineId)
+          if(this.activeLines.indexOf(inputLine.lineId) === -1){
+            this.activeLines.push(inputLine.lineId)
+          }
         })
       }
       if(state.outputAry){
         state.outputAry.forEach((outputLine) =>{
-          this.activeLines.push(outputLine.lineId)
+          if(this.activeLines.indexOf(outputLine.lineId) === -1){
+            this.activeLines.push(outputLine.lineId)
+          }
         })
       }
       return
     },
-    removeActiveLines(state){
-      this.activeLines = [];
-    },
-    highlightLine(state){
-      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
-      let curLine;
+    disHighlightLines(state){
+      debugger;
+      let spliceIndex;
       if(state.inputAry){
-        state.inputAry.forEach((inputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === inputLine.lineId;
-          });
-          curLine.active = true
+        state.inputAry.forEach((inputLine) =>{
+          if(this.activeLines.indexOf(inputLine.lineId) !== -1){
+            spliceIndex = this.activeLines.indexOf(inputLine.lineId)
+            this.activeLines.splice(spliceIndex, 1)
+          }
         })
       }
       if(state.outputAry){
-        state.outputAry.forEach((outputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === outputLine.lineId;
-          });
-          curLine.active = true
+        state.outputAry.forEach((outputLine) =>{
+          if(this.activeLines.indexOf(outputLine.lineId) !== -1){
+            spliceIndex = this.activeLines.indexOf(outputLine.lineId)
+            this.activeLines.splice(spliceIndex, 1)
+          }
         })
       }
-    },
-    disHighlightLine(state){
-      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
-      let curLine;
-      if(state.inputAry){
-        state.inputAry.forEach((inputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === inputLine.lineId;
-          });
-          curLine.active = false
-        })
-      }
-      if(state.outputAry){
-        state.outputAry.forEach((outputLine) => {
-          curLine = currentLineAry.find((line) => {
-            return line.lineId === outputLine.lineId;
-          });
-          curLine.active = false
-        })
-      }
+      return
     },
     isInCurrentThread(lineId){
       let currentThread = store.stateData.threadAry[this.threadIndex].lineAry;
@@ -519,7 +498,6 @@ export default {
       } 
 
       // 鼠标在连接点左侧时
-      // 在这里不对被连接的状态块的宽度进行计算，等到连线完成之后再更新一次
       if ((endPoint.x - line_h - lineRadius < startPoint.x && endPoint.y < startPoint.y)) { 
         if(endPoint.x - startPoint.x < line_h){}
         this.updateTempLineData({
@@ -850,20 +828,22 @@ export default {
       }
     },
     updateStateData(stateData) {
+      //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
-      function traverse(stateAry) {
+      function traverse(stateAry, targetStateId) {
         for (var i in stateAry){
-            if (stateAry[i].stateId === stateData.stateId){
+            if (stateAry[i].stateId === targetStateId){
             result.push(stateAry[i]);
             return
             }
-          traverse(stateAry[i].children);
+          traverse(stateAry[i].children,targetStateId);
         } 
       };
-      traverse(currentThread.stateAry);
-      let currentState = result[0]
+      traverse(currentThread.stateAry,stateData.stateId);
+      let currentState = result.pop()
+
       if (typeof stateData.data !== "undefined") {
         let update = (obj, data) => {
           //组件嵌套的情况，会将数据依次往上传递，传递的过程中会包一层data
@@ -878,6 +858,7 @@ export default {
         this.updateLines(stateData);
       } 
       else {
+        //更新被移动的状态的位置信息
         currentState.x = stateData.transform.x;
         currentState.y = stateData.transform.y;
         this.updateLines(stateData);
@@ -887,30 +868,28 @@ export default {
      * 更新某个状态块的所有输入连线和输出连线
      */
     updateLines(stateData) {
-      debugger;
+      //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
 
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
-      function traverse(stateAry) {
+      function traverse(stateAry,targetStateId) {
         for (var i in stateAry){
-            if (stateAry[i].stateId === stateData.stateId){
+            if (stateAry[i].stateId === targetStateId){
             result.push(stateAry[i]);
             return
             }
-          traverse(stateAry[i].children);
+          traverse(stateAry[i].children,targetStateId);
           }
       };
-      traverse(currentThread.stateAry)
+      traverse(currentThread.stateAry,stateData.stateId)
       let lineAry, curLine;
-
-      // 判断传入的stateData是通过事件传入的还是递归传入的childrenData
-      let state = result.pop()
+      let currentState = result.pop()
 
       //更新目标状态的连入连线和连出连线
-      if (state.inputAry) {
+      if (currentState.inputAry) {
         lineAry = currentThread.lineAry;
-        state.inputAry.forEach((inputLine) => {
+        currentState.inputAry.forEach((inputLine) => {
           // inputLine --> state中保存的lineId以及对这个触发事件的描述等信息，没有真正的用于画连线的数据
           curLine = lineAry.find((line) => {
             //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
@@ -920,9 +899,9 @@ export default {
         });
       }
 
-      if (state.outputAry) {
+      if (currentState.outputAry) {
         lineAry = currentThread.lineAry;
-        state.outputAry.forEach((outputLine) => {
+        currentState.outputAry.forEach((outputLine) => {
           // inputLine --> state中保存的lineId以及对这个触发事件的描述等信息，没有真正的用于画连线的数据
           curLine = lineAry.find((line) => {
             //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
@@ -932,58 +911,44 @@ export default {
         });
       }
 
-      // 递归处理嵌套在父状态内的所有状态的连线，因为绘制连线需要用到一些属性，定义childrenData来将属性一层层传递
-      while(state.children){
-        for (var i=0; i<state.children.length; i++){
-          let childrenData = this.updateChildrenData(state.children[i],stateData)
+      // 因为嵌套状态时传递上来的属性包裹在了data内，需要到data内获取更新连线所需的数据
+      while(stateData.data){
+        stateData = stateData.data
+      }
+      // 递归处理嵌套在父状态内的所有状态的连线
+      while(currentState.children){
+        for (var i=0; i<currentState.children.length; i++){
+          // 绘制连线需要用到一些属性，定义childrenData来将属性一层层传递
+          let childrenData = this.updateChildrenData(currentState.children[i], stateData)
           this.updateLines(childrenData)
         }
-        state = state.children
+        currentState = currentState.children
       }
     },
+
     //用于更新嵌套状态中子状态的连线的方法
     updateChildrenData(stateChildren, stateData){
-      debugger;
-      //第一次计算嵌套组件的位置信息时调用if块
-      if(stateData.AbsolutePosition){
-        let childrenData = {
-          children: stateChildren.children,
-          // 使用状态块的绝对位置来判断连线的位置，因为连线现在是以绝对位置实现的，后续可能需要修改
-          statePos: {
-            x: stateChildren.x + stateData.AbsolutePosition.x,
-            y: stateChildren.y + stateData.AbsolutePosition.y,
-          },
-          stateType: stateChildren.stateType,
-          inputAry: stateChildren.inputAry,
-          outputAry: stateChildren.outputAry,
-          width: stateChildren.width,
-          height: stateChildren.height,
-          inLoop: true,
-          stateId: stateChildren.stateId
-        }
-        return childrenData
-      } else {
-        //第二次以上计算嵌套组件的位置信息时调用else块
-          let childrenData = {
-            children: stateChildren.children,
-            // 使用状态块的绝对位置来判断连线的位置，因为连线现在是以绝对位置实现的，后续可能需要修改
-            statePos: {
-              x: stateChildren.x + stateData.statePos.x,
-              y: stateChildren.y + stateData.statePos.y,
-            },
-            stateType: stateChildren.stateType,
-            inputAry: stateChildren.inputAry,
-            outputAry: stateChildren.outputAry,
-            width: stateChildren.width,
-            height: stateChildren.height,
-            inLoop: true,
-            stateId: stateChildren.stateId
-          }
-          return childrenData
-        }
+      let childrenData = {
+        children: stateChildren.children,
+        // 使用状态块的绝对位置来判断连线的位置，连线现在是以绝对位置实现的，后续可能需要修改
+        AbsolutePosition: {
+          x: stateChildren.x + stateData.AbsolutePosition.x,
+          y: stateChildren.y + stateData.AbsolutePosition.y,
+        },
+        stateType: stateChildren.stateType,
+        inputAry: stateChildren.inputAry,
+        outputAry: stateChildren.outputAry,
+        width: stateChildren.width,
+        height: stateChildren.height,
+        inLoop: true,
+        stateId: stateChildren.stateId
+      }
+      return childrenData
+        
     },
     /**
      * 当连线的结束点变化时，动态更新连线
+     * 现在的实现为单纯的通过起始与结束点来判断该绘制哪种连线，自动布局的grid实现后需要通过grid的行列来进行判断
      */
     drawUpdateLine(curLine, stateHeight, endPoint, lineRadius) {
       let tempRadius = lineRadius;
@@ -1050,6 +1015,7 @@ export default {
     },
     /**
      * 当连线的起始点发生变化时，动态更新连线
+     * 现在的实现为单纯的通过起始与结束点来判断该绘制哪种连线，自动布局的grid实现后需要通过grid的行列来进行判断
      */
     drawUpdateOutputLine(startPoint, stateHeight, curLine, lineRadius) {
       let tempRadius = lineRadius;
@@ -1117,8 +1083,6 @@ export default {
      * 根据状态块的transform数据更新其endPoint, 然后更新用于画线的数据d   todo
      * 连线方案：判断当前的鼠标位置，目标状态，如果存在这样1个状态a，它的纵坐标和startState，endState相等，且a的横坐标在startState，endState中间，则需要绕着a画折线
      * 连线分多种复杂场景，这部分后面逐渐完善
-     * 
-     * 
      */
     updateLineData(curLine, stateData) {
       function translatePX2Num(str) {
@@ -1140,51 +1104,33 @@ export default {
           }
       };
       traverse(currentThread.stateAry, stateData.stateId);
-      let currentState
-      if(!stateData.stateId){
-        currentState = stateData
-      }
-      else{
-        currentState = result.pop()
-      }
-
+      let currentState = result.pop()
       let stateType = currentState.stateType
       let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2
-      //更新输出连线的高度
+      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
+
+      // 更新连线的垂直高度时，需要获取连线连出点的可缩放的嵌套状态的高度
       traverse(currentThread.stateAry, curLine.startState.stateId)
       let outputState = result.pop()
       let outputStateHeight = parseInt(translatePX2Num(outputState.height), 10) / 2
-      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
-      let copiedStateData = Tools.deepCopy(stateData);
-      let copiedTransform = copiedStateData.transform;
-      while(copiedStateData.data){
-        copiedStateData = copiedStateData.data
-      }
       let endPoint;
-      //需要再添加一个条件来判断多层嵌套状态下传入的数据
-      if(!stateData.data){
-        //多层嵌套下时套用这个起始位置的数据
-        if(stateData.inLoop){
-          endPoint = {
-            x: stateData.statePos.x,
-            y: stateData.statePos.y + stateHeight,
-          };
-        }
-        //无嵌套情况下套用这个位置的数据
-        else{
-          endPoint = {
-            x: stateData.transform.x,
-            y: stateData.transform.y + stateHeight + 36,
-          };       
-        }
+
+      //非嵌套状态时，使用transform判断位置
+      if(!stateData.data && !stateData.inLoop){
+        endPoint = {
+          x: stateData.transform.x + stateWidth + 2,
+          y: stateData.transform.y + stateHeight,
+        };
       }
-      //单层嵌套下套用这个起始位置的数据
-      else{
-          endPoint = {
-            x: copiedStateData.AbsolutePosition.x,
-            y: copiedStateData.AbsolutePosition.y + stateHeight,
-          };
+      // 因为嵌套状态时传递上来的属性包裹在了data内，需要到data内获取更新连线所需的数据
+      while(stateData.data){
+        stateData = stateData.data
       }
+      endPoint = {
+        x: stateData.AbsolutePosition.x,
+        y: stateData.AbsolutePosition.y + stateHeight,
+      }
+
       if(outputStateHeight > stateHeight){
         this.drawUpdateLine(curLine, outputStateHeight, endPoint, line_radius);
       }
@@ -1195,6 +1141,7 @@ export default {
     },
 
     updateOutputLineData(curLine, stateData) {
+      debugger;
       function translatePX2Num(str) {
         if (/px/.test(str)) {
           str = str.replace("px", "");
@@ -1214,58 +1161,37 @@ export default {
           traverse(stateAry[i].children, targetStateId);
           }
       };
-      let targetStateId = stateData.stateId
-      traverse(currentThread.stateAry, targetStateId);
-      let currentState
-      if(!stateData.stateId){
-        currentState = stateData
-      }
-      else{
-        currentState = result.pop()
-      }
+
+      traverse(currentThread.stateAry, stateData.stateId);
+      let currentState = result.pop()
       let stateType = currentState.stateType
       let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2
-      // 用于计算往左边模块连线时的被连线模块的高度
+      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
+
+      //更新连线的垂直高度时，需要获取连线连入点的可缩放的嵌套状态的高度
       traverse(currentThread.stateAry, curLine.endState.stateId)
       let inputState = result.pop()
       let inputStateHeight = parseInt(translatePX2Num(inputState.height), 10) / 2
-      let stateWidth = parseInt(translatePX2Num(currentState.width), 10)
-      let copiedStateData = Tools.deepCopy(stateData);
-      while(copiedStateData.data){
-        copiedStateData = copiedStateData.data
-      }
+
+      //非嵌套状态时，使用transform判断位置
       let startPoint;
-      //需要再添加一个条件来判断多层嵌套状态下传入的数据
-      if(!stateData.data){
-        //多层嵌套下时套用这个起始位置的数据
-        if(stateData.inLoop){
-            startPoint = {
-              x: stateData.statePos.x + stateWidth + 2,
-              y: stateData.statePos.y + stateHeight,
-            };
-        }
-        //无嵌套情况下套用这个位置的数据
-        else{
-            startPoint = {
-              x: stateData.transform.x + stateWidth + 3,
-              y: stateData.transform.y + stateHeight + 36,
-            };
-          }
+      if(!stateData.data && !stateData.inLoop){
+        startPoint = {
+          x: stateData.transform.x + stateWidth + 2,
+          y: stateData.transform.y + stateHeight,
+        };
       }
-      else{
-        //单层嵌套下套用这个起始位置的数据
-        if (stateType == "loopDiv") {
-          startPoint = {
-            x: copiedStateData.AbsolutePosition.x + stateWidth + 2,
-            y: copiedStateData.AbsolutePosition.y + stateHeight + 1,
-          };
-        } else {
-          startPoint = {
-            x: copiedStateData.AbsolutePosition.x + stateWidth + 3,
-            y: copiedStateData.AbsolutePosition.y + stateHeight,
-          };
-        }
+      // 因为嵌套状态时传递上来的属性包裹在了data内，需要到data内获取更新连线所需的数据
+      while(stateData.data){
+        stateData = stateData.data
       }
+      
+      startPoint = {
+        x: stateData.AbsolutePosition.x + stateWidth + 2,
+        y: stateData.AbsolutePosition.y + stateHeight,
+      };
+        
+      
       if(inputStateHeight > stateHeight){
         this.drawUpdateOutputLine(startPoint, inputStateHeight, curLine, line_radius);
       }
@@ -1294,7 +1220,6 @@ export default {
       });
       this._lastHeight = this.thread.height;
     },
-
 
     /**
      * TODO:自动布局
