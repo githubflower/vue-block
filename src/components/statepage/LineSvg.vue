@@ -2,7 +2,7 @@
     <g
         @contextmenu.prevent="onContextMenu"
         @click="activeLineChange"
-        :class="[{showdesc: line.showdesc}, {'active': isInActiveLines()}, line.type]"
+        :class="[{'showdesc': line.showdesc}, {'active': isInActiveLines()}, line.type]"
     >
         <path 
             :id="line.lineId"
@@ -11,9 +11,9 @@
             :class="genClass()"
             :style="{strokeWidth: strokeWidth}">
         </path>
-       <!--  <path
+        <path
             :d="getTextPath(line)"
-            :id="line.lineId + '-textpath'"></path> -->
+            :id="line.lineId + '-textpath'"></path>
         <text
             v-if="line.desc"
             x="15"
@@ -40,7 +40,6 @@ export default {
     props: ["line", "threadIndex", "lineClass", "activeLines"],
     data(){
         return {
-            isShowDesc: false,
             strokeWidth: stroke_width,
             descLimit: desc_limit,
         }
@@ -101,7 +100,6 @@ export default {
         },
     },
     created(){
-        this.$set(this.line, 'active', false);
         this.$set(this.line, 'showdesc', false);
         if(!this.line.lineId){
             this.line.lineId = this.genId();
@@ -109,16 +107,6 @@ export default {
     },
     mounted(){
         
-    },
-    watch: {
-        'line.type': function(v){
-            if(v){
-                this.isShowDesc = true;
-            }
-            else{
-                this.isShowDesc = false;
-            }
-        }
     },
     computed: {
         linePath: function(){

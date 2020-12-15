@@ -209,7 +209,8 @@ export default {
   width: 100%;
   height: 60px;
   z-index: 1;
-  background-color: #272b42;
+  background-color: #242265;
+  // background-color: #272b42;
   user-select: none;
   > .el-menu {
     background-color: transparent;

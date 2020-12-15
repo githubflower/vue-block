@@ -1,7 +1,7 @@
 const NAME_SPACE = "https://developers.google.com/blockly/xml";
 const SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-import dagre from 'dagre'
+
 
 var Util = {
     isDefined(a) {
@@ -246,7 +246,7 @@ var Util = {
         let fieldX = this.createFieldDom({
             id: rootState.stateId,
             name: "SX_FIELD",
-            value: 8888 //rootState.x,
+            value: 8888//rootState.x,
         });
         rootEl.appendChild(fieldX);
 
@@ -371,7 +371,6 @@ var Util = {
         const gap_y = 100;
         let x = this.toNum(stateDom.getAttribute('sx'));
         let y = this.toNum(stateDom.getAttribute('sy'));
-
         function getLineDom(dom) {
             var parent = dom.parentNode;
             if (parent) {
@@ -403,7 +402,7 @@ var Util = {
             x = prevX + gap_x;
             var index = 0;
             var prevState = existStates.find(item => {
-                return item.stateId === Util.getEntityStateId(prevStateDom);
+                return item.stateId === Util.getEntityStateId(prevStateDom); 
             })
 
             prevState.outputAry.forEach((item, i) => {
@@ -505,7 +504,7 @@ var Util = {
                     y: Util.getStateXY(stateDom, stateAry).y,
                     width: '76px',
                     height: '40px',
-                    // virtualHeight: Util.getVirtualHeight(outputAry), //TODO 开始状态为这个stateDom的所有状态高度之和
+                    virtualHeight: Util.getVirtualHeight(outputAry), //TODO 开始状态为这个stateDom的所有状态高度之和
                     name: stateDom.children[0].textContent,
                     inputAry: [],
                     outputAry: [],
@@ -513,7 +512,7 @@ var Util = {
                     nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
                 }
 
-
+                
 
                 function dom2State(dom) {
                     let stateId = dom.getAttribute('id');
@@ -525,7 +524,6 @@ var Util = {
                         stateType: STATE_BLOCK
                     };
                 }
-
                 function findOutputLinesOfStateDom(stateDom, outputLines) {
                     // 如果stateDom中有next节点 且 next节点的children中有block.state_trigger_event 则将这个block.state_trigger_event push 到 outputLines
                     // 然后将这个block.state_trigger_event作为新的stateDom，查找其包含的block.state_trigger_event 这样遍历查找所有的block.state_trigger_event就找到了outputLines
@@ -538,7 +536,7 @@ var Util = {
                                     lineId: lineDom.getAttribute('id'),
                                     d: lineDom.getAttribute('d'),
                                     startState: dom2State(stateDom),
-                                    endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
+                                    endState: dom2State(lineDom.children[0].children[0]), //TODO 需保证代码健壮性
                                 };
 
                                 let existLineOfOutputLines = outputLines.find(item => {
@@ -612,20 +610,6 @@ var Util = {
             lineAry: lineAry
         }
     },
-    getEndStateDomOfLine(lineDom){
-        let children = Array.prototype.slice.call(lineDom.childNodes);
-        let statement = children.find(dom => {
-            return dom.nodeName === 'statement'
-        })
-        let statementChildren = Array.prototype.slice.call(statement.childNodes);
-        let endStateDom = statementChildren.find(dom => {
-            return dom.nodeName === 'block'
-        })
-        if (!endStateDom){
-            console.error('数据错误：触发事件连线没有连接正确的状态');
-        }
-        return endStateDom;
-    },
     /**
      * 将Blockly数据复制到剪切板 - 调试时用
      * @param {*} blocklyXml 
@@ -654,120 +638,7 @@ var Util = {
             console.error('当前页面没有嵌入blockly');
         }
         return xmlText;
-    },
-    /**
-     * 在自动布局前重置所有状态的x,y坐标
-     */
-    resetAllStateData(thread) {
-        if (thread) {
-            thread.stateAry.forEach(state => {
-                state.x = 0;
-                state.y = 0;
-            })
-        }
-    },
-    autoLayout(thread) {
-        if (thread) {
-            let firstState = Util.findFirstState(thread.stateAry);
-            thread.stateAry.forEach(state => {
-                let prevState; //TODO 当前状态的前一个兄弟节点
-                state.virtualHeight = Util.getVirtualHeight(state);
-                state.y = prevState.y + prevState.virtualHeight;
-            })
-        }
-    },
-    /**
-     * 找到“开始状态”
-     */
-    findFirstState(stateAry) {
-        return stateAry[0]; //TODO 后续根据特定标记查找
-    },
-    getVirtualHeight(state) {
-        let outputStates = [];
-        state.outputAry.forEach(line => {
-            let lineObj = thread.lineAry.find(item => {
-                return item.lineId === line.lineId;
-            })
-            let endStateOfLine = thread.stateAry.find(item => {
-                return item.stateId === lineObj.endState.stateId;
-            })
-            outputStates.push(endStateOfLine);
-        })
-
-        let sum = 0;
-        outputStates.forEach(state => {
-            if (!state.virtualHeight) {
-                state.virtualHeight = Util.getVirtualHeight(state);
-                sum += state.virtualHeight;
-            }
-        })
-        return sum;
-    },
-    getAutoXY(state) {
-        //x,y是同时设置的，所以只需判断其中一个即可
-        if (state.y) {
-            return {
-                x: state.x,
-                y: state.y
-            }
-        } else {
-            state.y = prevState.y + prevState.virtualHeight;
-        }
-    },
-
-
-    testLayout(thread) {
-        var g = new dagre.graphlib.Graph({
-            directed: true,
-            compound: true,
-            multigraph: true,
-           
-        });
-        g.setGraph({
-            rankdir: 'LR'
-        });
-        g.setDefaultEdgeLabel(function() {
-            return {};
-        });
-
-        thread.stateAry.forEach(state => {
-            g.setNode(state.stateId, {
-                label: state.name,
-                // width: state.width || 76,
-                // height: state.height || 40
-                width: 76,
-                height: 40
-            });
-
-            state.outputAry.forEach(line => {
-                let lineObj = thread.lineAry.find(item => {
-                    return item.lineId === line.lineId;
-                })
-                let endState = thread.stateAry.find(item => {
-                    return item.stateId === lineObj.endState.stateId;
-                })
-                // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
-                g.setEdge(state.stateId, endState.stateId, {
-                    label: line.lineId
-                });
-            })
-        })
-
-        dagre.layout(g);
-        g.nodes().forEach(function(nodeId) {
-            let node = g.node(nodeId);
-            let state = thread.stateAry.find(item => {
-                return item.stateId === nodeId;
-            });
-            if (state){
-                state.x = node.x;
-                state.y = node.y;
-            }
-            console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
-        });
-        g.edges().forEach(function(line) {
-            console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
-        });
     }
+
 }
 export default Util;

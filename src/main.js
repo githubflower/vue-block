@@ -19,7 +19,7 @@ window.genId = (function () {
     return type + '-' + +new Date();//+ ++_id
   }
 })();
-
+const STATE_NAME_POOL = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 window.store = {
   debug: true,
   statenameIndex: 0,
@@ -45,7 +45,8 @@ window.store = {
     return {
       width: data.stateType === "loopDiv" ? "300px" : "76px",
       height: data.stateType === "loopDiv" ? "120px" : "40px",
-      name: "状态描述" + this.statenameIndex++,
+      // name: "状态描述" + this.statenameIndex++,
+      name: STATE_NAME_POOL[this.statenameIndex++],
       stateType: data.stateType,
       stateId: window.genId("state"),
       inputAry: [],

@@ -326,12 +326,64 @@ export default {
       this.zIndex = 1;
     },
     onDragenter(e) {},
+    getStateIndex(state){
+      //debugger;
+      let indexAry = []
+        let parent = state.$parent;
+        while (parent && parent.$options.name !== "StatePage") {
+          if (parent.$options.name === "ThreadSvg") {
+            indexAry.push(parent.threadIndex);
+          } else {
+            indexAry.push(parent.index);
+          }
+          parent = parent.$parent;
+        }
+      indexAry.push(state.index)
+      return indexAry
+    },
     onDrop(e) {
       //bug：每一次嵌套时计算位置时都会加上父状态的位置信息
-      //debugger;
-      let theDragStateData = JSON.parse(
-        e.dataTransfer.getData("theDragStateData")
-      );
+      debugger;
+      //TODO:处理直接拖拽下来形成嵌套的情况，还未完成修复，需要整理
+      let result = []
+      function traverse(stateAry,targetStateId) {
+        for (var i=0; i<stateAry.length; i++){
+            if (stateAry[i].stateId === targetStateId){
+            result.push(stateAry[i]);
+            result.push(i)
+            return
+            }
+          traverse(stateAry[i].children,targetStateId);
+        } 
+      };
+      //获取从工具栏中直接拖拽下来的状态块的index，需要在stateAry添加了被拖拽的状态块的信息后获取
+      let dropStateIndex;
+      let theDragStateData;
+      let currentStateAry = store.stateData.threadAry[this.threadIndex].stateAry
+      if (e.dataTransfer.getData("operate") === "addState") {
+        let threadPosInfo = e.target.getBoundingClientRect();
+        let data = {
+          index: this.threadIndex,
+          x: e.x - threadPosInfo.x,
+          y: e.y - threadPosInfo.y,
+          stateType: e.dataTransfer.getData("stateType"),
+        };
+
+        //回state内获取可响应的data
+        let draggingData = store.getDefaultStateCfg(data)
+        currentStateAry.push(draggingData)
+        traverse(currentStateAry, draggingData.stateId)
+        //获取用于删除快照的index
+        dropStateIndex = result.pop()
+        theDragStateData = result.pop()
+
+        e.stopPropagation();
+      } else {
+          theDragStateData = JSON.parse(
+            e.dataTransfer.getData("theDragStateData")
+          );
+        }
+
       if (this.stateData.stateId === theDragStateData.stateId) {
         return false;
       }
@@ -382,7 +434,6 @@ export default {
           this.stateData.width ="76px";
           this.stateData.height = "40px"
         }
-        //console.log("移动阶段：", theDragStateData)
         return false;
       }
 
@@ -412,29 +463,60 @@ export default {
           i++;
         }
       }
-      //console.log("嵌套阶段：", theDragStateData)
+
       if(this.stateData.stateType == "stateDiv" && this.stateData.mode != 'nest'){
         this.stateData.mode = 'nest'
-        this.stateData.width = "182px"
-        this.stateData.height = "110px"
+        this.stateData.width = "222px"
+        this.stateData.height = "120px"
       }
 
       this.stateData.children.push(theDragStateData);
-      let tI = statePageVue._dragData.indexAry.pop(); //线程索引
-      let dragTargetParent = statePageVue.threadAry[tI].stateAry;
-      while (
-        statePageVue._dragData &&
-        statePageVue._dragData.indexAry.length > 1
-      ) {
-        let i = statePageVue._dragData.indexAry.pop();
-        dragTargetParent = dragTargetParent[i].children;
+
+      let dragTargetParentStates = currentStateAry;
+      //因为在从工具栏直接拖拽下来形成嵌套时，无法在线程框内获取拖拽下来的状态块，只能通过与拖拽下来的状态块嵌套的状态来判断被拖拽下来的状态块的index
+      let directDropIndexAry = this.getDirectDropIndexAry(this, dropStateIndex)
+
+      if(e.dataTransfer.getData("operate") === "addState"){
+        dragTargetParentStates = this.dropTraverseChildren(directDropIndexAry, dragTargetParentStates)
+      } else{
+        dragTargetParentStates = this.dropTraverseChildren(statePageVue._dragData.indexAry, dragTargetParentStates)
       }
-      // bug
-      setTimeout(() => {
-        //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
-        dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
-      }, 10);
+
+      if(e.dataTransfer.getData("operate") === "addState"){
+        setTimeout(() => {
+          //因为从工具栏直接拖拽下来的状态块时默认添加到线程框的最外面一层的，所以需要在最外面一层进行删除
+          currentStateAry.splice(directDropIndexAry.pop(), 1);
+        }, 10);
+      } else{
+          setTimeout(() => {
+          //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
+          dragTargetParentStates.splice(statePageVue._dragData.indexAry.pop(), 1);
+        }, 10);
+      }
       e.stopPropagation();
+    },
+    //用于获取从工具栏中直接拖拽下来的状态块的indexAry
+    getDirectDropIndexAry(dropTarget, dropStateIndex){
+      let directDropIndexAry = this.getStateIndex(dropTarget)
+      //除去与被拖拽下来的状态块的状态块本身的index，并将添加下来的状态块的index推进directDropIndexAry
+      directDropIndexAry.pop()
+      directDropIndexAry.push(dropStateIndex)
+      //为寻找对应的形成嵌套的状态块以及删除多余的被拖拽下来的状态块的快照，需要将形成的directDropIndexAry进行reverse
+      directDropIndexAry.reverse()
+      return directDropIndexAry
+    },
+    //用于判断在drop时将被drop的状态块添加为哪个状态块的children
+    dropTraverseChildren(indexAry, parentStateAry){
+      debugger;
+      indexAry.pop() //除去线程索引
+      while (
+        indexAry && indexAry.length > 1
+      ) {
+        let i = indexAry.pop();
+        parentStateAry = parentStateAry[i].children
+        console.log(parentStateAry)
+      }
+      return parentStateAry
     },
 
     onDragLeave(e) {

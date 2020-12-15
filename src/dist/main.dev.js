@@ -32,19 +32,18 @@ window.genId = function () {
   };
 }();
 
+var STATE_NAME_POOL = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 window.store = {
   debug: true,
   statenameIndex: 0,
   stateData: {
     threadAry: [{
-      name: "线程1",
+      name: "Main_thread",
       width: 1200,
       height: 500,
       stateAry: [],
       lineAry: []
-    }],
-    //用于DEMO
-    demoStateData: {}
+    }]
   },
   addThread: function addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -58,7 +57,8 @@ window.store = {
     return {
       width: data.stateType === "loopDiv" ? "300px" : "76px",
       height: data.stateType === "loopDiv" ? "120px" : "40px",
-      name: "状态描述" + this.statenameIndex++,
+      // name: "状态描述" + this.statenameIndex++,
+      name: STATE_NAME_POOL[this.statenameIndex++],
       stateType: data.stateType,
       stateId: window.genId("state"),
       inputAry: [],
@@ -88,6 +88,7 @@ window.store = {
 
   /**
    * 删除连线 
+   * TODO: 需要考虑嵌套时的情况
    * 参数：连线id， 线程索引（TODO:后续考虑修改为线程id）
    * @param {lineId, threadIndex} data
    */
@@ -104,13 +105,26 @@ window.store = {
         line = lineAry.splice(i, 1)[0];
         break;
       }
-    } //更新这条线的始末状态的outputAry inputAry信息
+    } //修改为深度搜索与选中连线相关的状态
 
+
+    function traverseLine(stateAry, lineState) {
+      for (var i in stateAry) {
+        if (stateAry[i].stateId === lineState.stateId) {
+          result.push(stateAry[i]);
+          return;
+        }
+
+        traverseLine(stateAry[i].children, lineState);
+      }
+    }
+
+    ;
+    var result = []; //更新这条线的始末状态的outputAry inputAry信息
 
     var stateAry = this.stateData.threadAry[data.threadIndex].stateAry;
-    var startState = stateAry.find(function (item) {
-      return item.stateId === line.startState.stateId;
-    });
+    traverseLine(stateAry, line.startState);
+    var startState = result.pop();
     var outputAry = startState.outputAry;
     outputAry.forEach(function (item, index) {
       if (item.lineId === line.lineId) {
@@ -118,9 +132,8 @@ window.store = {
         return false;
       }
     });
-    var endState = stateAry.find(function (item) {
-      return item.stateId === line.endState.stateId;
-    });
+    traverseLine(stateAry, line.endState);
+    var endState = result.pop();
     var inputAry = endState.inputAry;
     inputAry.forEach(function (item, index) {
       if (item.lineId === line.lineId) {

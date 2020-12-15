@@ -59,6 +59,13 @@
           title="save qblock2localStorage"
           >save qblock2localStorage</el-button
         >
+        <el-button
+          type="primary"
+          plain
+          @click="testLayout"
+          title="testLayout"
+          >test layout</el-button
+        >
       </div>
       <!-- <el-button type="primary" plain @click="save">保存</el-button> -->
       <!-- <el-button
@@ -644,6 +651,9 @@ export default {
     saveQBlock2BlocklyXml(){
       var blocklyXml = Util.state2blockly(this.threadAry);
       window.localStorage.setItem("blocklyXml", blocklyXml);      
+    },
+    testLayout(){
+      var layout = Util.testLayout(this.threadAry[0]);
     }
   },
 
@@ -688,7 +698,6 @@ export default {
     //刷新iframe内容，从localstorage中读取blockly.xml,
     var blocklyXml = window.localStorage.getItem("blocklyXml");
     var qblockJson = Util.blockly2state(blocklyXml);
-    debugger;
     this.loadData(qblockJson);
   },
   beforeDestroy() {

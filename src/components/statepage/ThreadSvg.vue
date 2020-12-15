@@ -192,23 +192,21 @@ export default {
     updateActiveState(selectedState){
       //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
       let spliceIndex = this.activeStates.indexOf(selectedState)
-      //let alreadyInActiveState = inActiveStateIndex(selectedState, this.activeStates)
       if(spliceIndex !== -1){
         let disactiveState = this.activeStates.splice(spliceIndex, 1)[0]
         this.disHighlightLines(disactiveState)
-      }
-      //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
-      else{
-        this.activeStates.push(selectedState)
-        if(this.activeStates.length > highlight_limit){
-          let newActiveState = this.activeStates.pop()
-          while(this.activeStates.length > 0){
-            let disactiveState = this.activeStates.pop()
-            this.disHighlightLines(disactiveState)
+      } else{
+          //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
+          this.activeStates.push(selectedState)
+          if(this.activeStates.length > highlight_limit){
+            let newActiveState = this.activeStates.pop()
+            while(this.activeStates.length > 0){
+              let disactiveState = this.activeStates.pop()
+              this.disHighlightLines(disactiveState)
+            }
+            this.activeStates.push(newActiveState)
           }
-          this.activeStates.push(newActiveState)
         }
-      }
       //处理取消选中状态时同时取消连线高亮
       for(let i=0; i<this.activeStates.length; i++){
         this.disHighlightLines(this.activeStates[i])
@@ -217,7 +215,6 @@ export default {
     },
 
     highlightLines(state){
-      debugger;
       if(state.inputAry){
         state.inputAry.forEach((inputLine) =>{
           if(this.activeLines.indexOf(inputLine.lineId) === -1){
@@ -235,7 +232,6 @@ export default {
       return
     },
     disHighlightLines(state){
-      debugger;
       let spliceIndex;
       if(state.inputAry){
         state.inputAry.forEach((inputLine) =>{
@@ -870,7 +866,6 @@ export default {
     updateLines(stateData) {
       //debugger;
       let currentThread = store.stateData.threadAry[this.threadIndex]
-
       let result = []
       // 用于深度搜索stateId的方法，寻找到的state存储在result内
       function traverse(stateAry,targetStateId) {
@@ -1221,19 +1216,6 @@ export default {
       this._lastHeight = this.thread.height;
     },
 
-    /**
-     * TODO:自动布局
-     *
-     */
-     autoPosition(){
-       var style = document.getElementsByClassName("thread")[this.threadIndex].getAttribute("style");
-       console.log(style)
-       this.$nextTick(() =>{
-         console.log(style)
-       })
-       
-       var depth;
-     },
   },
 
   mounted() {
