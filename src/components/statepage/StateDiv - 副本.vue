@@ -253,7 +253,7 @@ export default {
         index: this.index,
         stateId: this.stateid,
         // 相对于当前线程框的绝对位置
-        AbsolutePosition:{
+        absolutePosition:{
           x: dom.getBoundingClientRect().left - threadPos.left,
           y: dom.getBoundingClientRect().top - threadPos.top
         }

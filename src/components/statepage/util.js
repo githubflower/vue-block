@@ -351,6 +351,12 @@ var Util = {
     toNum(str) {
         return parseInt(str, 10);
     },
+    translatePX2Num(str) {
+        if (/px/.test(str)) {
+            str = str.replace("px", "");
+        }
+        return +str;
+    },
     getPrevStateDom(dom) {
         var parent = dom.parentNode;
         if (parent) {
@@ -714,29 +720,38 @@ var Util = {
             state.y = prevState.y + prevState.virtualHeight;
         }
     },
+    getDomByStateId(stateId){
+        let doms = document.getElementsByClassName('state-wrap');
+        return Array.prototype.slice.call(doms).find(item => {
+            return item.getAttribute('stateid') === stateId;
+        })
+    },
 
 
     testLayout(thread) {
         var g = new dagre.graphlib.Graph({
-            directed: true,
-            compound: true,
+            //directed: true,
+            //compound: true,
             multigraph: true,
            
         });
         g.setGraph({
-            rankdir: 'LR'
+            rankdir: 'LR',
+            align:'UL',
+            edgesep:0
         });
         g.setDefaultEdgeLabel(function() {
             return {};
         });
 
         thread.stateAry.forEach(state => {
+            //需要考虑嵌套
             g.setNode(state.stateId, {
                 label: state.name,
                 // width: state.width || 76,
                 // height: state.height || 40
-                width: 76,
-                height: 40
+                width: parseInt(state.width.replace("px",""),10),
+                height: parseInt(state.height.replace("px",""),10)
             });
 
             state.outputAry.forEach(line => {

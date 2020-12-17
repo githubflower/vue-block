@@ -59,11 +59,7 @@
           title="save qblock2localStorage"
           >save qblock2localStorage</el-button
         >
-        <el-button
-          type="primary"
-          plain
-          @click="testLayout"
-          title="testLayout"
+        <el-button type="primary" plain @click="testLayout" title="testLayout"
           >test layout</el-button
         >
       </div>
@@ -648,13 +644,32 @@ export default {
       debugger;
       this.loadData(qblockJson);
     },
-    saveQBlock2BlocklyXml(){
+    saveQBlock2BlocklyXml() {
       var blocklyXml = Util.state2blockly(this.threadAry);
-      window.localStorage.setItem("blocklyXml", blocklyXml);      
+      window.localStorage.setItem("blocklyXml", blocklyXml);
     },
-    testLayout(){
+    testLayout() {
+      var stateDoms = document.querySelectorAll('.state-wrap');
+      stateDoms = Array.prototype.slice.call(stateDoms);
+      let reg = /is\-auto\-layouting/;
+      stateDoms.forEach(element => {
+        var clazz = element.getAttribute('class');
+        if(!reg.test(clazz)){
+          element.setAttribute('class', clazz + ' is-auto-layouting');
+        }
+      });
       var layout = Util.testLayout(this.threadAry[0]);
-    }
+
+      setTimeout(() => {
+        stateDoms.forEach(element => {
+          var clazz = element.getAttribute('class');
+          if(reg.test(clazz)){
+            element.setAttribute('class', clazz.replace(/\s*is\-auto\-layouting\s*/g, ''));
+          }
+        });
+      }, 1000);
+      
+    },
   },
 
   computed: {

@@ -1,1 +1,0 @@
-{"version":3,"sources":["menuCfg.js"],"names":["menu"],"mappings":";;;;;;eAAe;AACXA,EAAAA,IAAI,EAAE,CAAC,CAAD,EAAI,CAAJ,EAAO,CAAP;AADK,C","sourcesContent":["export default {\r\n    menu: [1, 2, 3]\r\n}"],"file":"menuCfg.dev.js"}

@@ -1,29 +1,35 @@
 <template>
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
-  <div 
-       :index="index"
-       :class="['state-div', stateData.mode, {'is-dragging': isDragging}, {'selected': isInActiveStates()}, runningStatus]"
-       @click="selectState()">
-
-    <div :class="runningAnimation" :v-show="runningAnimation">
-    </div>
+  <div
+    :index="index"
+    :class="[
+      'state-div',
+      stateData.mode,
+      { 'is-dragging': isDragging },
+      { selected: isInActiveStates() },
+      runningStatus,
+    ]"
+    @click="selectState()"
+  >
+    <div :class="runningAnimation" :v-show="runningAnimation"></div>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
     <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
-      <el-input
-        v-if="showInput"
-        :class="['state-name-input']"
-        v-model="stateData.name"
-        style="position: relative; top: 4px"
-        @keyup.enter.native="hideInput"
-        @blur="hideInput"
-      ></el-input>
-      <p 
-        :class="runningStatus"
-        v-else :title="stateData.name" 
-        @dblclick="rename">
-        {{ stateData.name.length > 5 ? stateData.name.slice(0,5) + '...' : stateData.name }}
-      </p>
+    <el-input
+      v-if="showInput"
+      :class="['state-name-input']"
+      v-model="stateData.name"
+      style="position: relative; top: 4px"
+      @keyup.enter.native="hideInput"
+      @blur="hideInput"
+    ></el-input>
+    <p :class="runningStatus" v-else :title="stateData.name" @dblclick="rename">
+      {{
+        stateData.name.length > 5
+          ? stateData.name.slice(0, 5) + "..."
+          : stateData.name
+      }}
+    </p>
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
@@ -31,11 +37,12 @@
     >
       {{ stateData.inputAry.length }}
       <ul class="input-list" v-show="showInputAry">
-        <li v-for="(item, index) in stateData.inputAry" 
-            :key="index"
-            @mouseenter="activeLine(item.lineId)"
-            @mouseleave="disActiveLine(item.lineId)"
-            >
+        <li
+          v-for="(item, index) in stateData.inputAry"
+          :key="index"
+          @mouseenter="activeLine(item.lineId)"
+          @mouseleave="disActiveLine(item.lineId)"
+        >
           {{ getDesc(item.lineId) }}
         </li>
       </ul>
@@ -77,7 +84,15 @@ const isNumber = (str) => {
 };
 export default {
   name: "StateDiv",
-  props: ["stateData", "index", "threadIndex", "activeStates", "showDescData", "runningStatus", "runningAnimation"],
+  props: [
+    "stateData",
+    "index",
+    "threadIndex",
+    "activeStates",
+    "showDescData",
+    "runningStatus",
+    "runningAnimation",
+  ],
   data() {
     return {
       showInput: false,
@@ -89,17 +104,17 @@ export default {
     };
   },
   methods: {
-    isInActiveStates(){
-      for(let i=0; i<this.activeStates.length; i++){
-        if(this.stateData.stateId === this.activeStates[i].stateId){
+    isInActiveStates() {
+      for (let i = 0; i < this.activeStates.length; i++) {
+        if (this.stateData.stateId === this.activeStates[i].stateId) {
           return true;
         }
       }
       return false;
     },
     //选中被点击的状态块
-    selectState(){
-      this.$emit('updateActiveState', this.stateData)
+    selectState() {
+      this.$emit("updateActiveState", this.stateData);
     },
     genId() {
       return window.genId("state");
@@ -226,7 +241,9 @@ export default {
     },
     updatePosition(dom) {
       // 获取当前线程框的绝对位置
-      let threadPos = document.getElementsByClassName("thread")[this.threadIndex].getBoundingClientRect()
+      let threadPos = document
+        .getElementsByClassName("thread")
+        [this.threadIndex].getBoundingClientRect();
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
@@ -250,10 +267,10 @@ export default {
         index: this.index,
         stateId: this.stateid,
         // 相对于当前线程框的绝对位置
-        AbsolutePosition:{
+        absolutePosition: {
           x: dom.getBoundingClientRect().left - threadPos.left,
-          y: dom.getBoundingClientRect().top - threadPos.top
-        }
+          y: dom.getBoundingClientRect().top - threadPos.top,
+        },
       });
     },
     getStyleTransform(dom) {
@@ -285,8 +302,8 @@ export default {
       // this.$el.child('.state-name-input')
       this.$nextTick(function () {
         // this.$el.firstChild.focus();
-        var inputDom = this.$el.querySelector('.state-name-input');
-        if(inputDom){
+        var inputDom = this.$el.querySelector(".state-name-input");
+        if (inputDom) {
           inputDom.focus();
         }
       });
@@ -305,25 +322,25 @@ export default {
         }) || {};
       return line.desc;
     },
-    showInputDesc(){
-      this.showInputAry = !this.showInputAry
+    showInputDesc() {
+      this.showInputAry = !this.showInputAry;
     },
-    showOutputDesc(){
-      this.showOutputAry = !this.showOutputAry
+    showOutputDesc() {
+      this.showOutputAry = !this.showOutputAry;
     },
     activeLine(lineId) {
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-        line.showdesc = true;
+      line.showdesc = true;
     },
     disActiveLine(lineId) {
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-        line.showdesc = false;
+      line.showdesc = false;
     },
   },
   created() {
@@ -332,14 +349,14 @@ export default {
       : this.genId();
   },
   mounted() {
-    document.addEventListener('click', () => {
+    document.addEventListener("click", () => {
       if (this.showInputAry === true) {
-        this.showInputAry = false
+        this.showInputAry = false;
       }
-      if(this.showOutputAry === true){
-        this.showOutputAry = false
+      if (this.showOutputAry === true) {
+        this.showOutputAry = false;
       }
-    })
+    });
     /*
         var elm = this.$el;
         window.testVueObj = this;
@@ -378,7 +395,6 @@ export default {
             }
         }; */
   },
-
 };
 </script>
 
@@ -388,9 +404,9 @@ export default {
 @qkmWhite: #ffffff;
 @qkmWhiteTransparent: #ffffffaf;
 @qkmOrange: #ffaf3dcc;
-@qkmRed:#e83e3ecc;
-@qkmAnimationOrange:#ffaf3d;
-@qkmAnimationRed:#e83e3e;
+@qkmRed: #e83e3ecc;
+@qkmAnimationOrange: #ffaf3d;
+@qkmAnimationRed: #e83e3e;
 .state-div {
   width: 100%;
   height: 100%;
@@ -403,47 +419,61 @@ export default {
   color: @qkmWhite;
   border-color: @qkmWhite;
 }
-.state-div.active{
+.state-div.active {
   border: 2px solid;
-  border-color:@qkmLightBlue;
+  border-color: @qkmLightBlue;
   box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
-.state-div.selected{
+.state-div.selected {
   border: 2px solid;
-  border-color:@qkmLightBlue;
+  border-color: @qkmLightBlue;
   box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
-.active-animation{
+.active-animation {
   width: 7px;
   height: 7px;
   top: -3.5px;
   left: -3.5px;
   border-radius: 2px;
-  background:@qkmLightBlue;
+  background: @qkmLightBlue;
   box-shadow: 2px 2px 4px 0px @qkmLightBlue;
   position: absolute;
   float: left;
   animation-name: activeMove;
-  animation-duration:2s;
-  animation-timing-function:linear;
-  animation-iteration-count:infinite;
-  animation-play-state:running;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
 }
- @keyframes activeMove
-  {
-    0%   {left:-3.5px; top:-3.5px;}
-    25%  {left:calc(100% - 3.5px); top:-3.5px;}
-    50%  {left:calc(100% - 3.5px); top:calc(100% - 3.5px);}
-    75%  {left:-3.5px; top:calc(100% - 3.5px);}
-    100% {left:-3.5px; top:-3.5px;}
+@keyframes activeMove {
+  0% {
+    left: -3.5px;
+    top: -3.5px;
   }
-
-.state-div.warning{
-  border: 2px solid;
-  border-color:@qkmOrange;
-  box-shadow: 2px 2px 4px 0px @qkmOrange
+  25% {
+    left: calc(100% - 3.5px);
+    top: -3.5px;
+  }
+  50% {
+    left: calc(100% - 3.5px);
+    top: calc(100% - 3.5px);
+  }
+  75% {
+    left: -3.5px;
+    top: calc(100% - 3.5px);
+  }
+  100% {
+    left: -3.5px;
+    top: -3.5px;
+  }
 }
-.warning-animation{
+
+.state-div.warning {
+  border: 2px solid;
+  border-color: @qkmOrange;
+  box-shadow: 2px 2px 4px 0px @qkmOrange;
+}
+.warning-animation {
   width: calc(99% - 1px);
   height: calc(99% - 4px);
   border: 8px solid @qkmAnimationOrange;
@@ -451,7 +481,7 @@ export default {
   border-radius: 5px;
   top: -4px;
   left: -4px;
-  position:absolute;
+  position: absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -460,7 +490,7 @@ export default {
   animation-iteration-count: infinite;
   animation-play-state: running;
 }
-.nest .warning-animation{
+.nest .warning-animation {
   width: 99%;
   height: 99%;
   border: 8px solid @qkmAnimationOrange;
@@ -468,7 +498,7 @@ export default {
   border-radius: 5px;
   top: -4px;
   left: -4px;
-  position:absolute;
+  position: absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -477,12 +507,12 @@ export default {
   animation-iteration-count: infinite;
   animation-play-state: running;
 }
-.state-div.error{
+.state-div.error {
   border: 2px solid;
-  border-color:@qkmRed;
+  border-color: @qkmRed;
   box-shadow: 2px 2px 4px 0px @qkmRed;
 }
-.error-animation{
+.error-animation {
   width: calc(99% - 1px);
   height: calc(99% - 4px);
   border: 8px solid @qkmAnimationRed;
@@ -490,7 +520,7 @@ export default {
   border-radius: 5px;
   top: -4px;
   left: -4px;
-  position:absolute;
+  position: absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -499,7 +529,7 @@ export default {
   animation-iteration-count: infinite;
   animation-play-state: running;
 }
-.nest .error-animation{
+.nest .error-animation {
   width: 99%;
   height: 99%;
   border: 8px solid @qkmAnimationRed;
@@ -507,7 +537,7 @@ export default {
   border-radius: 5px;
   top: -4px;
   left: -4px;
-  position:absolute;
+  position: absolute;
   filter: blur(2px);
   animation-name: errorWarningMove;
   animation-delay: 0.5s;
@@ -517,15 +547,25 @@ export default {
   animation-play-state: running;
 }
 
-@keyframes errorWarningMove{
-  0% {opacity: 1}
-  25% {opacity: 0.7}
-  50% {opacity: 0.35}
-  75% {opacity: 0.7}
-  100% {opacity: 1}
+@keyframes errorWarningMove {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  75% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
-p{
+p {
   display: -webkit-box;
   position: relative;
   top: 50%;
@@ -539,7 +579,7 @@ p{
   filter: none;
   background: inherit;
 }
-.nest p{
+.nest p {
   display: -webkit-box;
   position: relative;
   top: 5%;
@@ -554,13 +594,17 @@ p{
   background: inherit;
 }
 
-.nest p.active, .nest p.warning, .nest p.error{
+.nest p.active,
+.nest p.warning,
+.nest p.error {
   left: 50%;
   transform: translateX(-50%);
   display: inline-block;
   text-align: center;
 }
-.normal p.active, .normal p.warning, .normal p.error{
+.normal p.active,
+.normal p.warning,
+.normal p.error {
   left: 4px;
   display: inline-block;
   text-align: center;

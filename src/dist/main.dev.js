@@ -88,7 +88,6 @@ window.store = {
 
   /**
    * 删除连线 
-   * TODO: 需要考虑嵌套时的情况
    * 参数：连线id， 线程索引（TODO:后续考虑修改为线程id）
    * @param {lineId, threadIndex} data
    */
@@ -227,6 +226,49 @@ window.store = {
     if (data.dw) {
       this.stateData.threadAry[data.threadIndex].width += data.dw;
     }
+  },
+
+  /**
+   * 根据传入的线程id/index + 状态id获取状态
+   * @param {*} threadIdOrIndex
+   * @param {*} stateId 
+   * @param {*} isThreadId 是否是线程id
+   */
+  getState: function getState(threadIdOrIndex, stateId, isThreadId) {
+    var state;
+    var thread;
+
+    if (isThreadId) {
+      thread = this.stateData.threadAry.find(function (item) {
+        return item.id === threadIdOrIndex;
+      });
+    } else {
+      thread = this.stateData.threadAry[threadIdOrIndex];
+    }
+
+    if (thread) {
+      state = this.getStateImplement(stateId, thread.stateAry);
+    }
+
+    if (!state) {
+      console.error('根据threadIdOrIndex和stateId获取状态失败---> threadId: ' + threadIdOrIndex + ' stateId: ' + stateId + ' isThreadId: ' + isThreadId);
+    }
+
+    return state;
+  },
+  getStateImplement: function getStateImplement(stateId, stateAry) {
+    var _this = this;
+
+    var state;
+    stateAry.forEach(function (item) {
+      if (item.stateId === stateId) {
+        state = item;
+        return false;
+      } else if (item.children && item.children.length) {
+        state = _this.getStateImplement(stateId, item.children);
+      }
+    });
+    return state;
   }
 };
 
