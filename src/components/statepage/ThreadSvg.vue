@@ -101,11 +101,12 @@ import LineSvg from "./LineSvg";
 import PathAnimation from "./PathAnimation";
 import { lineCfg } from "./graphCfg.js";
 import Tools from "@/Tools.js";
-import QBlock from './qblock.js'
-const line_h = lineCfg.line_h;
-const line_v = lineCfg.line_v;
+import QBlock from "./qblock.js";
+import dagre from "dagre";
+const LINE_H = lineCfg.line_h;
+const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
-const highlight_limit = lineCfg.highlight_limit;
+const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
 const deepCopy = (obj) => {
   if (typeof obj !== "object") {
     return obj;
@@ -199,7 +200,7 @@ export default {
       } else {
         //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
         this.activeStates.push(selectedState);
-        if (this.activeStates.length > highlight_limit) {
+        if (this.activeStates.length > HIGHLIGHT_LIMIT) {
           let newActiveState = this.activeStates.pop();
           while (this.activeStates.length > 0) {
             let disactiveState = this.activeStates.pop();
@@ -255,7 +256,7 @@ export default {
     isInCurrentThread(lineId) {
       let currentThread = store.stateData.threadAry[this.threadIndex].lineAry;
       for (let i = 0; i < currentThread.length; i++) {
-        if (currentThread[i].lineId == lineId) {
+        if (currentThread[i].lineId === lineId) {
           return true;
         }
       }
@@ -328,273 +329,232 @@ export default {
 
     //将绘制连线的方法拆分为以下方法
     moveToStartPoint(lineStartPoint) {
-      return `M ${lineStartPoint.x} ${lineStartPoint.y}`;
+      return `M ${lineStartPoint.x} ${lineStartPoint.y} `;
     },
     //以配置好的连线长度绘制连线
     drawHorizontalSetLine() {
-      return `h ${line_h}`;
+      return `h ${LINE_H} `;
     },
     drawHorizontalLine(lineEndPointX) {
-      return `H ${lineEndPointX}`;
+      return `H ${lineEndPointX} `;
     },
     drawVerticalLine(lineEndPointY) {
-      return `m 0 0 V ${lineEndPointY}`;
+      return `m 0 0 V ${lineEndPointY} `;
     },
     drawLineToPoint(lineEndPointX, lineEndPointY) {
-      return `m 0 0 L ${lineEndPointX} ${lineEndPointY}`;
+      return `m 0 0 L ${lineEndPointX} ${lineEndPointY} `;
     },
     drawArc(radius, xRotation, sweepFlag, lineEndPointX, lineEndPointY) {
-      return `m 0 0 A ${radius} ${radius} ${xRotation} 0 ${sweepFlag} ${lineEndPointX} ${lineEndPointY}`;
+      return `m 0 0 A ${radius} ${radius} ${xRotation} 0 ${sweepFlag} ${lineEndPointX} ${lineEndPointY} `;
     },
     drawArrow(lineEndPoint) {
       return `m -5 -5 L ${lineEndPoint.x} ${lineEndPoint.y} L ${
         lineEndPoint.x - 5
-      } ${lineEndPoint.y + 5}`;
+      } ${lineEndPoint.y + 5} `;
     },
 
-    //绘制现有的几种连线样式
-    drawStraightConnectLine(startPoint, endPoint, lineRadius) {
+    //绘制直线连线
+    drawStraightConnectLine(startPoint, endPoint) {
       let linePath = [];
       linePath.push(this.moveToStartPoint(startPoint));
       linePath.push(this.drawHorizontalLine(endPoint.x));
       linePath.push(this.drawArrow(endPoint));
       return linePath.join(" ");
     },
-    drawUpperBackConnectLine(startPoint, endPoint, lineRadius, stateHeight) {
-      let linePath = [];
-      linePath.push(this.moveToStartPoint(startPoint));
-      linePath.push(this.drawHorizontalSetLine());
 
-      let firstArcX = startPoint.x + line_h + LINE_RADIUS;
-      let firstArcY = startPoint.y - LINE_RADIUS;
-      linePath.push(this.drawArc(LINE_RADIUS, 1, 0, firstArcX, firstArcY));
-
-      let lineToSecondArc = endPoint.y - line_v + LINE_RADIUS - stateHeight;
-      linePath.push(this.drawVerticalLine(lineToSecondArc));
-
-      let secondArcX = startPoint.x + line_h;
-      let secondArcY = endPoint.y - line_v - stateHeight;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 0, secondArcX, secondArcY));
-
-      let lineToThirdArcX = endPoint.x - line_h + LINE_RADIUS;
-      let lineToThirdArcY = endPoint.y - line_v - stateHeight;
-      linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY));
-
-      let thirdArcX = endPoint.x - line_h;
-      let thirdArcY = endPoint.y - line_v + LINE_RADIUS - stateHeight;
-      linePath.push(this.drawArc(LINE_RADIUS, 1, 0, thirdArcX, thirdArcY));
-
-      let lineToFourthArc = endPoint.y - LINE_RADIUS;
-      linePath.push(this.drawVerticalLine(lineToFourthArc));
-
-      let fourthArcX = endPoint.x - line_h + LINE_RADIUS;
-      let fourthArcY = endPoint.y;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 0, fourthArcX, fourthArcY));
-
-      let lineToArrowX = endPoint.x;
-      let lineToArrowY = endPoint.y;
-      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY));
-      linePath.push(this.drawArrow(endPoint));
-
-      return linePath.join(" ");
+    //分段处理向后和向前的连线
+    drawLineOutputH(startPoint, endPoint, lineRadius) {
+      let tempLinePath = "";
+      tempLinePath += this.moveToStartPoint(startPoint);
+      tempLinePath += this.drawHorizontalSetLine();
+      let firstArcX, firstArcY;
+      //若起始点的y坐标大于结束点的y坐标
+      if (startPoint.y > endPoint.y) {
+        firstArcX = startPoint.x + LINE_H + lineRadius;
+        firstArcY = startPoint.y - lineRadius;
+        tempLinePath += this.drawArc(lineRadius, 1, 0, firstArcX, firstArcY);
+      } else {
+        firstArcX = startPoint.x + LINE_H + lineRadius;
+        firstArcY = startPoint.y + lineRadius;
+        tempLinePath += this.drawArc(lineRadius, 0, 1, firstArcX, firstArcY);
+      }
+      return tempLinePath;
     },
-    drawLowerBackConnectLine(startPoint, endPoint, lineRadius, stateHeight) {
-      let linePath = [];
-      linePath.push(this.moveToStartPoint(startPoint));
-      linePath.push(this.drawHorizontalSetLine());
+    drawLineOutputV(startPoint, endPoint, stateHeight) {
+      let lineToSecondArc, secondArcX, secondArcY;
+      let tempLinePath = "";
+      //若起始点的y坐标大于结束点的y坐标
+      if (startPoint.y > endPoint.y) {
+        lineToSecondArc = endPoint.y - LINE_V + LINE_RADIUS - stateHeight;
+        tempLinePath += this.drawVerticalLine(lineToSecondArc);
 
-      let firstArcX = startPoint.x + line_h + LINE_RADIUS;
-      let firstArcY = startPoint.y + LINE_RADIUS;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, firstArcX, firstArcY));
+        secondArcX = startPoint.x + LINE_H;
+        secondArcY = endPoint.y - LINE_V - stateHeight;
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 0, secondArcX, secondArcY);
+      } else {
+        lineToSecondArc = endPoint.y + LINE_V - LINE_RADIUS + stateHeight;
+        tempLinePath += this.drawVerticalLine(lineToSecondArc);
 
-      let lineToSecondArc = endPoint.y + line_v - LINE_RADIUS + stateHeight;
-      linePath.push(this.drawVerticalLine(lineToSecondArc));
-
-      let secondArcX = startPoint.x + line_h;
-      let secondArcY = endPoint.y + line_v + stateHeight;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, secondArcX, secondArcY));
-
-      let lineToThirdArcX = endPoint.x - line_h + LINE_RADIUS;
-      let lineToThirdArcY = endPoint.y + line_v + stateHeight;
-      linePath.push(this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY));
-
-      let thirdArcX = endPoint.x - line_h;
-      let thirdArcY = endPoint.y + line_v - LINE_RADIUS + stateHeight;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, thirdArcX, thirdArcY));
-
-      let lineToFourthArc = endPoint.y + LINE_RADIUS;
-      linePath.push(this.drawVerticalLine(lineToFourthArc));
-
-      let fourthArcX = endPoint.x - line_h + LINE_RADIUS;
-      let fourthArcY = endPoint.y;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, fourthArcX, fourthArcY));
-
-      let lineToArrowX = endPoint.x;
-      let lineToArrowY = endPoint.y;
-      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY));
-      linePath.push(this.drawArrow(endPoint));
-
-      return linePath.join(" ");
+        secondArcX = startPoint.x + LINE_H;
+        secondArcY = endPoint.y + LINE_V + stateHeight;
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, secondArcX, secondArcY);
+      }
+      tempLinePath += " ";
+      return tempLinePath;
     },
-    drawUpperConnectLine(startPoint, endPoint, lineRadius) {
-      let linePath = [];
-      linePath.push(this.moveToStartPoint(startPoint));
-      linePath.push(this.drawHorizontalSetLine());
+    drawLineH(startPoint, endPoint, stateHeight) {
+      let lineToThirdArcX, lineToThirdArcY, thirdArcX, thirdArcY;
+      let tempLinePath = "";
+      if (startPoint.y > endPoint.y) {
+        lineToThirdArcX = endPoint.x - LINE_H + LINE_RADIUS;
+        lineToThirdArcY = endPoint.y - LINE_V - stateHeight;
+        tempLinePath += this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY);
 
-      let firstArcX = startPoint.x + line_h + LINE_RADIUS;
-      let firstArcY = startPoint.y - LINE_RADIUS;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 0, firstArcX, firstArcY));
+        thirdArcX = endPoint.x - LINE_H;
+        thirdArcY = endPoint.y - LINE_V + LINE_RADIUS - stateHeight;
+        tempLinePath += this.drawArc(LINE_RADIUS, 1, 0, thirdArcX, thirdArcY);
+      } else {
+        lineToThirdArcX = endPoint.x - LINE_H + LINE_RADIUS;
+        lineToThirdArcY = endPoint.y + LINE_V + stateHeight;
+        tempLinePath += this.drawLineToPoint(lineToThirdArcX, lineToThirdArcY);
 
-      let lineToSecondArc = endPoint.y + LINE_RADIUS;
-      linePath.push(this.drawVerticalLine(lineToSecondArc));
-
-      let secondArcX = startPoint.x + line_h + 2 * LINE_RADIUS;
-      let secondArcY = endPoint.y;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, secondArcX, secondArcY));
-
-      let lineToArrowX = endPoint.x;
-      let lineToArrowY = endPoint.y;
-      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY));
-      linePath.push(this.drawArrow(endPoint));
-
-      return linePath.join(" ");
+        thirdArcX = endPoint.x - LINE_H;
+        thirdArcY = endPoint.y + LINE_V - LINE_RADIUS + stateHeight;
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, thirdArcX, thirdArcY);
+      }
+      tempLinePath += " ";
+      return tempLinePath;
     },
-    drawLowerConnectLine(startPoint, endPoint, lineRadius) {
-      let linePath = [];
-      linePath.push(this.moveToStartPoint(startPoint));
-      linePath.push(this.drawHorizontalSetLine());
+    drawLineV(startPoint, endPoint, lineRadius) {
+      let lineToSecondArc, secondArcX, secondArcY;
+      let tempLinePath = "";
+      if (startPoint.y > endPoint.y) {
+        lineToSecondArc = endPoint.y + lineRadius;
+        tempLinePath += this.drawVerticalLine(lineToSecondArc);
 
-      let firstArcX = startPoint.x + line_h + LINE_RADIUS;
-      let firstArcY = startPoint.y + LINE_RADIUS;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 1, firstArcX, firstArcY));
+        secondArcX = startPoint.x + LINE_H + 2 * lineRadius;
+        secondArcY = endPoint.y;
+        tempLinePath += this.drawArc(lineRadius, 0, 1, secondArcX, secondArcY);
+      } else {
+        lineToSecondArc = endPoint.y - lineRadius;
+        tempLinePath += this.drawVerticalLine(lineToSecondArc);
 
-      let lineToSecondArc = endPoint.y - LINE_RADIUS;
-      linePath.push(this.drawVerticalLine(lineToSecondArc));
+        secondArcX = startPoint.x + LINE_H + 2 * lineRadius;
+        secondArcY = endPoint.y;
+        tempLinePath += this.drawArc(lineRadius, 0, 0, secondArcX, secondArcY);
+      }
+      return tempLinePath;
+    },
+    drawLineInputV(startPoint, endPoint) {
+      let lineToFourthArc, fourthArcX, fourthArcY;
+      let tempLinePath = "";
+      if (startPoint.y > endPoint.y) {
+        lineToFourthArc = endPoint.y - LINE_RADIUS;
+        tempLinePath += this.drawVerticalLine(lineToFourthArc);
 
-      let secondArcX = startPoint.x + line_h + 2 * LINE_RADIUS;
-      let secondArcY = endPoint.y;
-      linePath.push(this.drawArc(LINE_RADIUS, 0, 0, secondArcX, secondArcY));
+        fourthArcX = endPoint.x - LINE_H + LINE_RADIUS;
+        fourthArcY = endPoint.y;
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 0, fourthArcX, fourthArcY);
+      } else {
+        lineToFourthArc = endPoint.y + LINE_RADIUS;
+        tempLinePath += this.drawVerticalLine(lineToFourthArc);
 
-      let lineToArrowX = endPoint.x;
-      let lineToArrowY = endPoint.y;
-      linePath.push(this.drawLineToPoint(lineToArrowX, lineToArrowY));
-      linePath.push(this.drawArrow(endPoint));
+        fourthArcX = endPoint.x - LINE_H + LINE_RADIUS;
+        fourthArcY = endPoint.y;
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, fourthArcX, fourthArcY);
+      }
+      return tempLinePath;
+    },
+    drawLineInputH(endPoint) {
+      let tempLinePath = this.drawLineToPoint(endPoint.x, endPoint.y);
+      return tempLinePath;
+    },
 
-      return linePath.join(" ");
+    //向后绘制连线
+    drawLine5ByPoint(startPoint, endPoint, stateHeight) {
+      let linePath = "";
+      let outputH = this.drawLineOutputH(startPoint, endPoint, LINE_RADIUS);
+      let outputV = this.drawLineOutputV(startPoint, endPoint, stateHeight);
+      let output2InputH = this.drawLineH(startPoint, endPoint, stateHeight);
+      let inputV = this.drawLineInputV(startPoint, endPoint);
+      let inputH = this.drawLineInputH(endPoint);
+      let arrow = this.drawArrow(endPoint);
+      linePath = outputH + outputV + output2InputH + inputV + inputH + arrow;
+      return linePath;
+    },
+    drawLine5(startState, endState) {
+      let startPoint = this.calculateStartPoint(startState);
+      let endPoint = this.calculateEndPoint(endState);
+      let linePath = this.drawLine5ByPoint(startPoint, endPoint, stateHeight);
+      return linePath;
+    },
+
+    //向前绘制连线
+    drawLine3ByPoint(startPoint, endPoint, lineRadius) {
+      let linePath = "";
+      let outputH = this.drawLineOutputH(startPoint, endPoint, lineRadius);
+      let output2InputV = this.drawLineV(startPoint, endPoint, lineRadius);
+      let inputH = this.drawLineInputH(endPoint);
+      let arrow = this.drawArrow(endPoint);
+      linePath = outputH + output2InputV + inputH + arrow;
+      return linePath;
+    },
+    drawLine3(startState, endState, lineRadius) {
+      let startPoint = this.calculateStartPoint(startState);
+      let endPoint = this.calculateEndPoint(endState);
+      let linePath = this.drawLine3ByPoint(startPoint, endPoint, lineRadius);
+    },
+
+    //计算连线的开始与结束点
+    calculateStartPoint(startState) {
+      let startPoint = {
+        x: startState.x + QBlock.State.getStateWidth(startState),
+        y: startState.y + QBlock.State.getStateHeight(startState) / 2,
+      };
+      return startPoint;
+    },
+    calculateEndPoint(endState) {
+      let endPoint = {
+        x: endState.x,
+        y: endState.y + QBlock.State.getStateHeight(endState) / 2,
+      };
+      return endPoint;
     },
     /*
      * 绘制临时连线
      *
      */
-    drawOnConnectingLine(startPoint, endPoint, lineRadius, stateHeight = 20) {
-      let tempRadius = LINE_RADIUS;
-      // y坐标相等时绘制直线
-      if (endPoint.y == startPoint.y && endPoint.x > startPoint.x) {
+    drawOnConnectingLine(startPoint, endPoint, stateHeight) {
+      let tempRadius = 0;
+      let isDynamicRadiusFlag =
+        Math.abs(startPoint.y - endPoint.y) < 2 * LINE_RADIUS;
+      if (endPoint.y === startPoint.y && endPoint.x > startPoint.x) {
         this.updateTempLineData({
           endPoint: endPoint,
           d: this.drawStraightConnectLine(startPoint, endPoint, LINE_RADIUS),
         });
       }
-
-      // 鼠标在连接点左侧时
-      if (
-        endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-        endPoint.y < startPoint.y
-      ) {
-        if (endPoint.x - startPoint.x < line_h) {
-        }
+      if (startPoint.x > endPoint.x - LINE_H - LINE_RADIUS) {
         this.updateTempLineData({
           endPoint: endPoint,
-          d: this.drawUpperBackConnectLine(
-            startPoint,
-            endPoint,
-            LINE_RADIUS,
-            stateHeight
-          ),
+          d: this.drawLine5ByPoint(startPoint, endPoint, stateHeight),
         });
-      }
-
-      if (
-        endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-        endPoint.y > startPoint.y
-      ) {
-        if (endPoint.x - startPoint.x < line_h) {
-        }
-        this.updateTempLineData({
-          endPoint: endPoint,
-          d: this.drawLowerBackConnectLine(
-            startPoint,
-            endPoint,
-            LINE_RADIUS,
-            stateHeight
-          ),
-        });
-      }
-
-      // 当结束点的x, y坐标均大于起始点的时候
-      if (
-        endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y > startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (endPoint.y - startPoint.y < 2 * tempRadius) {
-          let doubleRadius = endPoint.y - startPoint.y;
-          tempRadius = doubleRadius / 2;
-          this.updateTempLineData({
-            endPoint: endPoint,
-            d: this.drawLowerConnectLine(startPoint, endPoint, tempRadius),
-          });
-        } else {
-          this.updateTempLineData({
-            endPoint: endPoint,
-            d: this.drawLowerConnectLine(startPoint, endPoint, LINE_RADIUS),
-          });
-        }
-      }
-      // 当结束点的x坐标大于起始点，y坐标小于起始点时
-      if (
-        endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y < startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (startPoint.y - endPoint.y < 2 * tempRadius) {
-          let doubleRadius = startPoint.y - endPoint.y;
-          tempRadius = doubleRadius / 2;
-          this.updateTempLineData({
-            endPoint: endPoint,
-            d: this.drawUpperConnectLine(startPoint, endPoint, tempRadius),
-          });
-        } else {
-          this.updateTempLineData({
-            endPoint: endPoint,
-            d: this.drawUpperConnectLine(startPoint, endPoint, LINE_RADIUS),
-          });
-        }
-      }
-    },
-    // 根据连入状态的高度绘制连线
-    drawLineByEndState(endStateId, endPoint) {
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let targetState = Tools.stateTraverse(stateAry, endStateId);
-
-      if (targetState) {
-        let targetStateHeight =
-          parseInt(targetState.height.replace("px", ""), 10) / 2;
-        this.drawOnConnectingLine(
-          this.tempLineData.startPoint,
-          endPoint,
-          LINE_RADIUS,
-          targetStateHeight
-        );
       } else {
-        this.drawOnConnectingLine(
-          this.tempLineData.startPoint,
-          endPoint,
-          LINE_RADIUS
-        );
+        //若两个状态块之间的y轴距离小于2个预设拐角半径，则需要动态计算连线拐角的半径，并绘制连线
+        if (isDynamicRadiusFlag) {
+          let tempRadius = Math.abs(startPoint.y - endPoint.y) / 2;
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawLine3ByPoint(startPoint, endPoint, tempRadius),
+          });
+        } else {
+          this.updateTempLineData({
+            endPoint: endPoint,
+            d: this.drawLine3ByPoint(startPoint, endPoint, LINE_RADIUS),
+          });
+        }
       }
     },
-
     onConnecting(e) {
       if (stateManage.isConnecting) {
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
@@ -603,17 +563,27 @@ export default {
           stateManage.isConnecting = true;
           this.showTempLine = true;
           let endPoint = this.getEndPoint(e);
-          let endState = this.getEndState(e);
-          //修改画线方法
-          if (endState.stateId) {
-            this.drawLineByEndState(endState.stateId, endPoint);
-          } else {
-            this.drawOnConnectingLine(
-              this.tempLineData.startPoint,
-              endPoint,
-              LINE_RADIUS
+          let endStateId = this.getEndState(e).stateId;
+          let startStateId = this.tempLineData.startState.stateId;
+          let startState = store.getState(this.threadIndex, startStateId);
+
+          //获取连线从起始状态垂直绘制的高度
+          let halfMaxStateHeight;
+          if (endStateId) {
+            let endState = store.getState(this.threadIndex, endStateId);
+            halfMaxStateHeight = Math.max(
+              QBlock.State.getStateHeight(endState) / 2,
+              QBlock.State.getStateHeight(startState) / 2
             );
+          } else {
+            halfMaxStateHeight = QBlock.State.getStateHeight(startState) / 2;
           }
+
+          this.drawOnConnectingLine(
+            this.tempLineData.startPoint,
+            endPoint,
+            halfMaxStateHeight
+          );
         } else {
           stateManage.isConnecting = false;
           this.showTempLine = false;
@@ -626,9 +596,7 @@ export default {
         this.tempLineData[key] = lineData[key];
       });
     },
-
     drawConnectLine(e) {
-      //debugger;
       let endState = this.getEndState(e);
       let lineData = this.copy(this.tempLineData);
       lineData.endState = endState;
@@ -638,8 +606,9 @@ export default {
         threadIndex: this.threadIndex,
         lineData: lineData,
       });
+      //需要通过lineId来判断是否需要删除连线，这里暂时先返回lineData的lineId
+      return lineData.lineId;
     },
-
     copy(obj) {
       return deepCopy(obj);
     },
@@ -650,8 +619,8 @@ export default {
      */
     isSameLine(line1, line2, endStateId) {
       return (
-        line1.startState.stateId == line2.startState.stateId &&
-        line1.endState.stateId == endStateId
+        line1.startState.stateId === line2.startState.stateId &&
+        line1.endState.stateId === endStateId
       );
     },
     isDuplicateLine(line, endStateId) {
@@ -721,7 +690,6 @@ export default {
     },
 
     onMouseup(e) {
-      //debugger;
       if (!stateManage.isConnecting) {
         this.showTempLine = false;
       }
@@ -733,12 +701,8 @@ export default {
         let regIsConnectPoint = /connect-point/;
         let existedLine = false;
         let endStateId = this.getEndState(e).stateId;
-
         let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
         let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
-        // 寻找连线的起始状态,
-        let startStateId = this.tempLineData.startState.stateId;
-        let inLoopData = this.createInLoopData(startStateId, stateAry);
 
         if (regIsConnectPoint.test(target_class)) {
           //绘制连接线
@@ -746,131 +710,256 @@ export default {
           if (existedLine) {
             return;
           } else {
-            this.drawConnectLine(e);
-            inLoopData = this.getInLoopData(inLoopData, stateAry, lineAry);
-            if (inLoopData.inLoopFlag) {
-              alert("该连线会形成循环结构");
-              console.log(inLoopData.inLoopStates);
-              this.createNestStructure(
-                startStateId,
-                endStateId,
-                inLoopData.inLoopStates
-              );
-            }
+            let drawingLineId = this.drawConnectLine(e);
+            this.handleLoops(stateAry, lineAry, drawingLineId, endStateId);
           }
         }
         this.showTempLine = false;
         stateManage.isConnecting = false;
       }
     },
-    //根据lineId寻找对应连线
-    findLine(lineId, lineAry) {
-      let lineData =
-        lineAry.find((item) => {
-          return lineId === item.lineId;
-        }) || {};
-      return lineData;
-    },
-    /**
-     * 根据当前连线连出的状态块的id，生成用于传入isInLoop中判断当前状态图是否存在环的数据
-     * @param {startStateId, stateAry}
-     */
-    createInLoopData(startStateId, stateAry) {
-      let startState = Tools.stateTraverse(stateAry, startStateId);
-      let inLoopData = {
-        currentState: startState,
-        startState: startState,
-        inLoopStates: [],
-        inLoopFlag: false,
-      };
-      return inLoopData;
-    },
     /**
      *
-     * 获取判断从当前状态块连出当前连线后，状态图内是否存在循环的数据。若图中存在寻环，则获取形成循环的状态。
-     *
-     * @param {inLoopData}
+     * 判断与处理状态图内可能存在的循环结构
+     * @param {stateAry, lineAry, drawingLineId, endStateId}
      */
-    getInLoopData(inLoopData, stateAry, lineAry) {
-      let result = [];
-      this.isInLoop(inLoopData, stateAry, lineAry, result);
-      if (result.length > 0) {
-        return result.pop();
-      } else {
-        return {
-          inLoopFlag: false,
-        };
-      }
-    },
-    /**判断添加连线后，状态图内是否会形成循环
-     *
-     * @param {inLoopData, stateAry, lineAry, result} inLoopData
-     *
-     */
-    isInLoop(inLoopData, stateAry, lineAry, result) {
-      //遍历当前状态的inputAry
-      for (let i = 0; i < inLoopData.currentState.inputAry.length; i++) {
-        //因为状态的inputAry内只存储了lineId，到lineAry内获取当前连线的连出状态
-        let lineData = this.findLine(
-          inLoopData.currentState.inputAry[i].lineId,
+    handleLoops(stateAry, lineAry, drawingLineId, endStateId) {
+      let inLoopStatesId = this.getInLoopStatesId(stateAry, lineAry);
+      if (inLoopStatesId && inLoopStatesId.length !== 0) {
+        alert("该连线会形成循环结构");
+        store.deleteLine({
+          lineId: drawingLineId,
+          threadIndex: this.threadIndex,
+        });
+        let loopStateData = this.createLoop(inLoopStatesId, stateAry);
+        //若走到这里，则可以判断当前的endstate时循环状态内的起始状态
+        this.relateLine2FirstLoopState(
+          endStateId,
+          loopStateData,
+          stateAry,
           lineAry
         );
-        let inputStateId = lineData.startState.stateId;
-        //若连线的连出状态与开始判断是否存在循环的状态相同，则存在循环，删除当前连线，并用循环结构包裹
-        if (inputStateId === inLoopData.startState.stateId) {
-          store.deleteLine(lineData);
-          inLoopData.inLoopStates.push(inLoopData.startState);
-          inLoopData.inLoopFlag = true;
-          result.push(inLoopData);
-          return;
-        }
-        //若连线的连出状态与开始判断是否存在循环的状态不同，则继续遍历当前连线的连出状态的inputAry
-        let inputState = Tools.stateTraverse(stateAry, inputStateId);
-        //追踪处于循环结构内的状态
-        inLoopData.inLoopStates.push(inputState);
-        inLoopData.currentState = inputState;
-        this.isInLoop(inLoopData, stateAry, lineAry, result);
       }
     },
     /**
-     * 若该连线会形成循环结构，则用一个嵌套结构的状态包裹形成循环结构的状态
+     *
+     * 根据当前状态图建立用于判断循环结构的图
+     * TODO: 需要增加判断在哪一层建立用于判断循环结构的图
+     * @param {stateAry, lineAry}
+     */
+    createGraphlibGraph(stateAry, lineAry) {
+      var g = new dagre.graphlib.Graph({
+        multigraph: true,
+      });
+      stateAry.forEach((state) => {
+        //需要考虑嵌套
+        g.setNode(state.stateId, {
+          label: state.name,
+          // width: state.width || 76,
+          // height: state.height || 40
+          width: parseInt(state.width.replace("px", ""), 10),
+          height: parseInt(state.height.replace("px", ""), 10),
+        });
+
+        state.outputAry.forEach((line) => {
+          let lineObj = lineAry.find((item) => {
+            return item.lineId === line.lineId;
+          });
+          let endState = stateAry.find((item) => {
+            return item.stateId === lineObj.endState.stateId;
+          });
+          // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
+          g.setEdge(state.stateId, endState.stateId, {
+            label: line.lineId,
+          });
+        });
+      });
+      return g;
+    },
+    /** 获取当前状态图中形成的环
+     * @param {stateAry, lineAry}
+     *
+     */
+    getInLoopStatesId(stateAry, lineAry) {
+      let g = this.createGraphlibGraph(stateAry, lineAry);
+      return dagre.graphlib.alg.findCycles(g)[0];
+    },
+    /**
+     * 建立一个循环状态来包裹形成循环的状态块
      * TODO：需要处理与形成循环结构的状态相连的连线以及删除原本状态的问题
      *
-     * @param {startStateId, endStateId, inLoopStates}
+     * @param {inLoopStates, stateAry}
      */
-    createNestStructure(startStateId, endStateId, inLoopStates) {
-      debugger;
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let startState = Tools.stateTraverse(stateAry, startStateId);
-      let endState = Tools.stateTraverse(stateAry, endStateId);
+    createLoop(inLoopStatesId, stateAry) {
+      let loopStatePosition = this.calculateLoopPosition(
+        inLoopStatesId,
+        stateAry
+      );
       let loopStateTemplate = {
-        x: startState.x < endState.x ? startState.x - 20 : endState.x - 20,
-        y: startState.y < endState.y ? startState.y - 20 : endState.y - 20,
-        stateType: "stateDiv",
+        x: loopStatePosition.x - 40,
+        y: loopStatePosition.y - 40,
+        stateType: "loopDiv",
         index: this.threadIndex,
       };
       let loopState = store.getDefaultStateCfg(loopStateTemplate);
-      loopState.width = Math.abs(startState.x - endState.x) + "px";
-      loopState.height = Math.abs(startState.y - endState.y) + "px";
-      loopState.mode = "nest";
-      for (var i in inLoopStates) {
-        loopState.children.push(inLoopStates[i]);
+      loopState.width = this.calculateLoopWidth(inLoopStatesId, stateAry);
+      loopState.height = this.calculateLoopHeight(inLoopStatesId, stateAry);
+
+      this.addStateToLoop(inLoopStatesId, stateAry, loopState);
+
+      let loopStateData = {
+        stateId: loopState.stateId,
+        loopState: loopState,
+        startPoint: {
+          x: loopState.x + parseInt(loopState.width.replace("px", ""), 10) / 2,
+          y: loopState.y + parseInt(loopState.height.replace("px", ""), 10) / 2,
+        },
+      };
+      return loopStateData;
+    },
+    //计算循环状态的左上角位置
+    calculateLoopPosition(inLoopStatesId, stateAry) {
+      let minX = 10000;
+      let minY = 10000;
+      inLoopStatesId.forEach((currentStateId) => {
+        let currentState = Tools.stateTraverse(stateAry, currentStateId);
+        minX = currentState.x < minX ? currentState.x : minX;
+        minY = currentState.y < minY ? currentState.y : minY;
+      });
+      return {
+        x: minX,
+        y: minY,
+      };
+    },
+    //计算循环状态的宽度
+    calculateLoopWidth(inLoopStatesId, stateAry) {
+      let minX = 10000;
+      let maxX = 0;
+      //获取x坐标最大的状态的宽度
+      let rightestState = Tools.stateTraverse(stateAry, inLoopStatesId[0]);
+      let rightestStateWidth = parseInt(
+        rightestState.width.replace("px", ""),
+        10
+      );
+
+      inLoopStatesId.forEach((currentStateId) => {
+        let currentState = Tools.stateTraverse(stateAry, currentStateId);
+        minX = currentState.x < minX ? currentState.x : minX;
+        maxX = currentState.x > maxX ? currentState.x : maxX;
+        return false;
+      });
+      let width = maxX - minX + rightestStateWidth + 80 + "px";
+      return width;
+    },
+    //计算循环状态的高度
+    calculateLoopHeight(inLoopStatesId, stateAry) {
+      let minY = 10000;
+      let maxY = 0;
+
+      //获取y坐标最大的状态，用于计算宽度
+      function findLowestState(inLoopStatesId, stateAry) {
+        let largestY = 0;
+        let lowestYStateIndex = 0;
+        for (let i = 0; i < inLoopStatesId.length; i++) {
+          let currentState = Tools.stateTraverse(stateAry, inLoopStatesId[i]);
+          if (currentState.y > largestY) {
+            largestY = currentState.y;
+            lowestYStateIndex = i;
+          }
+        }
+        let lowestState = Tools.stateTraverse(
+          stateAry,
+          inLoopStatesId[lowestYStateIndex]
+        );
+        return lowestState;
+      }
+
+      let lowestState = findLowestState(inLoopStatesId, stateAry);
+      let lowestStateHeight = parseInt(
+        lowestState.height.replace("px", ""),
+        10
+      );
+      inLoopStatesId.forEach((currentStateId) => {
+        let currentState = Tools.stateTraverse(stateAry, currentStateId);
+        minY = currentState.y < minY ? currentState.y : minY;
+        maxY = currentState.y > maxY ? currentState.y : maxY;
+      });
+
+      let height = maxY - minY + lowestStateHeight + 80 + "px";
+      return height;
+    },
+    //将形成循环的状态添加进循环状态
+    addStateToLoop(inLoopStatesId, stateAry, loopState) {
+      for (let i in inLoopStatesId) {
+        let currentState = Tools.stateTraverse(stateAry, inLoopStatesId[i]);
+        currentState.x -= loopState.x;
+        currentState.y -= loopState.y;
+        this.deleteDuplicateState(stateAry, currentState.stateId);
+        loopState.children.push(currentState);
       }
       stateAry.push(loopState);
+    },
+    /**
+     * 处理从外层状态连入循环状态中第一个被执行的状态的连线
+     * 暂时只适用于处在状态图最外层的情况
+     */
+    relateLine2FirstLoopState(
+      firstLoopStateId,
+      loopStateData,
+      stateAry,
+      lineAry
+    ) {
+      let loopStateIndex;
+      stateAry.forEach((state, index) => {
+        if (state.stateId === loopStateData.stateId) {
+          loopStateIndex = index;
+          return false;
+        }
+      });
+      let firstLoopState = Tools.stateTraverse(stateAry, firstLoopStateId);
+
+      for (let i = 0; i < firstLoopState.inputAry.length; i++) {
+        let lineData;
+        lineAry.forEach((item) => {
+          if (item.lineId === firstLoopState.inputAry[i].lineId) {
+            lineData = item;
+            return false;
+          }
+        });
+        lineData.endPoint = {
+          x: loopStateData.startPoint.x,
+          y: loopStateData.startPoint.y,
+        };
+        lineData.endState = {
+          stateId: loopStateData.stateId,
+          stateIndex: loopStateIndex,
+        };
+        store.relateLine2endState({
+          threadIndex: this.threadIndex,
+          lineData: lineData,
+        });
+      }
+
+      firstLoopState.inputAry = [];
+    },
+    /**
+     *
+     * 用于处理在检测到循环结构时，将状态加入循环结构后删除外层的状态的方法
+     * 暂时只适用于处在状态图最外层的情况
+     * @param {stateAry, stateId}
+     */
+    deleteDuplicateState(stateAry, stateId) {
+      stateAry.forEach((state, index) => {
+        if (state.stateId === stateId) {
+          stateAry.splice(index, 1);
+          return false;
+        }
+      });
     },
 
     drop(e) {
       if (e.dataTransfer.getData("operate") === "addState") {
-        let threadPosInfo = e.target.getBoundingClientRect();
-        let leftGap = e.dataTransfer.getData("mousedowntoleft");
-        let topGap = e.dataTransfer.getData("mousedowntotop");
-        let data = {
-          index: this.threadIndex,
-          x: e.x - threadPosInfo.x - leftGap,
-          y: e.y - threadPosInfo.y - topGap,
-          stateType: e.dataTransfer.getData("stateType"),
-        };
-        store.addState(data);
+        this.addStateToThread(e);
       } else {
         let theDragStateData = JSON.parse(
           e.dataTransfer.getData("theDragStateData")
@@ -890,35 +979,7 @@ export default {
           theDragStateData.stateId,
           this.thread
         );
-        let findingIndex = (stateAry, DragStateId) => {
-          let stateIndex = 0;
-          for (let i = 0; i < stateAry.length; i++) {
-            if (stateAry[i].stateId === DragStateId) {
-              stateIndex = i;
-              break;
-            }
-          }
-          return stateIndex;
-        };
         if (stateInThreadFlag) {
-          // 进入这里说明是同一层级内部的拖动
-          let copiedIndexAry = Tools.deepCopy(statePageVue._dragData.indexAry);
-          let copiedThreadIndex = copiedIndexAry.pop();
-          let parentIndex = null;
-          theDragStateData.parent = parentIndex;
-          // 当拖动的组件为循环组件时，动态更新循环组件内children的parent
-          if (theDragStateData.children) {
-            let i = 0;
-            while (i < theDragStateData.children.length) {
-              // 通过在stateAry里寻找父数据来确认parent，不可以直接用length
-              theDragStateData.children[i].parent = findingIndex(
-                statePageVue.threadAry[copiedThreadIndex].stateAry,
-                theDragStateData.stateId
-              );
-              i++;
-            }
-          }
-          //console.log("drop内移动阶段：", theDragStateData)
           return false;
         }
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
@@ -926,57 +987,65 @@ export default {
         let y = e.pageY - this.$el.getBoundingClientRect().top;
         theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
         theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
-        // 放开时重新计算状态的parent属性
 
-        let copiedIndexAry = Tools.deepCopy(statePageVue._dragData.indexAry);
-        let copiedThreadIndex = copiedIndexAry.pop();
-        let parentIndex = null;
-        theDragStateData.parent = parentIndex;
-        // 当拖动的组件为循环组件时，动态更新循环组件内children的parent
-        if (theDragStateData.children) {
-          let i = 0;
-          while (i < theDragStateData.children.length) {
-            // 走到这里说明是从循环内部拖动到外部，因为增加了一个模块，直接用stateAry.length来做parent
-            theDragStateData.children[i].parent =
-              statePageVue.threadAry[copiedThreadIndex].stateAry.length;
-            i++;
-          }
-        }
-        //console.log("drop内嵌套阶段：", theDragStateData)
-        let tI = statePageVue._dragData.indexAry.pop(); //线程索引
-        statePageVue.threadAry[tI].stateAry.push(theDragStateData);
+        theDragStateData.parent = null;
+        statePageVue.threadAry[this.threadIndex].stateAry.push(
+          theDragStateData
+        );
 
-        let dragTargetParent = statePageVue.threadAry[tI].stateAry;
-        while (
-          statePageVue._dragData &&
-          statePageVue._dragData.indexAry.length > 1
-        ) {
-          let i = statePageVue._dragData.indexAry.pop();
-          dragTargetParent = dragTargetParent[i].children;
-        }
+        let dragTargetParent =
+          statePageVue.threadAry[this.threadIndex].stateAry;
+        //去除线程索引
+        statePageVue._dragData.indexAry.pop();
+        dragTargetParent = this.getDropStateParent(
+          statePageVue._dragData.indexAry,
+          dragTargetParent
+        );
         setTimeout(() => {
           dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
         }, 10);
       }
     },
-    getXYFromEventData(eventData){
+    //将从工具栏上拖拽下来的状态添加进当前线程内
+    addStateToThread(e) {
+      let threadPosInfo = e.target.getBoundingClientRect();
+      let leftGap = e.dataTransfer.getData("mousedowntoleft");
+      let topGap = e.dataTransfer.getData("mousedowntotop");
+      let data = {
+        index: this.threadIndex,
+        x: e.x - threadPosInfo.x - leftGap,
+        y: e.y - threadPosInfo.y - topGap,
+        stateType: e.dataTransfer.getData("stateType"),
+      };
+      store.addState(data);
+      return;
+    },
+    //用于判断在drop时将drop的状态块添加为哪个状态块的children
+    getDropStateParent(indexAry, parentStateAry) {
+      while (indexAry && indexAry.length > 1) {
+        let i = indexAry.pop();
+        parentStateAry = parentStateAry[i].children;
+      }
+      return parentStateAry;
+    },
+    getXYFromEventData(eventData) {
       let xy = {};
       //组件嵌套的情况，会将数据依次往上传递，传递的过程中会包一层data
-      if(typeof eventData.data !== 'undefined'){
+      if (typeof eventData.data !== "undefined") {
         xy = this.getXYFromEventData(eventData.data);
-      }else{
+      } else {
         xy = {
           x: eventData.transform.x,
-          y: eventData.transform.y
-        }
+          y: eventData.transform.y,
+        };
       }
       return xy;
     },
     /**
      * 更新状态的位置 这里xy数据更新后视图自动更新
      */
-    updateStateXY(state, xy){
-      if(state){
+    updateStateXY(state, xy) {
+      if (state) {
         state.x = xy.x;
         state.y = xy.y;
       }
@@ -1025,15 +1094,12 @@ export default {
     /**
      * 更新这个状态的子状态相对于线程框的xy坐标 即absolutePosition 此数据仅用于绘制line
      */
-    updateSubStatesAbsoluteXY(state, xy){
+    updateSubStatesAbsoluteXY(state, xy) {
       // 递归处理嵌套在父状态内的所有状态的连线
-      if(state){
+      if (state) {
         for (var i = 0; i < state.children.length; i++) {
           // 绘制连线需要用到一些属性，定义childrenData来将属性一层层传递
-          let childrenData = this.updateChildrenData(
-            state.children[i],
-            xy
-          );
+          let childrenData = this.updateChildrenData(state.children[i], xy);
           this.updateLines(childrenData);
           this.updateSubStatesAbsoluteXY(state.children[i], xy); //TODO 更深层次的状态的连线更新 待验证
         }
@@ -1059,354 +1125,49 @@ export default {
       };
       return childrenData;
     },
-    /**
-     * 当连线的结束点变化时，动态更新连线
-     * 现在的实现为单纯的通过起始与结束点来判断该绘制哪种连线，自动布局的grid实现后需要通过grid的行列来进行判断
-     */
-    drawInputLine(curLine, stateHeight, endPoint) {
-      let lineRadius = LINE_RADIUS;
-      let linepath;
 
-      // 计算得到endPoint
-      if(!endPoint){
-        let threadPos = document.getElementsByClassName("thread")[this.threadIndex].getBoundingClientRect();
-        let statePos =  document.getElementById(curLine.endState.stateId).getBoundingClientRect();
-        endPoint = {
-          x: statePos.getBoundingClientRect().left - threadPos.left,
-          y: statePos.getBoundingClientRect().top - threadPos.top
-        }
+    createLinePath(line) {},
+    /* reUpdateLinePath(line, threadIndex){
+      this.updateLinePath(line, line.startState, line.endState, threadIndex);
+    }, */
+    updateLinePath(line, startState, endState, threadIndex) {
+      if (!threadIndex) {
+        threadIndex = this.threadIndex;
       }
-
-      // y坐标相同，绘制直线
-      if (
-        endPoint.x > curLine.startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y == curLine.startPoint.y
-      ) {
-        linepath = this.drawStraightConnectLine(
-          curLine.startPoint,
-          endPoint,
-          LINE_RADIUS
-        );
-        curLine.endPoint = endPoint;
-        curLine.d = linepath;
-        return;
-      }
-
-      // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
-      if (
-        (endPoint.x - line_h - LINE_RADIUS < curLine.startPoint.x &&
-          endPoint.y < curLine.startPoint.y) ||
-        (endPoint.x < curLine.startPoint.x &&
-          endPoint.y == curLine.startPoint.y)
-      ) {
-        linepath = this.drawUpperBackConnectLine(
-          curLine.startPoint,
-          endPoint,
-          LINE_RADIUS,
-          stateHeight
-        );
-        curLine.endPoint = endPoint;
-        curLine.d = linepath;
-        return;
-      }
-      // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-      if (
-        endPoint.x - line_h - LINE_RADIUS < curLine.startPoint.x &&
-        endPoint.y > curLine.startPoint.y
-      ) {
-        linepath = this.drawLowerBackConnectLine(
-          curLine.startPoint,
-          endPoint,
-          LINE_RADIUS,
-          stateHeight
-        );
-        curLine.endPoint = endPoint;
-        curLine.d = linepath;
-        return;
-      }
-
-      // 当结束点的x, y坐标均大于起始点的时候
-      if (
-        endPoint.x > curLine.startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y > curLine.startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (endPoint.y - curLine.startPoint.y < 2 * tempRadius) {
-          let doubleRadius = endPoint.y - curLine.startPoint.y;
-          tempRadius = doubleRadius / 2;
-          linepath = this.drawLowerConnectLine(
-            curLine.startPoint,
-            endPoint,
-            tempRadius
-          );
-          curLine.endPoint = endPoint;
-          curLine.d = linepath;
-          return;
-        } else {
-          linepath = this.drawLowerConnectLine(
-            curLine.startPoint,
-            endPoint,
-            LINE_RADIUS
-          );
-          curLine.endPoint = endPoint;
-          curLine.d = linepath;
-          return;
-        }
-      }
-      //当结束点的x坐标大于起始点，y坐标小于起始点时
-      if (
-        endPoint.x > curLine.startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y < curLine.startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (curLine.startPoint.y - endPoint.y < 2 * tempRadius) {
-          let doubleRadius = curLine.startPoint.y - endPoint.y;
-          tempRadius = doubleRadius / 2;
-          (linepath = this.drawUpperConnectLine(
-            curLine.startPoint,
-            endPoint,
-            tempRadius
-          )),
-            (curLine.endPoint = endPoint);
-          curLine.d = linepath;
-          return;
-        } else {
-          (linepath = this.drawUpperConnectLine(
-            curLine.startPoint,
-            endPoint,
-            LINE_RADIUS
-          )),
-            (curLine.endPoint = endPoint);
-          curLine.d = linepath;
-          return;
-        }
-      }
-    },
-    /**
-     * 当连线的起始点发生变化时，动态更新连线
-     * 现在的实现为单纯的通过起始与结束点来判断该绘制哪种连线，自动布局的grid实现后需要通过grid的行列来进行判断
-     */
-    drawOutputLine(startPoint, stateHeight, curLine, lineRadius) {
-      let tempRadius = LINE_RADIUS;
-      let linepath;
-      // y坐标相同，绘制直线
-      if (
-        curLine.endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        curLine.endPoint.y == startPoint.y
-      ) {
-        linepath = this.drawStraightConnectLine(
-          startPoint,
-          curLine.endPoint,
-          LINE_RADIUS
-        );
-        curLine.startPoint = startPoint;
-        curLine.d = linepath;
-        return;
-      }
-
-      if (
-        (curLine.endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-          curLine.endPoint.y < startPoint.y) ||
-        (curLine.endPoint.x < startPoint.x &&
-          curLine.endPoint.y == startPoint.y)
-      ) {
-        linepath = this.drawUpperBackConnectLine(
-          startPoint,
-          curLine.endPoint,
-          LINE_RADIUS,
-          stateHeight
-        );
-        curLine.startPoint = startPoint;
-        curLine.d = linepath;
-        return;
-      }
-
-      // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-      if (
-        curLine.endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-        curLine.endPoint.y > startPoint.y
-      ) {
-        linepath = this.drawLowerBackConnectLine(
-          startPoint,
-          curLine.endPoint,
-          LINE_RADIUS,
-          stateHeight
-        );
-        curLine.startPoint = startPoint;
-        curLine.d = linepath;
-        return;
-      }
-      // 当结束点的x, y坐标均大于起始点的时候
-      if (
-        curLine.endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        curLine.endPoint.y > startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (curLine.endPoint.y - startPoint.y < 2 * tempRadius) {
-          let doubleRadius = curLine.endPoint.y - startPoint.y;
-          tempRadius = doubleRadius / 2;
-          linepath = this.drawLowerConnectLine(
-            startPoint,
-            curLine.endPoint,
-            tempRadius
-          );
-          curLine.startPoint = startPoint;
-          curLine.d = linepath;
-          return;
-        } else {
-          linepath = this.drawLowerConnectLine(
-            startPoint,
-            curLine.endPoint,
-            LINE_RADIUS
-          );
-          curLine.startPoint = startPoint;
-          curLine.d = linepath;
-          return;
-        }
-      }
-      //当结束点的x坐标大于起始点，y坐标小于起始点时
-      if (
-        curLine.endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        curLine.endPoint.y < startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (startPoint.y - curLine.endPoint.y < 2 * tempRadius) {
-          let doubleRadius = startPoint.y - curLine.endPoint.y;
-          tempRadius = doubleRadius / 2;
-          linepath = this.drawUpperConnectLine(
-            startPoint,
-            curLine.endPoint,
-            tempRadius
-          );
-          curLine.startPoint = startPoint;
-          curLine.d = linepath;
-          return;
-        } else {
-          linepath = this.drawUpperConnectLine(
-            startPoint,
-            curLine.endPoint,
-            LINE_RADIUS
-          );
-          curLine.startPoint = startPoint;
-          curLine.d = linepath;
-          return;
-        }
-      }
-    },
-    createLinePath(line){
-
-    },
-    drawLine(line, startState, endState){
-      let tempRadius = LINE_RADIUS;
       let startPoint, endPoint, stateHeight, linepath;
-      startPoint = QBlock.Line.getStartPoint(line, this.threadIndex);
-      endPoint = QBlock.Line.getEndPoint(line, this.threadIndex);
-      stateHeight = Math.max(QBlock.State.getStateHeight(startState)/2, QBlock.State.getStateHeight(endState)/2);
+      startPoint = QBlock.Line.getStartPoint(line, threadIndex);
+      endPoint = QBlock.Line.getEndPoint(line, threadIndex);
+      let halfMaxStateHeight = Math.max(
+        QBlock.State.getStateHeight(startState) / 2,
+        QBlock.State.getStateHeight(endState) / 2
+      );
 
-      // y坐标相同，绘制直线
-      if (
-        endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y == startPoint.y
-      ) {
+      let tempRadius = 0;
+      let isDynamicRadiusFlag =
+        Math.abs(startPoint.y - endPoint.y) < 2 * LINE_RADIUS;
+      if (endPoint.y === startPoint.y && endPoint.x > startPoint.x) {
         linepath = this.drawStraightConnectLine(
           startPoint,
           endPoint,
           LINE_RADIUS
         );
-        line.endPoint = endPoint;
-        line.d = linepath;
-        return;
       }
-
-      // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
-      if (
-        (endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-          endPoint.y < startPoint.y) ||
-        (endPoint.x < startPoint.x &&
-          endPoint.y == startPoint.y)
-      ) {
-        linepath = this.drawUpperBackConnectLine(
+      if (startPoint.x > endPoint.x - LINE_H - LINE_RADIUS) {
+        linepath = this.drawLine5ByPoint(
           startPoint,
           endPoint,
-          LINE_RADIUS,
-          stateHeight
+          halfMaxStateHeight
         );
-        line.endPoint = endPoint;
-        line.d = linepath;
-        return;
-      }
-      // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-      if (
-        endPoint.x - line_h - LINE_RADIUS < startPoint.x &&
-        endPoint.y > startPoint.y
-      ) {
-        linepath = this.drawLowerBackConnectLine(
-          startPoint,
-          endPoint,
-          LINE_RADIUS,
-          stateHeight
-        );
-        line.endPoint = endPoint;
-        line.d = linepath;
-        return;
-      }
-
-      // 当结束点的x, y坐标均大于起始点的时候
-      if (
-        endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y > startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (endPoint.y - startPoint.y < 2 * tempRadius) {
-          let doubleRadius = endPoint.y - startPoint.y;
-          tempRadius = doubleRadius / 2;
-          linepath = this.drawLowerConnectLine(
-            startPoint,
-            endPoint,
-            tempRadius
-          );
-          line.endPoint = endPoint;
-          line.d = linepath;
-          return;
+      } else {
+        //若两个状态块之间的y轴距离小于2个预设拐角半径，则需要动态计算连线拐角的半径，并绘制连线
+        if (isDynamicRadiusFlag) {
+          let tempRadius = Math.abs(startPoint.y - endPoint.y) / 2;
+          linepath = this.drawLine3ByPoint(startPoint, endPoint, tempRadius);
         } else {
-          linepath = this.drawLowerConnectLine(
-            startPoint,
-            endPoint,
-            LINE_RADIUS
-          );
-          line.endPoint = endPoint;
-          line.d = linepath;
-          return;
+          linepath = this.drawLine3ByPoint(startPoint, endPoint, LINE_RADIUS);
         }
       }
-      //当结束点的x坐标大于起始点，y坐标小于起始点时
-      if (
-        endPoint.x > startPoint.x + line_h + LINE_RADIUS &&
-        endPoint.y < startPoint.y
-      ) {
-        // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-        if (startPoint.y - endPoint.y < 2 * tempRadius) {
-          let doubleRadius = startPoint.y - endPoint.y;
-          tempRadius = doubleRadius / 2;
-          (linepath = this.drawUpperConnectLine(
-            startPoint,
-            endPoint,
-            tempRadius
-          )),
-            (line.endPoint = endPoint);
-          line.d = linepath;
-          return;
-        } else {
-          (linepath = this.drawUpperConnectLine(
-            startPoint,
-            endPoint,
-            LINE_RADIUS
-          )),
-            (line.endPoint = endPoint);
-          line.d = linepath;
-          return;
-        }
-      }
+      line.d = linepath;
     },
     /**
      * 根据状态块的transform数据更新其endPoint, 然后更新用于画线的数据d   todo
@@ -1415,86 +1176,24 @@ export default {
      */
     updateInputLines(curLine, eventData) {
       let line = curLine;
-      function translatePX2Num(str) {
-        if (/px/.test(str)) {
-          str = str.replace("px", "");
-        }
-        return +str;
-      }
-      let currentThread = store.stateData.threadAry[this.threadIndex];
-
-      // let currentState = store.getState(this.threadIndex, eventData.stateId);
-      // 可以替换为
-      let currentState = store.getState(this.threadIndex, line.endState.stateId);
-      
-      let stateType = currentState.stateType;
-      let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2;
-      let stateWidth = parseInt(translatePX2Num(currentState.width), 10);
-
-      // 更新连线的垂直高度时，需要获取连线连出点的可缩放的嵌套状态的高度
-      let startState = store.getState(this.threadIndex, curLine.startState.stateId);
-      let endState = currentState;
-      this.drawLine(line, startState, endState);
+      let startState = store.getState(
+        this.threadIndex,
+        curLine.startState.stateId
+      );
+      let endState = store.getState(this.threadIndex, line.endState.stateId);
+      this.updateLinePath(line, startState, endState);
     },
 
     updateOutputLines(curLine, stateData) {
-      function translatePX2Num(str) {
-        if (/px/.test(str)) {
-          str = str.replace("px", "");
-        }
-        return +str;
-      }
-      let currentThread = store.stateData.threadAry[this.threadIndex];
-      let currentState = Tools.stateTraverse(
-        currentThread.stateAry,
-        stateData.stateId
+      let line = curLine;
+      let startState = store.getState(
+        this.threadIndex,
+        line.startState.stateId
       );
-      let stateType = currentState.stateType;
-      let stateHeight = parseInt(translatePX2Num(currentState.height), 10) / 2;
-      let stateWidth = parseInt(translatePX2Num(currentState.width), 10);
-
-      //更新连线的垂直高度时，需要获取连线连入点的可缩放的嵌套状态的高度
-      let inputState = Tools.stateTraverse(
-        currentThread.stateAry,
-        curLine.endState.stateId
-      );
-      let inputStateHeight =
-        parseInt(translatePX2Num(inputState.height), 10) / 2;
-
-      //非嵌套状态时，使用transform判断位置
-      let startPoint;
-      if (!stateData.data && !stateData.inLoop) {
-        startPoint = {
-          x: stateData.transform.x + stateWidth + 2,
-          y: stateData.transform.y + stateHeight,
-        };
-      }
-      // 因为嵌套状态时传递上来的属性包裹在了data内，需要到data内获取更新连线所需的数据
-      while (stateData.data) {
-        stateData = stateData.data;
-      }
-
-      startPoint = {
-        x: stateData.absolutePosition.x + stateWidth + 2,
-        y: stateData.absolutePosition.y + stateHeight,
-      };
-
-      if (inputStateHeight > stateHeight) {
-        this.drawOutputLine(
-          startPoint,
-          inputStateHeight,
-          curLine,
-          LINE_RADIUS
-        );
-      } else {
-        this.drawOutputLine(
-          startPoint,
-          stateHeight,
-          curLine,
-          LINE_RADIUS
-        );
-      }
+      let endState = store.getState(this.threadIndex, curLine.endState.stateId);
+      this.updateLinePath(line, startState, endState);
     },
+
     startResize(e) {
       this.showVirtualBox = true;
       EventObj.$emit("operateChange", {

@@ -649,26 +649,28 @@ export default {
       window.localStorage.setItem("blocklyXml", blocklyXml);
     },
     testLayout() {
-      var stateDoms = document.querySelectorAll('.state-wrap');
+      var stateDoms = document.querySelectorAll(".state-wrap");
       stateDoms = Array.prototype.slice.call(stateDoms);
       let reg = /is\-auto\-layouting/;
-      stateDoms.forEach(element => {
-        var clazz = element.getAttribute('class');
-        if(!reg.test(clazz)){
-          element.setAttribute('class', clazz + ' is-auto-layouting');
+      stateDoms.forEach((element) => {
+        var clazz = element.getAttribute("class");
+        if (!reg.test(clazz)) {
+          element.setAttribute("class", clazz + " is-auto-layouting");
         }
       });
       var layout = Util.testLayout(this.threadAry[0]);
 
       setTimeout(() => {
-        stateDoms.forEach(element => {
-          var clazz = element.getAttribute('class');
-          if(reg.test(clazz)){
-            element.setAttribute('class', clazz.replace(/\s*is\-auto\-layouting\s*/g, ''));
+        stateDoms.forEach((element) => {
+          var clazz = element.getAttribute("class");
+          if (reg.test(clazz)) {
+            element.setAttribute(
+              "class",
+              clazz.replace(/\s*is\-auto\-layouting\s*/g, "")
+            );
           }
         });
       }, 1000);
-      
     },
   },
 

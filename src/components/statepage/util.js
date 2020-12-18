@@ -2,6 +2,7 @@ const NAME_SPACE = "https://developers.google.com/blockly/xml";
 const SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 import dagre from 'dagre'
+import QBlock from './qblock';
 
 var Util = {
     isDefined(a) {
@@ -782,6 +783,10 @@ var Util = {
         });
         g.edges().forEach(function(line) {
             console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
+            let lineObj = thread.lineAry.find(item => {
+                return item.lineId === g.edge(line).label;
+            });
+            QBlock.Line.redrawLine(lineObj, 0);
         });
     }
 }

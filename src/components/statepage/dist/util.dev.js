@@ -7,6 +7,8 @@ exports["default"] = void 0;
 
 var _dagre = _interopRequireDefault(require("dagre"));
 
+var _qblock = _interopRequireDefault(require("./qblock"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -846,6 +848,11 @@ var Util = {
     });
     g.edges().forEach(function (line) {
       console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
+      var lineObj = thread.lineAry.find(function (item) {
+        return item.lineId === g.edge(line).label;
+      });
+
+      _qblock["default"].Line.redrawLine(lineObj, 0);
     });
   }
 };

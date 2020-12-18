@@ -6,7 +6,7 @@ import router from './router'
 import Element from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
-
+import Tools from './Tools.js'
 Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.prototype.axios = axios;
 
@@ -79,6 +79,7 @@ window.store = {
    */
   deleteLine(data) {
     let lineAry = this.stateData.threadAry[data.threadIndex].lineAry,
+      stateAry = this.stateData.threadAry[data.threadIndex].stateAry,
       lineItem,
       line,
       i;
@@ -89,21 +90,8 @@ window.store = {
         break;
       }
     }
-    //修改为深度搜索与选中连线相关的状态
-    function traverseLine(stateAry, lineState) {
-      for (var i in stateAry){
-          if (stateAry[i].stateId === lineState.stateId){
-          result.push(stateAry[i]);
-          return
-          }
-        traverseLine(stateAry[i].children, lineState);
-      } 
-    };
-    let result = [];
-    //更新这条线的始末状态的outputAry inputAry信息
-    let stateAry = this.stateData.threadAry[data.threadIndex].stateAry;
-    traverseLine(stateAry, line.startState)
-    let startState = result.pop()
+
+    let startState = Tools.stateTraverse(stateAry, line.startState.stateId)
     let outputAry = startState.outputAry;
     outputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {
@@ -112,8 +100,7 @@ window.store = {
       }
     });
 
-    traverseLine(stateAry, line.endState)
-    let endState = result.pop()
+    let endState = Tools.stateTraverse(stateAry, line.endState.stateId)
     let inputAry = endState.inputAry;
     inputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {
@@ -128,24 +115,12 @@ window.store = {
    */
 
   relateLine2startState(data) {
-    let result = []
-    // 用于深度搜索stateId的方法，寻找到的state存储在result内
-    function traverse(stateAry) {
-      for (var i in stateAry){
-        if (stateAry[i].stateId === data.lineData.startState.stateId){
-          result.push(stateAry[i]);
-          return
-        }
-        traverse(stateAry[i].children);
-      }
-    };
-
+    let stateAry = this.stateData.threadAry[data.threadIndex].stateAry
+    let targetStateId = data.lineData.startState.stateId
     if (data.lineData.startState) {
-      traverse(this.stateData.threadAry[data.threadIndex].stateAry)
-      let outputAry = result[0].outputAry;
+      let outputAry = Tools.stateTraverse(stateAry, targetStateId).outputAry
       if (!outputAry) {
         outputAry = [];
-        result[0].outputAry = outputAry;
       }
       outputAry.push({
         lineId: data.lineData.lineId, //这里只存放连线的lineId，对连线的具体数据只保存一份，放在thread.lineAry里面，避免维护多份数据
@@ -162,24 +137,11 @@ window.store = {
       data.lineData.endState &&
       data.lineData.endState.stateIndex !== null
     ) {
-      // 根据id来拿
-      let result = []
-      // 用于深度搜索stateId的方法，寻找到的state存储在result内
-      function traverse(stateAry) {
-        for (var i in stateAry){
-          if (stateAry[i].stateId === data.lineData.endState.stateId){
-            result.push(stateAry[i]);
-            return
-          }
-          traverse(stateAry[i].children);
-        }
-      };
-      traverse(this.stateData.threadAry[data.threadIndex].stateAry)
-      let inputAry = result[0].inputAry;
-      
+      let stateAry = this.stateData.threadAry[data.threadIndex].stateAry
+      let targetStateId = data.lineData.endState.stateId
+      let inputAry = Tools.stateTraverse(stateAry, targetStateId).inputAry
       if (!inputAry) {
         inputAry = [];
-        result[0].inputAry = inputAry;
       }
       inputAry.push({
         lineId: data.lineData.lineId,
@@ -224,15 +186,20 @@ window.store = {
   },
   getStateImplement(stateId, stateAry){
     let state;
-    stateAry.forEach(item => {
+    stateAry.every(item => {
+      let flag = true;
       if (item.stateId === stateId) {
         state = item;
-        return false;
+        flag = false
       } else if (item.children && item.children.length) {
         state = this.getStateImplement(stateId, item.children);
+        if(state){
+          flag = false
+        }
       }
+      return flag
     });
-    return state;
+    return state
   }
 }
 

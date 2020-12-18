@@ -83,14 +83,17 @@ export default {
         typeof line.startPoint.x === "undefined" ||
         isNaN(line.startPoint.x)
       ) {
-        
-        let startState = store.getState(this.threadIndex, line.startState.stateId, false/**isThreadId: false */); 
+        let startState = store.getState(
+          this.threadIndex,
+          line.startState.stateId,
+          false /**isThreadId: false */
+        );
         line.startPoint = {
           x: startState.x + Util.translatePX2Num(startState.width),
           y: startState.y + Util.translatePX2Num(startState.height) / 2,
         };
-      }else{
-          //debugger;
+      } else {
+        //debugger;
       }
       return line.startPoint;
     },
@@ -102,13 +105,17 @@ export default {
         typeof line.endPoint.x === "undefined" ||
         isNaN(line.endPoint.x)
       ) {
-        let endState = store.getState(this.threadIndex, line.endState.stateId, false/**isThreadId: false */); 
+        let endState = store.getState(
+          this.threadIndex,
+          line.endState.stateId,
+          false /**isThreadId: false */
+        );
         line.endPoint = {
           x: endState.x,
           y: endState.y + Util.translatePX2Num(endState.height) / 2,
         };
-      }else{
-          //debugger;
+      } else {
+        //debugger;
       }
       return line.endPoint;
     },
