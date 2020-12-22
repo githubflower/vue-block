@@ -1,8 +1,16 @@
 <template>
   <!-- :stateId="stateData.stateId ? stateData.stateId : genId()"  -->
   <!-- :stateId="stateId"  -->
-  <div :index="index" :class="['state-div', { 'is-dragging': isDragging }, { 'active': isActive }, {'selected': isSelected}]" 
-       @click="activeLines">
+  <div
+    :index="index"
+    :class="[
+      'state-div',
+      { 'is-dragging': isDragging },
+      { active: isActive },
+      { selected: isInActiveStates() },
+    ]"
+    @click="selectState()"
+  >
     <span class="icon" :style="{ backgroundImage: `url( ${loopIcon})` }"></span>
     <el-input
       v-if="showInput"
@@ -13,14 +21,18 @@
       @blur="hideInput"
     ></el-input>
     <p v-else :title="stateData.name" @dblclick="rename">
-      {{ stateData.name.length > 8 ? stateData.name.slice(0,8) + '...' : stateData.name }}
+      {{
+        stateData.name.length > 8
+          ? stateData.name.slice(0, 8) + "..."
+          : stateData.name
+      }}
     </p>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
     <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
-      @click="showInputAry = !showInputAry"
+      @click.stop="showInputDesc"
     >
       {{ stateData.inputAry.length }}
       <ul class="input-list" v-show="showInputAry">
@@ -32,7 +44,7 @@
     <div
       v-show="stateData.outputAry && stateData.outputAry.length"
       class="out event-count"
-      @click="showOutputAry = !showOutputAry"
+      @click.stop="showOutputDesc"
     >
       {{ stateData.outputAry.length }}
       <ul class="output-list" v-show="showOutputAry">
@@ -46,8 +58,7 @@
         </li>
       </ul>
     </div>
-    <div 
-      class="connect-point in loop-start-point"></div>
+    <div class="connect-point in"></div>
     <div
       class="connect-point out"
       @mousedown="onConnectPointMousedown"
@@ -67,7 +78,7 @@ const isNumber = (str) => {
 };
 export default {
   name: "LoopDiv",
-  props: ["stateData", "index", "threadIndex"],
+  props: ["stateData", "index", "threadIndex", "activeStates"],
 
   data() {
     return {
@@ -76,7 +87,6 @@ export default {
       showInput: false,
       isDragging: false,
       isActive: false,
-      isSelected: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
       showInputAry: false,
@@ -84,31 +94,19 @@ export default {
     };
   },
   methods: {
-    activeLines(){
-      this.isSelected = !this.isSelected
-      let currentLineAry = store.stateData.threadAry[this.threadIndex].lineAry
-      //遍历被选中的state的连线输入和连线输出
-      //TODO
-      let curLine;
-      if(this.stateData.inputAry){
-        this.stateData.inputAry.forEach((inputLine) => {
-          curLine = currentLineAry.find((line) => {
-            //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
-            return line.lineId === inputLine.lineId;
-          });
-
-          curLine.isActive = this.isSelected
-        })
+    /**
+     * 判断当前状态是否在已被高亮的状态块内
+     */
+    isInActiveStates() {
+      for (let i = 0; i < this.activeStates.length; i++) {
+        if (this.stateData.stateId === this.activeStates[i].stateId) {
+          return true;
+        }
       }
-      if(this.stateData.outputAry){
-        this.stateData.outputAry.forEach((outputLine) => {
-          curLine = currentLineAry.find((line) => {
-            //line --> line的具体画连线的数据   inputLine与line通过lineId更新数据
-            return line.lineId === outputLine.lineId;
-          });
-          curLine.isActive = this.isSelected
-        })
-      }
+      return false;
+    },
+    selectState() {
+      this.$emit("updateActiveState", this.stateData);
     },
     genId() {
       return window.genId("state");
@@ -120,10 +118,8 @@ export default {
     },
     isConnectPoint(dom) {
       let connectPointReg = /connect-point/;
-      let loopStartPointReg = /loop-start-point/;
-      let loopContinuePointReg = /loop-continue-point/;
       let classStr = dom.getAttribute("class");
-      if (connectPointReg.test(classStr) || loopStartPointReg.test(classStr) || loopContinuePointReg.test(classStr)) {
+      if (connectPointReg.test(classStr)) {
         return true;
       }
       return false;
@@ -139,7 +135,6 @@ export default {
      * 鼠标在连接点按下
      */
     onConnectPointMousedown(e) {
-      debugger;
       // this.operate = IS_CONNECTING;
       window.stateManage.isConnecting = true;
       let boundingRect = e.target.getBoundingClientRect();
@@ -166,8 +161,7 @@ export default {
     },
 
     onMouseup(e) {
-        stateManage.isConnecting = false;
-      
+      stateManage.isConnecting = false;
     },
     onDrag(e) {
       this._endInfo = {
@@ -245,7 +239,9 @@ export default {
     },
     updatePosition(dom) {
       // 获取当前线程框的绝对位置
-      let threadPos = document.getElementsByClassName("thread")[this.threadIndex].getBoundingClientRect()
+      let threadPos = document
+        .getElementsByClassName("thread")
+        [this.threadIndex].getBoundingClientRect();
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
@@ -269,10 +265,10 @@ export default {
         index: this.index,
         stateId: this.stateData.stateId,
         // 相对于当前线程框的绝对位置
-        absolutePosition:{
+        absolutePosition: {
           x: dom.getBoundingClientRect().left - threadPos.left,
-          y: dom.getBoundingClientRect().top - threadPos.top
-        }
+          y: dom.getBoundingClientRect().top - threadPos.top,
+        },
       });
     },
     getStyleTransform(dom) {
@@ -313,6 +309,12 @@ export default {
     /**
      * 根据lineId获取这个连线的描述信息
      */
+    showInputDesc() {
+      this.showInputAry = !this.showInputAry;
+    },
+    showOutputDesc() {
+      this.showOutputAry = !this.showOutputAry;
+    },
     getDesc(lineId) {
       let line =
         statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
@@ -321,20 +323,20 @@ export default {
       return line.desc;
     },
     activeLine(lineId) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-
-      line.active = true;
+      line.showdesc = true;
     },
     disActiveLine(lineId) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
-
-      line.active = false;
+      line.showdesc = false;
     },
   },
   created() {
@@ -343,6 +345,14 @@ export default {
       : this.genId();
   },
   mounted() {
+    document.addEventListener("click", () => {
+      if (this.showInputAry === true) {
+        this.showInputAry = false;
+      }
+      if (this.showOutputAry === true) {
+        this.showOutputAry = false;
+      }
+    });
     /*
         var elm = this.$el;
         window.testVueObj = this;
@@ -409,8 +419,9 @@ export default {
   color: #ce5050;
   border-color: #ce5050;
 }
-.state-div.selected{
-  border-color: @qkmOrange
+.state-div.selected {
+  border: 2px solid @qkmOrange;
+  box-shadow: 2px 2px 4px 0px @qkmOrange;
 }
 span.icon {
   position: absolute;
@@ -472,6 +483,10 @@ span.icon {
   border: 2px solid blue;
   cursor: default;
 }
+.state-div:hover .connect-point.out {
+  border: 2px solid rgb(251, 255, 0);
+  cursor: default;
+}
 .connect-point.in {
   transform: translate(-50%, -50%);
 }
@@ -490,6 +505,7 @@ span.icon {
   top: 20px;
   right: 20px;
   background-color: #ffffff;
+  opacity: 0.75;
   color: #000000;
   z-index: 1;
 }

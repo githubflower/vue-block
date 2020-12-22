@@ -8,6 +8,7 @@ const lineCfg = {
     dur: 1200, //一次完整的连线运行动画持续的时间 毫秒
     interval: 100, // 连线动画中矩形物块开始动画的时间差 毫秒
     highlight_limit: 1, //高亮状态块的最大个数
+    threadTitleHeight: 35, //线程框标题的高度
 }
 
 export {

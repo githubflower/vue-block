@@ -41,33 +41,9 @@ let deepCopy = (obj) => {
 
     return ret;
 }
-//递归根据stateId在stateAry内寻找对应的状态，根据indexFlag来决定是否返回对应状态的index
-function stateTraverse(stateAry,targetStateId,indexFlag=false){
-    let result = [];
-    traverse(stateAry, targetStateId, result, indexFlag)
-    if(indexFlag){
-        return result
-    } else{
-        return result.pop()
-    }
-
-}
-function traverse(stateAry, targetStateId, result, indexFlag){
-    for (var i=0; i<stateAry.length; i++){
-        if (stateAry[i].stateId === targetStateId){
-            result.push(stateAry[i])
-            if(indexFlag){
-                result.push(i)
-            }
-            return
-        }
-        traverse(stateAry[i].children, targetStateId, result)
-    }
-}
 
 
 export default {
     downloadFlie: downloadFlie,
     deepCopy: deepCopy,
-    stateTraverse: stateTraverse,
 }

@@ -43,7 +43,8 @@ window.store = {
       height: 500,
       stateAry: [],
       lineAry: []
-    }]
+    }],
+    lineMap: []
   },
   addThread: function addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -104,26 +105,9 @@ window.store = {
         line = lineAry.splice(i, 1)[0];
         break;
       }
-    } //修改为深度搜索与选中连线相关的状态
-
-
-    function traverseLine(stateAry, lineState) {
-      for (var i in stateAry) {
-        if (stateAry[i].stateId === lineState.stateId) {
-          result.push(stateAry[i]);
-          return;
-        }
-
-        traverseLine(stateAry[i].children, lineState);
-      }
     }
 
-    ;
-    var result = []; //更新这条线的始末状态的outputAry inputAry信息
-
-    var stateAry = this.stateData.threadAry[data.threadIndex].stateAry;
-    traverseLine(stateAry, line.startState);
-    var startState = result.pop();
+    var startState = store.getState(data.threadIndex, line.startState.stateId);
     var outputAry = startState.outputAry;
     outputAry.forEach(function (item, index) {
       if (item.lineId === line.lineId) {
@@ -131,8 +115,7 @@ window.store = {
         return false;
       }
     });
-    traverseLine(stateAry, line.endState);
-    var endState = result.pop();
+    var endState = store.getState(data.threadIndex, line.endState.stateId);
     var inputAry = endState.inputAry;
     inputAry.forEach(function (item, index) {
       if (item.lineId === line.lineId) {
@@ -147,28 +130,13 @@ window.store = {
    * @param  { threadIndex, lineData }data
    */
   relateLine2startState: function relateLine2startState(data) {
-    var result = []; // 用于深度搜索stateId的方法，寻找到的state存储在result内
-
-    function traverse(stateAry) {
-      for (var i in stateAry) {
-        if (stateAry[i].stateId === data.lineData.startState.stateId) {
-          result.push(stateAry[i]);
-          return;
-        }
-
-        traverse(stateAry[i].children);
-      }
-    }
-
-    ;
+    var startStateId = data.lineData.startState.stateId;
 
     if (data.lineData.startState) {
-      traverse(this.stateData.threadAry[data.threadIndex].stateAry);
-      var outputAry = result[0].outputAry;
+      var outputAry = store.getState(data.threadIndex, startStateId).outputAry;
 
       if (!outputAry) {
         outputAry = [];
-        result[0].outputAry = outputAry;
       }
 
       outputAry.push({
@@ -177,35 +145,13 @@ window.store = {
       });
     }
   },
-
-  /**
-   * 
-   * 
-   * 
-   */
   relateLine2endState: function relateLine2endState(data) {
     if (data.lineData.endState && data.lineData.endState.stateIndex !== null) {
-      // 用于深度搜索stateId的方法，寻找到的state存储在result内
-      var traverse = function traverse(stateAry) {
-        for (var i in stateAry) {
-          if (stateAry[i].stateId === data.lineData.endState.stateId) {
-            result.push(stateAry[i]);
-            return;
-          }
-
-          traverse(stateAry[i].children);
-        }
-      };
-
-      // 根据id来拿
-      var result = [];
-      ;
-      traverse(this.stateData.threadAry[data.threadIndex].stateAry);
-      var inputAry = result[0].inputAry;
+      var endStateId = data.lineData.endState.stateId;
+      var inputAry = store.getState(data.threadIndex, endStateId).inputAry;
 
       if (!inputAry) {
         inputAry = [];
-        result[0].inputAry = inputAry;
       }
 
       inputAry.push({
@@ -260,13 +206,21 @@ window.store = {
     var _this = this;
 
     var state;
-    stateAry.forEach(function (item) {
+    stateAry.every(function (item) {
+      var flag = true;
+
       if (item.stateId === stateId) {
         state = item;
-        return false;
+        flag = false;
       } else if (item.children && item.children.length) {
         state = _this.getStateImplement(stateId, item.children);
+
+        if (state) {
+          flag = false;
+        }
       }
+
+      return flag;
     });
     return state;
   }

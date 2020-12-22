@@ -2,8 +2,7 @@ const NAME_SPACE = "https://developers.google.com/blockly/xml";
 const SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 import dagre from 'dagre'
-import QBlock from './qblock';
-
+import QBlock from './qblock.js'
 var Util = {
     isDefined(a) {
         return !((a === '') || (a === null) || (typeof a === 'undefined'));
@@ -213,10 +212,10 @@ var Util = {
      * @param {*} el 新建的和状态对应的Dom节点
      * @param {*} state 当前操作的状态
      */
-    saveLineData(el, state) {
-        el.setAttribute("d", state.d);
-        el.setAttribute("start_state", JSON.stringify(state.startState));
-        el.setAttribute("end_state", JSON.stringify(state.startState));
+    saveLineData(el, line) {
+        el.setAttribute("d", line.d);
+        el.setAttribute("start_state", JSON.stringify(line.startState));
+        el.setAttribute("end_state", JSON.stringify(line.startState));
     },
     /**
      * 将一个状态块转为Dom节点
@@ -243,13 +242,6 @@ var Util = {
             value: rootState.name,
         });
         rootEl.appendChild(fieldDom);
-
-        let fieldX = this.createFieldDom({
-            id: rootState.stateId,
-            name: "SX_FIELD",
-            value: 8888 //rootState.x,
-        });
-        rootEl.appendChild(fieldX);
 
         let nextStatesDom = this.createNextStatesDom2(rootState, threadData);
         if (nextStatesDom) {
@@ -544,7 +536,7 @@ var Util = {
                                 let newLine = {
                                     lineId: lineDom.getAttribute('id'),
                                     d: lineDom.getAttribute('d'),
-                                    startState: dom2State(stateDom),
+                                    startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                                     endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
                                 };
 
@@ -576,7 +568,7 @@ var Util = {
                             lineId: lineDom.getAttribute('id'),
                             d: lineDom.getAttribute('d'),
                             startState: dom2State(Util.getPrevStateDom(lineDom)),
-                            endState: dom2State(stateDom)
+                            endState: dom2State(Util.getEndStateDomOfLine(lineDom))
                         };
 
                         let existLineOfInputLines = inputLines.find(item => {
@@ -618,6 +610,9 @@ var Util = {
             stateAry: stateAry,
             lineAry: lineAry
         }
+    },
+    getStartStateDomOfLine(lineDom) {
+        return this.getPrevStateDom(lineDom);
     },
     getEndStateDomOfLine(lineDom){
         let children = Array.prototype.slice.call(lineDom.childNodes);
@@ -728,7 +723,6 @@ var Util = {
         })
     },
 
-
     testLayout(thread) {
         var g = new dagre.graphlib.Graph({
             //directed: true,
@@ -739,20 +733,20 @@ var Util = {
         g.setGraph({
             rankdir: 'LR',
             align:'UL',
-            edgesep:0
+            edgesep:0,
+            ranksep:70
         });
         g.setDefaultEdgeLabel(function() {
             return {};
         });
 
         thread.stateAry.forEach(state => {
-            //需要考虑嵌套
             g.setNode(state.stateId, {
                 label: state.name,
                 // width: state.width || 76,
                 // height: state.height || 40
-                width: parseInt(state.width.replace("px",""),10),
-                height: parseInt(state.height.replace("px",""),10)
+                width: QBlock.State.getStateWidth(state),
+                height: QBlock.State.getStateHeight(state)
             });
 
             state.outputAry.forEach(line => {
@@ -769,25 +763,46 @@ var Util = {
             })
         })
 
-        dagre.layout(g);
+        dagre.layout(g);//布局分析
+
         g.nodes().forEach(function(nodeId) {
             let node = g.node(nodeId);
             let state = thread.stateAry.find(item => {
                 return item.stateId === nodeId;
             });
             if (state){
-                state.x = node.x;
-                state.y = node.y;
+                Util.setStateXYbyNode(state, node)//重设状态位置信息
+                if(state.inputAry && state.inputAry.length){
+                    state.inputAry.forEach(item => {
+                        store.stateData.lineMap[item.lineId].refresh();
+                    })
+                }
             }
             console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
         });
-        g.edges().forEach(function(line) {
-            console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
-            let lineObj = thread.lineAry.find(item => {
-                return item.lineId === g.edge(line).label;
+
+       /*  thread.lineAry.forEach(item => {
+            item.forceRefresh = false;
+        }) */
+      
+        /* setTimeout(() => {
+            
+            g.edges().forEach(function(line) {
+                console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
+                let lineObj = thread.lineAry.find(item => {
+                    return item.lineId === g.edge(line).label;
+                });
+                lineObj.d = '';
             });
-            QBlock.Line.redrawLine(lineObj, 0);
-        });
+        }, 300); */
+
+    },
+    setStateXYbyNode(state, node){
+        let halfStateWidth = QBlock.State.getStateWidth(state) / 2
+        let halfStateHeight = QBlock.State.getStateHeight(state) / 2
+        state.x = node.x - halfStateWidth
+        state.y = node.y - halfStateHeight
+        return
     }
 }
 export default Util;

@@ -31,6 +31,7 @@
       :threadIndex="threadIndex"
       :activeStates="activeStates"
       @updateTempLineData="updateTempLineData"
+      @updateActiveState="updateActiveState"
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -289,18 +290,7 @@ export default {
         JSON.stringify(this.stateData)
       );
       e.dataTransfer.setData("startInfo", JSON.stringify(this._startInfo));
-      let indexAry = [];
-      indexAry.push(this.index);
-
-      let parent = this.$parent;
-      while (parent && parent.$options.name !== "StatePage") {
-        if (parent.$options.name === "ThreadSvg") {
-          indexAry.push(parent.threadIndex);
-        } else {
-          indexAry.push(parent.index);
-        }
-        parent = parent.$parent;
-      }
+      let indexAry = this.calculateDragDataIndex(this);
       EventObj.$emit("saveDragData", {
         mousedownPoint: {
           x: this._mousedownPoint.x,
@@ -310,6 +300,25 @@ export default {
       });
 
       this.zIndex = 0;
+    },
+    /**
+     * 由内到外获取当前状态的索引
+     * @param {dragData}
+     */
+    calculateDragDataIndex(dragData) {
+      let indexAry = [];
+      indexAry.push(dragData.index);
+
+      let parent = dragData.$parent;
+      while (parent && parent.$options.name !== "StatePage") {
+        if (parent.$options.name === "ThreadSvg") {
+          indexAry.push(parent.threadIndex);
+        } else {
+          indexAry.push(parent.index);
+        }
+        parent = parent.$parent;
+      }
+      return indexAry;
     },
     dragEnd(e) {
       if (this._isResizing) {
@@ -429,7 +438,7 @@ export default {
 
       if (e.dataTransfer.getData("operate") === "addState") {
         setTimeout(() => {
-          //因为从工具栏直接拖拽下来的状态块时默认添加到线程框的最外面一层的，所以需要在最外面一层进行删除
+          //从工具栏直接拖拽下来的状态块默认添加到线程框的最外面一层，需要在最外面一层进行删除
           stateAry.splice(dropStateIndex, 1);
         }, 10);
       } else {
@@ -748,7 +757,7 @@ export default {
   left: 0;
   display: inline-block;
   &.is-auto-layouting {
-    transition: all 1s;
+    transition: all 0.3s;
   }
   /* background-color: rgba(50, 50, 50, 0.62); */
 }

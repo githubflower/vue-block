@@ -7,7 +7,7 @@ exports["default"] = void 0;
 
 var _dagre = _interopRequireDefault(require("dagre"));
 
-var _qblock = _interopRequireDefault(require("./qblock"));
+var _qblock = _interopRequireDefault(require("./qblock.js"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -255,10 +255,10 @@ var Util = {
    * @param {*} el 新建的和状态对应的Dom节点
    * @param {*} state 当前操作的状态
    */
-  saveLineData: function saveLineData(el, state) {
-    el.setAttribute("d", state.d);
-    el.setAttribute("start_state", JSON.stringify(state.startState));
-    el.setAttribute("end_state", JSON.stringify(state.startState));
+  saveLineData: function saveLineData(el, line) {
+    el.setAttribute("d", line.d);
+    el.setAttribute("start_state", JSON.stringify(line.startState));
+    el.setAttribute("end_state", JSON.stringify(line.startState));
   },
 
   /**
@@ -278,13 +278,6 @@ var Util = {
       value: rootState.name
     });
     rootEl.appendChild(fieldDom);
-    var fieldX = this.createFieldDom({
-      id: rootState.stateId,
-      name: "SX_FIELD",
-      value: 8888 //rootState.x,
-
-    });
-    rootEl.appendChild(fieldX);
     var nextStatesDom = this.createNextStatesDom2(rootState, threadData);
 
     if (nextStatesDom) {
@@ -577,7 +570,7 @@ var Util = {
                 var newLine = {
                   lineId: lineDom.getAttribute('id'),
                   d: lineDom.getAttribute('d'),
-                  startState: dom2State(stateDom),
+                  startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                   endState: dom2State(Util.getEndStateDomOfLine(lineDom))
                 };
                 var existLineOfOutputLines = outputLines.find(function (item) {
@@ -612,7 +605,7 @@ var Util = {
               lineId: lineDom.getAttribute('id'),
               d: lineDom.getAttribute('d'),
               startState: dom2State(Util.getPrevStateDom(lineDom)),
-              endState: dom2State(stateDom)
+              endState: dom2State(Util.getEndStateDomOfLine(lineDom))
             };
             var existLineOfInputLines = inputLines.find(function (item) {
               return item.lineId === newLine.lineId;
@@ -679,6 +672,9 @@ var Util = {
       stateAry: stateAry,
       lineAry: lineAry
     };
+  },
+  getStartStateDomOfLine: function getStartStateDomOfLine(lineDom) {
+    return this.getPrevStateDom(lineDom);
   },
   getEndStateDomOfLine: function getEndStateDomOfLine(lineDom) {
     var children = Array.prototype.slice.call(lineDom.childNodes);
@@ -803,19 +799,19 @@ var Util = {
     g.setGraph({
       rankdir: 'LR',
       align: 'UL',
-      edgesep: 0
+      edgesep: 0,
+      ranksep: 70
     });
     g.setDefaultEdgeLabel(function () {
       return {};
     });
     thread.stateAry.forEach(function (state) {
-      //需要考虑嵌套
       g.setNode(state.stateId, {
         label: state.name,
         // width: state.width || 76,
         // height: state.height || 40
-        width: parseInt(state.width.replace("px", ""), 10),
-        height: parseInt(state.height.replace("px", ""), 10)
+        width: _qblock["default"].State.getStateWidth(state),
+        height: _qblock["default"].State.getStateHeight(state)
       });
       state.outputAry.forEach(function (line) {
         var lineObj = thread.lineAry.find(function (item) {
@@ -831,7 +827,8 @@ var Util = {
       });
     });
 
-    _dagre["default"].layout(g);
+    _dagre["default"].layout(g); //布局分析
+
 
     g.nodes().forEach(function (nodeId) {
       var node = g.node(nodeId);
@@ -840,20 +837,38 @@ var Util = {
       });
 
       if (state) {
-        state.x = node.x;
-        state.y = node.y;
+        Util.setStateXYbyNode(state, node); //重设状态位置信息
+
+        if (state.inputAry && state.inputAry.length) {
+          state.inputAry.forEach(function (item) {
+            store.stateData.lineMap[item.lineId].refresh();
+          });
+        }
       }
 
       console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
     });
-    g.edges().forEach(function (line) {
-      console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
-      var lineObj = thread.lineAry.find(function (item) {
-        return item.lineId === g.edge(line).label;
-      });
+    /*  thread.lineAry.forEach(item => {
+         item.forceRefresh = false;
+     }) */
 
-      _qblock["default"].Line.redrawLine(lineObj, 0);
-    });
+    /* setTimeout(() => {
+        
+        g.edges().forEach(function(line) {
+            console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
+            let lineObj = thread.lineAry.find(item => {
+                return item.lineId === g.edge(line).label;
+            });
+            lineObj.d = '';
+        });
+    }, 300); */
+  },
+  setStateXYbyNode: function setStateXYbyNode(state, node) {
+    var halfStateWidth = _qblock["default"].State.getStateWidth(state) / 2;
+    var halfStateHeight = _qblock["default"].State.getStateHeight(state) / 2;
+    state.x = node.x - halfStateWidth;
+    state.y = node.y - halfStateHeight;
+    return;
   }
 };
 var _default = Util;

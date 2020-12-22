@@ -246,7 +246,6 @@ export default {
     },
     deleteState(data) {
       //在嵌套状态下按下时执行了多次,导致无法选中嵌套在父状态内的状态来单个删除
-      //debugger;
       this.contextmenuXY.x = data.mousedownPoint.x;
       this.contextmenuXY.y = data.mousedownPoint.y;
       this.showDeleteStateMenu = true;
@@ -308,7 +307,6 @@ export default {
         }, */
     drag(e) {},
     dragStart(e) {
-      //debugger;
       // e.dataTransfer.items.push('aaa');
       // e.dataTransfer.items.add('aaa');
       let stateType = e.target.firstElementChild.getAttribute("stateType");
@@ -648,16 +646,29 @@ export default {
       var blocklyXml = Util.state2blockly(this.threadAry);
       window.localStorage.setItem("blocklyXml", blocklyXml);
     },
+
     testLayout() {
       var stateDoms = document.querySelectorAll(".state-wrap");
+      var lineDoms = document.querySelectorAll(".connect-line");
+      
       stateDoms = Array.prototype.slice.call(stateDoms);
+      lineDoms = Array.prototype.slice.call(lineDoms);
       let reg = /is\-auto\-layouting/;
+      
       stateDoms.forEach((element) => {
         var clazz = element.getAttribute("class");
         if (!reg.test(clazz)) {
           element.setAttribute("class", clazz + " is-auto-layouting");
         }
       });
+
+      lineDoms.forEach((element) => {
+        var clazz = element.getAttribute("class");
+        if (!reg.test(clazz)) {
+          element.setAttribute("class", clazz + " is-auto-layouting");
+        }
+      });
+
       var layout = Util.testLayout(this.threadAry[0]);
 
       setTimeout(() => {
@@ -670,7 +681,19 @@ export default {
             );
           }
         });
-      }, 1000);
+      }, 300);
+       setTimeout(() => {
+         
+         lineDoms.forEach((element) => {
+            var clazz = element.getAttribute("class");
+            if (reg.test(clazz)) {
+              element.setAttribute(
+                "class",
+                clazz.replace(/\s*is\-auto\-layouting\s*/g, "")
+              );
+            }
+          });
+       }, 3000);
     },
   },
 

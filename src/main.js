@@ -6,7 +6,6 @@ import router from './router'
 import Element from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
-import Tools from './Tools.js'
 Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.prototype.axios = axios;
 
@@ -33,6 +32,7 @@ window.store = {
         lineAry: [],
       },
     ],
+    lineMap: []
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -79,7 +79,6 @@ window.store = {
    */
   deleteLine(data) {
     let lineAry = this.stateData.threadAry[data.threadIndex].lineAry,
-      stateAry = this.stateData.threadAry[data.threadIndex].stateAry,
       lineItem,
       line,
       i;
@@ -91,7 +90,7 @@ window.store = {
       }
     }
 
-    let startState = Tools.stateTraverse(stateAry, line.startState.stateId)
+    let startState = store.getState(data.threadIndex, line.startState.stateId)
     let outputAry = startState.outputAry;
     outputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {
@@ -100,7 +99,7 @@ window.store = {
       }
     });
 
-    let endState = Tools.stateTraverse(stateAry, line.endState.stateId)
+    let endState = store.getState(data.threadIndex, line.endState.stateId)
     let inputAry = endState.inputAry;
     inputAry.forEach((item, index) => {
       if (item.lineId === line.lineId) {
@@ -115,10 +114,9 @@ window.store = {
    */
 
   relateLine2startState(data) {
-    let stateAry = this.stateData.threadAry[data.threadIndex].stateAry
-    let targetStateId = data.lineData.startState.stateId
+    let startStateId = data.lineData.startState.stateId
     if (data.lineData.startState) {
-      let outputAry = Tools.stateTraverse(stateAry, targetStateId).outputAry
+      let outputAry = store.getState(data.threadIndex, startStateId).outputAry
       if (!outputAry) {
         outputAry = [];
       }
@@ -127,19 +125,14 @@ window.store = {
       });
     }
   },
-  /**
-   * 
-   * 
-   * 
-   */
+
   relateLine2endState(data) {
     if (
       data.lineData.endState &&
       data.lineData.endState.stateIndex !== null
     ) {
-      let stateAry = this.stateData.threadAry[data.threadIndex].stateAry
-      let targetStateId = data.lineData.endState.stateId
-      let inputAry = Tools.stateTraverse(stateAry, targetStateId).inputAry
+      let endStateId = data.lineData.endState.stateId
+      let inputAry = store.getState(data.threadIndex, endStateId).inputAry
       if (!inputAry) {
         inputAry = [];
       }

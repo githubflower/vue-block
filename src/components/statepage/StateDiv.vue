@@ -104,6 +104,9 @@ export default {
     };
   },
   methods: {
+    /**
+     * 判断当前状态是否在已被高亮的状态块内
+     */
     isInActiveStates() {
       for (let i = 0; i < this.activeStates.length; i++) {
         if (this.stateData.stateId === this.activeStates[i].stateId) {
@@ -112,7 +115,6 @@ export default {
       }
       return false;
     },
-    //选中被点击的状态块
     selectState() {
       this.$emit("updateActiveState", this.stateData);
     },
@@ -316,8 +318,9 @@ export default {
      */
     getDesc(lineId) {
       //this.$parent.$parent.$parent.$options.name === 'StatePage'  todo
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
       return line.desc;
@@ -329,15 +332,17 @@ export default {
       this.showOutputAry = !this.showOutputAry;
     },
     activeLine(lineId) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
       line.showdesc = true;
     },
     disActiveLine(lineId) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
       line.showdesc = false;
@@ -669,6 +674,7 @@ p {
   top: 20px;
   right: 20px;
   background-color: @qkmWhite;
+  opacity: 0.75;
   color: #000000;
   z-index: 1;
 }

@@ -9,10 +9,10 @@ var QBlock = {
     },
     State: {
         /**
-         * 获取状态相对于线程框的坐标信息
+         * 获取状态相对于线程框的坐标信息  此方法依赖状态组件的dom，不推荐使用
          * @param {*} state
          */
-        getXY2Canvas(state, threadIndex){
+        getXY2CanvasWithStateRendered(state, threadIndex) {
             let threadPos = document.getElementsByClassName("thread")[threadIndex].getBoundingClientRect();
             let statePos = Util.getDomByStateId(state.stateId).getBoundingClientRect();
             return {
@@ -20,19 +20,37 @@ var QBlock = {
                 y: statePos.top - threadPos.top
             }
         },
-        getStateHeight(state){
+        /**
+         * 根据状态及其父状态信息计算出相对于线程框的绝对位置  不依赖dom
+         * @param {*} state 
+         * @param {*} threadIndex 
+         */
+        getXY2Canvas(state, threadIndex){
+            let xy = {
+                x: state.x,
+                y: state.y
+            };
+            if(state.parent){
+                let parent = store.getState(threadIndex, state.parent, false/**isThreadId: false */);
+                let parentXY = this.getXY2Canvas(parent, threadIndex);
+                xy.x += parentXY.x;
+                xy.y += parentXY.y;
+            }
+            return xy;
+        },
+        getStateHeight(state) {
             return Util.translatePX2Num(state.height);
         },
-        getStateHeightByStateId(threadIndex, stateId){
+        getStateHeightByStateId(threadIndex, stateId) {
             let state = store.getState(threadIndex, stateId, false);
             return Util.translatePX2Num(state.height);
         },
-        getStateWidth(state){
+        getStateWidth(state) {
             return Util.translatePX2Num(state.width);
         }
     },
     Line: {
-        getStartPoint(line, threadIndex){
+        getStartPoint(line, threadIndex) {
             /* if (
                 !line.startPoint ||
                 line.startPoint.x === null ||
@@ -43,137 +61,52 @@ var QBlock = {
             } */
             let startState = store.getState(threadIndex, line.startState.stateId, false/**isThreadId: false */);
             let xy = QBlock.State.getXY2Canvas(startState, threadIndex);
-            line.startPoint = {
+            return {
                 x: xy.x + Util.translatePX2Num(startState.width),
-                y: xy.y + Util.translatePX2Num(startState.height) / 2,
+                y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight,
             };
-            return line.startPoint;
+            // return line.startPoint;
         },
         getEndPoint(line, threadIndex) {
             let endState = store.getState(threadIndex, line.endState.stateId, false/**isThreadId: false */);
             let xy = QBlock.State.getXY2Canvas(endState, threadIndex);
-            line.endPoint = {
+            return {
                 x: xy.x,
-                y: xy.y + Util.translatePX2Num(endState.height) / 2,
+                y: xy.y + Util.translatePX2Num(endState.height) / 2 + lineCfg.threadTitleHeight,
             };
-            return line.endPoint;
+            // return line.endPoint;
         },
-        redrawLine(line, threadIndex){
+        redrawLine(line, threadIndex) {
             this.drawLine(line, line.startState, line.endState, threadIndex);
         },
         drawLine(line, startState, endState, threadIndex) {
-            let tempRadius = LINE_RADIUS;
             let startPoint, endPoint, stateHeight, linepath;
             startPoint = QBlock.Line.getStartPoint(line, threadIndex);
             endPoint = QBlock.Line.getEndPoint(line, threadIndex);
-            stateHeight = Math.max(
-                QBlock.State.getStateHeightByStateId(threadIndex, startState.stateId) / 2,
-                QBlock.State.getStateHeightByStateId(threadIndex, endState.stateId) / 2
-            );
 
-            // y坐标相同，绘制直线
-            if (
-                endPoint.x > startPoint.x + LINE_H + LINE_RADIUS &&
-                endPoint.y == startPoint.y
-            ) {
-                linepath = this.drawStraightConnectLine(
-                    startPoint,
-                    endPoint,
-                    LINE_RADIUS
-                );
-                line.endPoint = endPoint;
-                line.d = linepath;
-                return line;
-            }
 
-            // 当结束点的x坐标小于起始点且y坐标相等时或小于起始点时
-            else if (
-                (endPoint.x - LINE_H - LINE_RADIUS < startPoint.x &&
-                    endPoint.y < startPoint.y) ||
-                (endPoint.x < startPoint.x && endPoint.y == startPoint.y)
-            ) {
-                linepath = this.drawUpperBackConnectLine(
+            let isDynamicRadiusFlag =
+                Math.abs(startPoint.y - endPoint.y) < 2 * LINE_RADIUS;
+            let path;
+            if (endPoint.y === startPoint.y && endPoint.x > startPoint.x) {
+                path = this.drawStraightConnectLine(startPoint, endPoint, LINE_RADIUS);
+            } else if (startPoint.x > endPoint.x - LINE_H - LINE_RADIUS) {
+                path = this.drawLine5ByStateAndPoint(
+                    startState,
                     startPoint,
-                    endPoint,
-                    LINE_RADIUS,
-                    stateHeight
+                    endState,
+                    endPoint
                 );
-                line.endPoint = endPoint;
-                line.d = linepath;
-                return line;
-            }
-            // 当结束点的x坐标小于起始点时且y坐标大于起始点时
-            else if (
-                endPoint.x - LINE_H - LINE_RADIUS < startPoint.x &&
-                endPoint.y > startPoint.y
-            ) {
-                linepath = this.drawLowerBackConnectLine(
-                    startPoint,
-                    endPoint,
-                    LINE_RADIUS,
-                    stateHeight
-                );
-                line.endPoint = endPoint;
-                line.d = linepath;
-                return line;
-            }
-
-            // 当结束点的x, y坐标均大于起始点的时候
-            else if (
-                endPoint.x > startPoint.x + LINE_H + LINE_RADIUS &&
-                endPoint.y > startPoint.y
-            ) {
-                // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-                if (endPoint.y - startPoint.y < 2 * tempRadius) {
-                    let doubleRadius = endPoint.y - startPoint.y;
-                    tempRadius = doubleRadius / 2;
-                    linepath = this.drawLowerConnectLine(
-                        startPoint,
-                        endPoint,
-                        tempRadius
-                    );
-                    line.endPoint = endPoint;
-                    line.d = linepath;
-                    return line;
-                } else {
-                    linepath = this.drawLowerConnectLine(
-                        startPoint,
-                        endPoint,
-                        LINE_RADIUS
-                    );
-                    line.endPoint = endPoint;
-                    line.d = linepath;
-                    return line;
+            } else {
+                //若两个状态块之间的y轴距离小于2个预设拐角半径，则需要动态计算连线拐角的半径，并绘制连线
+                var radius = LINE_RADIUS;
+                if (isDynamicRadiusFlag) {
+                    radius = Math.abs(startPoint.y - endPoint.y) / 2;
                 }
+                path = this.drawLine3ByPoint(startPoint, endPoint, radius);
             }
-            //当结束点的x坐标大于起始点，y坐标小于起始点时
-            else if (
-                endPoint.x > startPoint.x + LINE_H + LINE_RADIUS &&
-                endPoint.y < startPoint.y
-            ) {
-                // 当结束点与起始点的y坐标差距小于两个拐角半径时，根据结束点和起始点的y坐标的差动态决定拐角半径
-                if (startPoint.y - endPoint.y < 2 * tempRadius) {
-                    let doubleRadius = startPoint.y - endPoint.y;
-                    tempRadius = doubleRadius / 2;
-                    (linepath = this.drawUpperConnectLine(
-                        startPoint,
-                        endPoint,
-                        tempRadius
-                    )),
-                        (line.endPoint = endPoint);
-                    line.d = linepath;
-                    return line;
-                } else {
-                    (linepath = this.drawUpperConnectLine(
-                        startPoint,
-                        endPoint,
-                        LINE_RADIUS
-                    )),
-                        (line.endPoint = endPoint);
-                    line.d = linepath;
-                    return line;
-                }
-            }
+            console.log('>>> ' + path);
+            return path;
         },
     }
 }
