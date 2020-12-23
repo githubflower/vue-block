@@ -251,6 +251,7 @@ export default {
     },
 
     dragStart(e) {
+      //debugger;
       //console.log("--dragStart")
       if (this._isResizing) {
         return false;
@@ -269,6 +270,10 @@ export default {
       }
       e.dataTransfer.effectAllowed = "copyMove";
 
+      let leftGap;
+      let topGap;
+      leftGap = e.pageX - Math.round(e.target.getBoundingClientRect().left);
+      topGap = e.pageY - Math.round(e.target.getBoundingClientRect().top);
       this.isDragging = true;
       // this._startInfo = e.target.getBoundingClientRect();
       // 鼠标点击位置
@@ -290,6 +295,8 @@ export default {
         JSON.stringify(this.stateData)
       );
       e.dataTransfer.setData("startInfo", JSON.stringify(this._startInfo));
+      e.dataTransfer.setData("mousedowntoleft", leftGap);
+      e.dataTransfer.setData("mousedowntotop", topGap);
       let indexAry = this.calculateDragDataIndex(this);
       EventObj.$emit("saveDragData", {
         mousedownPoint: {
@@ -331,6 +338,7 @@ export default {
         x: e.x,
         y: e.pageY,
       };
+      //在嵌套状态时，需要根据状态自身的xy来设定transform
       this.updatePosition(e.target);
       this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
 
@@ -341,6 +349,8 @@ export default {
       //获取从工具栏中直接拖拽下来的状态块的index，需要在stateAry添加了被拖拽的状态块的信息后获取
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
       let theDragStateData = this.dragInType(e, stateAry);
+      let leftGap = parseInt(e.dataTransfer.getData("mousedowntoleft"),10);
+      let topGap = parseInt(e.dataTransfer.getData("mousedowntotop"),10);
       //直接将state添加进被嵌套的状态中会使程序不可控，还是需要先将state添加进stateAry的最外层，再删除外层元素
       let dropStateIndex = stateAry.length - 1;
 
@@ -400,13 +410,16 @@ export default {
       }
 
       // 无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
-      let x = e.pageX - this.$el.getBoundingClientRect().left;
-      let y = e.pageY - this.$el.getBoundingClientRect().top;
-
+      let x, y
+      x = e.pageX - this.$el.getBoundingClientRect().left - leftGap;
+      y = e.pageY - this.$el.getBoundingClientRect().top - topGap;
       theDragStateData.x = x;
       theDragStateData.y = y;
+      //TODO:使用上方的xy更新状态的transform
+
       //theDragStateData.x = 0 /* - statePageVue._dragData.mousedownPoint.x */;
       //theDragStateData.y = 0 /*  - statePageVue._dragData.mousedownPoint.y */;
+      this.stateData.children.push(theDragStateData);
       theDragStateData.parent = this.stateData.stateId;
 
       //若状态从非嵌套变为嵌套状态，改变状态的模式与大小
@@ -417,24 +430,24 @@ export default {
         this.normalToNest(this.stateData);
       }
 
-      this.stateData.children.push(theDragStateData);
 
       let dragStateParentStates = stateAry;
       //获取在直接拖拽形成嵌套时，正在拖拽的状态父状态的索引
       let directDropIndexAry = this.getdropParentIndexAry(this);
-
       if (e.dataTransfer.getData("operate") === "addState") {
         dragStateParentStates = this.getDropStateParent(
           directDropIndexAry,
           dragStateParentStates
         );
       } else {
+        //去除线程索引
+        statePageVue._dragData.indexAry.pop()
         dragStateParentStates = this.getDropStateParent(
-          //去除线程索引
-          statePageVue._dragData.indexAry.pop(),
+          statePageVue._dragData.indexAry,
           dragStateParentStates
         );
       }
+
 
       if (e.dataTransfer.getData("operate") === "addState") {
         setTimeout(() => {
@@ -443,7 +456,7 @@ export default {
         }, 10);
       } else {
         setTimeout(() => {
-          //这里必须等drog逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
+          //这里必须等dragEnd逻辑执行完以后再去删除外层元素，否则会影响到theDragStateData数据 TODO  后面开始编码后再解决这个问题，使用setTimeout会让程序不可控！！！
           dragStateParentStates.splice(
             statePageVue._dragData.indexAry.pop(),
             1
@@ -542,16 +555,22 @@ export default {
       // this.$emit('resizeSvg', needResizeInfo);
     },
     updatePosition(dom) {
-      // 获取当前线程框的绝对位置
-      let threadPos = document
-        .getElementsByClassName("thread")
-        [this.threadIndex].getBoundingClientRect();
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
         style = dom.getAttribute("style"),
+        //计算transform的方法有问题
         cx = this._startInfo.transform.x + dx,
-        cy = this._startInfo.transform.y + dy;
+        cy = this._startInfo.transform.y + dy
+        //通知父容器更新transform数据 （数据驱动更新样式）
+        this.$emit("updateStateData", {
+          transform: {
+            x: cx,
+            y: cy,
+          },
+          index: this.index,
+          stateId: this.stateData.stateId,
+        });
       // 手動更新样式
       /* if(style){
                 style = style.replace(reg, `transform: translate(${cx}px, ${cy}px)`);
@@ -559,21 +578,6 @@ export default {
                 style = `transform: translate(${cx}px, ${cy}px)`;
             }
             dom.setAttribute('style', style); */
-
-      //通知父容器更新transform数据 （数据驱动更新样式）
-      this.$emit("updateStateData", {
-        transform: {
-          x: cx,
-          y: cy,
-        },
-        index: this.index,
-        stateId: this.stateData.stateId,
-        // 相对于当前线程框的绝对位置
-        absolutePosition: {
-          x: dom.getBoundingClientRect().left - threadPos.left,
-          y: dom.getBoundingClientRect().top - threadPos.top,
-        },
-      });
     },
     getStyleTransform(dom) {
       let style,

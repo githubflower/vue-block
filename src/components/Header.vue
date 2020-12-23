@@ -15,7 +15,7 @@
           :index="subItem.id"
           :key="subItem.id"
         >
-          <template>{{ subItem.name }}</template>
+          <template>{{ subItem.name }}-2</template>
           <el-submenu
             v-for="thirdLevelItem in subItem.children"
             :index="thirdLevelItem.id"
@@ -46,6 +46,7 @@
 <script>
 import { qblockCfg } from "@/qblockCfg.js";
 import Tools from "@/Tools.js";
+import Util from '@/components/statepage/util'
 // import extenedMenu from '/static/plugins/cfg.json'
 
 export default {
@@ -98,8 +99,15 @@ export default {
     };
   },
   methods: {
+    emptyFun(){
+      alert('emptyFun');
+    },
     handleSelect(key, keyPath) {
-      console.log(key, keyPath);
+      //保存工程
+      console.log(key);
+      if(key === '1-2'){
+        this.saveProject();
+      }
     },
 
     showCode() {
@@ -128,26 +136,14 @@ export default {
     },
 
     saveProject() {
-      // save stateData
-      let stateData = Tools.deepCopy(statePageVue.threadAry);
+      let blocklyXml = Util.state2blockly(store.stateData.threadAry);
+      let code;
 
-      // save blockly xml
-      let blocklyWindow = document.getElementsByTagName("iframe")[0]
-        .contentWindow;
-      let blocklyData = blocklyWindow.Blockly.Xml.workspaceToDom(
-        blocklyWindow.Code.workspace
-      );
-
-      // save qrl
-      let code = blocklyWindow.Blockly.Lua.workspaceToCode(
-        blocklyWindow.Code.workspace
-      );
       this.axios({
         url: "/service/saveProject",
         method: "post",
         data: {
-          stateData: stateData,
-          blocklyData: blocklyData, //blocklyData,
+          blocklyXml: blocklyXml,
           code: code,
         },
       }).then((res) => {

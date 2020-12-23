@@ -328,7 +328,7 @@ export default {
               .getBoundingClientRect().top
           );
       }
-      if (e.target.getElementsByClassName("template-loop")[0]) {
+      else if (e.target.getElementsByClassName("template-loop")[0]) {
         leftGap =
           e.pageX -
           Math.round(
@@ -669,8 +669,22 @@ export default {
         }
       });
 
-      var layout = Util.testLayout(this.threadAry[0]);
+      //循环对不同层级的状态实行自动布局
+      let lineAry = this.threadAry[0].lineAry
+      Util.testLayout(this.threadAry[0], lineAry);
+      this.executeAutoLayout(stateDoms, lineDoms, reg)
+      let stateAry = this.threadAry[0].stateAry
 
+
+      for (let i = 0; i<stateAry.length; i++){
+        if(stateAry[i].children){
+          Util.testLayout(stateAry[i], lineAry);
+          this.executeAutoLayout(stateDoms, lineDoms, reg)
+        }
+      }
+    },
+    
+    executeAutoLayout(stateDoms,lineDoms, reg){
       setTimeout(() => {
         stateDoms.forEach((element) => {
           var clazz = element.getAttribute("class");

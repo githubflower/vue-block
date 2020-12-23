@@ -242,10 +242,6 @@ export default {
       // this.$emit('resizeSvg', needResizeInfo);
     },
     updatePosition(dom) {
-      // 获取当前线程框的绝对位置
-      let threadPos = document
-        .getElementsByClassName("thread")
-        [this.threadIndex].getBoundingClientRect();
       let dx = this._endInfo.x - this._startInfo.x,
         dy = this._endInfo.y - this._startInfo.y,
         reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
@@ -268,11 +264,6 @@ export default {
         },
         index: this.index,
         stateId: this.stateid,
-        // 相对于当前线程框的绝对位置
-        absolutePosition: {
-          x: dom.getBoundingClientRect().left - threadPos.left,
-          y: dom.getBoundingClientRect().top - threadPos.top,
-        },
       });
     },
     getStyleTransform(dom) {

@@ -722,52 +722,67 @@ var Util = {
             return item.getAttribute('stateid') === stateId;
         })
     },
+    genGraphByLayer(layer, lineAry){
 
-    testLayout(thread) {
         var g = new dagre.graphlib.Graph({
-            //directed: true,
-            //compound: true,
             multigraph: true,
-           
         });
         g.setGraph({
             rankdir: 'LR',
             align:'UL',
             edgesep:0,
-            ranksep:70
+            ranksep:50,
         });
         g.setDefaultEdgeLabel(function() {
             return {};
         });
-
-        thread.stateAry.forEach(state => {
+        let stateInCurrentLayer
+        if(layer.stateAry){
+            stateInCurrentLayer = layer.stateAry
+        } else{
+            stateInCurrentLayer = layer.children
+        }
+        stateInCurrentLayer.forEach(state => {
             g.setNode(state.stateId, {
                 label: state.name,
-                // width: state.width || 76,
-                // height: state.height || 40
                 width: QBlock.State.getStateWidth(state),
                 height: QBlock.State.getStateHeight(state)
             });
 
+            //需要修改为使用getState来寻找state，以处理嵌套外层状态连线连入嵌套状态内部的情况
             state.outputAry.forEach(line => {
-                let lineObj = thread.lineAry.find(item => {
+                let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId;
                 })
-                let endState = thread.stateAry.find(item => {
-                    return item.stateId === lineObj.endState.stateId;
-                })
+                let endState = store.getState(0, lineObj.endState.stateId)
+                if(!endState){
+                    return
+                }
                 // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
                 g.setEdge(state.stateId, endState.stateId, {
                     label: line.lineId
                 });
             })
         })
-
-        dagre.layout(g);//布局分析
-
+        return g
+    },
+    setStateXYbyNode(state, node){
+        let halfStateWidth = QBlock.State.getStateWidth(state) / 2
+        let halfStateHeight = QBlock.State.getStateHeight(state) / 2
+        state.x = node.x - halfStateWidth + 20
+        state.y = node.y - halfStateHeight + 20
+        return
+    },
+    setStateXYbyLayer(g,layer){
+        let stateInCurrentLayer
+        if(layer.stateAry){
+            stateInCurrentLayer = layer.stateAry
+        } else{
+            stateInCurrentLayer = layer.children
+        }
         g.nodes().forEach(function(nodeId) {
             let node = g.node(nodeId);
-            let state = thread.stateAry.find(item => {
+            let state = stateInCurrentLayer.find(item => {
                 return item.stateId === nodeId;
             });
             if (state){
@@ -780,29 +795,11 @@ var Util = {
             }
             console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
         });
-
-       /*  thread.lineAry.forEach(item => {
-            item.forceRefresh = false;
-        }) */
-      
-        /* setTimeout(() => {
-            
-            g.edges().forEach(function(line) {
-                console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
-                let lineObj = thread.lineAry.find(item => {
-                    return item.lineId === g.edge(line).label;
-                });
-                lineObj.d = '';
-            });
-        }, 300); */
-
     },
-    setStateXYbyNode(state, node){
-        let halfStateWidth = QBlock.State.getStateWidth(state) / 2
-        let halfStateHeight = QBlock.State.getStateHeight(state) / 2
-        state.x = node.x - halfStateWidth
-        state.y = node.y - halfStateHeight
-        return
-    }
+    testLayout(thread,lineAry) {
+        let g = this.genGraphByLayer(thread, lineAry)
+        dagre.layout(g);//布局分析
+        this.setStateXYbyLayer(g, thread)
+    },
 }
 export default Util;

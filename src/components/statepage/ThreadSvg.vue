@@ -734,7 +734,10 @@ export default {
       } else {
         let theDragStateData = JSON.parse(
           e.dataTransfer.getData("theDragStateData")
+          
         );
+        let leftGap = e.dataTransfer.getData("mousedowntoleft");
+        let topGap = e.dataTransfer.getData("mousedowntotop");
         let isStateIdInThread = (id, thread) => {
           let flag = false;
           thread.stateAry.forEach((item) => {
@@ -754,8 +757,8 @@ export default {
           return false;
         }
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
-        let x = e.pageX - this.$el.getBoundingClientRect().left;
-        let y = e.pageY - this.$el.getBoundingClientRect().top;
+        let x = e.pageX - this.$el.getBoundingClientRect().left - leftGap;
+        let y = e.pageY - this.$el.getBoundingClientRect().top - topGap;
         theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
         theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
 
