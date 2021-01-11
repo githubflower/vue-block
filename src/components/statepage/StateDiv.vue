@@ -6,7 +6,6 @@
     :class="[
       'state-div',
       stateData.mode,
-      { 'is-dragging': isDragging },
       { selected: isInActiveStates() },
       runningStatus,
     ]"
@@ -96,7 +95,6 @@ export default {
   data() {
     return {
       showInput: false,
-      isDragging: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
       showInputAry: false,
@@ -120,11 +118,6 @@ export default {
     },
     genId() {
       return window.genId("state");
-    },
-    generateStatePos(stateData) {
-      return isNumber(stateData.x) && isNumber(stateData.y)
-        ? `transform: translate(${stateData.x}px, ${stateData.y}px)`
-        : "transform: translate(0, 0)";
     },
     isConnectPoint(dom) {
       let connectPointReg = /connect-point/;
@@ -162,134 +155,10 @@ export default {
         },
       };
       this.$emit("updateTempLineData", data);
-
-      window.stateManage.startPoint = {
-        x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
-        y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
-      };
     },
     onMouseup() {
       stateManage.isConnecting = false;
     },
-    onDrag(e) {
-      this._endInfo = {
-        x: e.x,
-        y: e.pageY,
-      };
-
-      this.judgeBoundary(e.target);
-      this.updatePosition(e.target);
-    },
-    dragStart(e) {
-      if (this.operate === IS_CONNECTING) {
-        e.preventDefault();
-        return false;
-      }
-      e.dataTransfer.effectAllowed = "copyMove";
-      this.isDragging = true;
-      // this._startInfo = e.target.getBoundingClientRect();
-      this._startInfo = {
-        x: e.x,
-        y: e.pageY,
-      };
-      this._startInfo.transform = this.getStyleTransform(e.target);
-      console.log("---dragStart---", this._startInfo);
-    },
-    dragEnd(e) {
-      this.isDragging = false;
-      // this._endInfo = e.target.getBoundingClientRect();
-      this._endInfo = {
-        x: e.x,
-        y: e.pageY,
-      };
-      this.updatePosition(e.target);
-      console.log("---dragEnd---", this._endInfo);
-      this._startInfo = null; //每次开始拖拽时都会重新设置这个_startInfo
-    },
-    onDragLeave(e) {
-      //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
-      if (!this._startInfo) {
-        return;
-      }
-      console.log("onDragLeave --- " + e.x + " --- " + e.y);
-      console.log("onDragLeave --- " + e.x + " --- " + e.pageY);
-      this._endInfo = {
-        x: e.x,
-        y: e.pageY,
-      };
-
-      this.judgeBoundary(e.target);
-      this.updatePosition(e.target);
-    },
-    judgeBoundary(dom) {
-      let targetInfo = dom.getBoundingClientRect();
-      let curSvg = dom.closest("svg");
-      let curSvgRect = curSvg.getBoundingClientRect();
-      let needResizeW = targetInfo.right > curSvgRect.right,
-        needResizeH = targetInfo.bottom > curSvgRect.bottom,
-        needResizeInfo = {
-          threadIndex: this.threadIndex,
-        };
-      if (needResizeH) {
-        needResizeInfo.dh = targetInfo.bottom - curSvgRect.bottom;
-      }
-      if (needResizeW) {
-        needResizeInfo.dw = targetInfo.right - curSvgRect.right;
-      }
-      if (needResizeW || needResizeH) {
-        EventObj.$emit("resizeSvg", needResizeInfo);
-      }
-      // this.$emit('resizeSvg', needResizeInfo);
-    },
-    updatePosition(dom) {
-      let dx = this._endInfo.x - this._startInfo.x,
-        dy = this._endInfo.y - this._startInfo.y,
-        reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
-        style = dom.getAttribute("style"),
-        cx = this._startInfo.transform.x + dx,
-        cy = this._startInfo.transform.y + dy;
-      // 手動更新样式
-      /* if(style){
-                style = style.replace(reg, `transform: translate(${cx}px, ${cy}px)`);
-            }else{
-                style = `transform: translate(${cx}px, ${cy}px)`;
-            }
-            dom.setAttribute('style', style); */
-
-      //通知父容器更新transform数据 （数据驱动更新样式）
-      this.$emit("updateStateData", {
-        transform: {
-          x: cx,
-          y: cy,
-        },
-        index: this.index,
-        stateId: this.stateid,
-      });
-    },
-    getStyleTransform(dom) {
-      let style,
-        transform = {
-          x: 0,
-          y: 0,
-        },
-        reg = /transform:\s*translate\((\-?\d*)(px)?,\s*(\-?\d*)(px)?\)/,
-        ret;
-      if (dom) {
-        style = dom.getAttribute("style");
-        if (style) {
-          ret = style.match(reg);
-          console.log(ret);
-          if (ret) {
-            transform = {
-              x: parseInt(ret[1], 10),
-              y: parseInt(ret[3], 10),
-            };
-          }
-        }
-      }
-      return transform;
-    },
-    contextmenu() {},
     rename() {
       this.showInput = true;
       // this.$el.child('.state-name-input')
@@ -601,9 +470,11 @@ p {
 .normal p.active,
 .normal p.warning,
 .normal p.error {
-  left: 4px;
+  left: 47%;
+  top: 54%;
   display: inline-block;
   text-align: center;
+  position: absolute;
 }
 .event-count {
   width: 20px;
@@ -632,8 +503,8 @@ p {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 10px;
 }
 .connect-point:hover {

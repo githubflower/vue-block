@@ -15,15 +15,15 @@
         <!-- <el-button type="primary" plain stateType="stateDiv">状态</el-button> -->
         <div class="template-state" stateType="stateDiv">状态</div>
       </span>
-      <!-- <span
+       <span
         draggable="true"
         @drag="drag"
         @dragstart="dragStart"
         @dragend="dragEnd"
-      > -->
+      > 
       <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
-      <!-- <div class="template-loop" stateType="loopDiv">循环</div> -->
-      <!-- </span> -->
+      <div class="template-loop" stateType="loopDiv">循环</div>
+      </span>
       <SwitchBtn />
       <div class="demo">
         <!--
@@ -235,66 +235,103 @@ export default {
         this.highlightState(demoData);
       }
     },
+    generateStartState(){
+      let startStateData = {
+        stateType: "stateDiv",
+        x: 50,
+        y: 50,
+      };
+      let startState = store.getDefaultStateCfg(startStateData)
+      startState.name = "开始"
+      startState.stateId = "state-start"
+      return startState
+    },
+    generateEndState(){
+      let endStateData = {
+        stateType: "stateDiv",
+        x:500,
+        y:50,
+      }
+      let endState = store.getDefaultStateCfg(endStateData)
+      endState.name = "结束"
+      endState.stateId = "state-end"
+      return endState
+    },
     addThread() {
+      let startState = this.generateStartState()
+      let endState = this.generateEndState()
       store.addThread({
         name: "线程名称" + (this.threadAry.length + 1),
         width: 1200,
         height: 500,
-        stateAry: [],
+        stateAry: [
+          startState,
+          endState,
+        ],
         lineAry: [],
+        runningStatus: "",
       });
     },
     deleteState(data) {
-      //在嵌套状态下按下时执行了多次,导致无法选中嵌套在父状态内的状态来单个删除
       this.contextmenuXY.x = data.mousedownPoint.x;
       this.contextmenuXY.y = data.mousedownPoint.y;
       this.showDeleteStateMenu = true;
-      this._deleteStateData = data;
+      //由于事件是从stateDiv一层层发送到statePage的，会产生无法正确获取最底层的状态的indexAry的问题，需要进行以下的处理
+      if(typeof this._deleteStateData === 'undefined'){
+        this._deleteStateData = data;
+      } else if(this._deleteStateData.indexAry.length < data.indexAry.length){
+        this._deleteStateData = data
+      }
     },
-
+    //用于删除状态时同时删除与状态相连的连线
+    deleteStateLine(state, threadIndex){
+      let stateInputLineAry = state.inputAry;
+      let stateOutputLineAry = state.outputAry;
+      let currentLine;
+      while (stateInputLineAry.length > 0) {
+        currentLine = stateInputLineAry.pop();
+        store.deleteLine({ lineId: currentLine.lineId, threadIndex: threadIndex });
+      }
+      while (stateOutputLineAry.length > 0) {
+        currentLine = stateOutputLineAry.pop();
+        store.deleteLine({ lineId: currentLine.lineId, threadIndex: threadIndex });
+      }
+    },
+    //处理删除嵌套状态时，同时删除父状态内部的状态与连线
+    deleteStateChildren(stateChildren, threadIndex){
+      for (let index = 0; index < stateChildren.length; index++) {
+        this.deleteStateLine(stateChildren[index], threadIndex);
+        if (stateChildren[index].children) {
+          this.deleteStateChildren(stateChildren[index].children, threadIndex);
+        }
+      }
+    },
+    //删除状态以及与状态相连的连线
     deleteStateFn() {
       let data = this._deleteStateData;
-      let tI = data.indexAry.pop(); //线程索引
-      let target = this.threadAry[tI].stateAry;
+      let threadIndex = data.indexAry.pop(); //线程索引
+      let currentStateAry = this.threadAry[threadIndex].stateAry;
       while (data.indexAry.length > 1) {
         let i = data.indexAry.pop();
-        target = target[i].children;
+        currentStateAry = currentStateAry[i].children;
       }
 
-      //用于删除状态时同时删除与状态相连的连线
-      let deleteStateLine = (state, tI) => {
-        let stateInputLineAry = state.inputAry;
-        let stateOutputLineAry = state.outputAry;
-        let currentLine;
-        while (stateInputLineAry.length > 0) {
-          currentLine = stateInputLineAry.pop();
-          store.deleteLine({ lineId: currentLine.lineId, threadIndex: tI });
-        }
-        while (stateOutputLineAry.length > 0) {
-          currentLine = stateOutputLineAry.pop();
-          store.deleteLine({ lineId: currentLine.lineId, threadIndex: tI });
-        }
-      };
-
-      let copiedIndex = Tools.deepCopy(data.indexAry);
-      let targetIndex = copiedIndex.pop();
-      let targetState = target[targetIndex];
-      deleteStateLine(targetState, tI);
-
-      //处理删除嵌套状态时，同时删除父状态内部的状态与连线
-      let deleteStateChildren = (stateChildren, tI) => {
-        for (let index = 0; index < stateChildren.length; index++) {
-          deleteStateLine(stateChildren[index], tI);
-          if (stateChildren[index].children) {
-            deleteStateChildren(stateChildren[index].children, tI);
-          }
-        }
-      };
+      let deleteStateIndex = data.indexAry.pop();
+      let targetState = currentStateAry[deleteStateIndex];
+      this.deleteStateLine(targetState, threadIndex);
 
       let targetChildren = targetState.children;
-      deleteStateChildren(targetChildren, tI);
-
-      target.splice(data.indexAry.pop(), 1);
+      this.deleteStateChildren(targetChildren, threadIndex);
+      currentStateAry.splice(deleteStateIndex, 1);
+      //若删除的是嵌套状态内部的最后一个状态，将嵌套状态恢复为普通状态
+      if(targetState.parent){
+        let targetParent = store.getState(threadIndex, targetState.parent)
+        if(targetParent.children.length === 0 && targetParent.stateType !== 'loopDiv'){
+          targetParent.mode = "normal"
+          targetParent.width = "76px"
+          targetParent.height = "40px"
+        } 
+      }
       this.showDeleteStateMenu = false;
     },
     /* generateDefaultPos(index){
@@ -327,8 +364,7 @@ export default {
               .getElementsByClassName("template-state")[0]
               .getBoundingClientRect().top
           );
-      }
-      else if (e.target.getElementsByClassName("template-loop")[0]) {
+      } else if (e.target.getElementsByClassName("template-loop")[0]) {
         leftGap =
           e.pageX -
           Math.round(
@@ -650,11 +686,11 @@ export default {
     testLayout() {
       var stateDoms = document.querySelectorAll(".state-wrap");
       var lineDoms = document.querySelectorAll(".connect-line");
-      
+
       stateDoms = Array.prototype.slice.call(stateDoms);
       lineDoms = Array.prototype.slice.call(lineDoms);
       let reg = /is\-auto\-layouting/;
-      
+
       stateDoms.forEach((element) => {
         var clazz = element.getAttribute("class");
         if (!reg.test(clazz)) {
@@ -669,22 +705,36 @@ export default {
         }
       });
 
-      //循环对不同层级的状态实行自动布局
-      let lineAry = this.threadAry[0].lineAry
+      //对与线程框最外层同级的状态进行自动布局
+      let lineAry = this.threadAry[0].lineAry;
       Util.testLayout(this.threadAry[0], lineAry);
-      this.executeAutoLayout(stateDoms, lineDoms, reg)
-      let stateAry = this.threadAry[0].stateAry
+      this.executeAutoLayout(stateDoms, lineDoms, reg);
 
+      let stateAry = this.threadAry[0].stateAry;
+      let autoLayoutData = {
+        stateDoms: stateDoms,
+        lineDoms: lineDoms,
+        reg: reg,
+        lineAry: lineAry,
+      };
+      //对嵌套状态进行自动布局
+      this.traverseExecuteAutoLayout(autoLayoutData, stateAry);
+    },
 
-      for (let i = 0; i<stateAry.length; i++){
-        if(stateAry[i].children){
-          Util.testLayout(stateAry[i], lineAry);
-          this.executeAutoLayout(stateDoms, lineDoms, reg)
+    traverseExecuteAutoLayout(autoLayoutData, stateAry) {
+      for (let i = 0; i < stateAry.length; i++) {
+        if (stateAry[i].children) {
+          Util.testLayout(stateAry[i], autoLayoutData.lineAry);
+          this.executeAutoLayout(
+            autoLayoutData.stateDoms,
+            autoLayoutData.lineDoms,
+            autoLayoutData.reg
+          );
         }
+        this.traverseExecuteAutoLayout(autoLayoutData, stateAry[i].children);
       }
     },
-    
-    executeAutoLayout(stateDoms,lineDoms, reg){
+    executeAutoLayout(stateDoms, lineDoms, reg) {
       setTimeout(() => {
         stateDoms.forEach((element) => {
           var clazz = element.getAttribute("class");
@@ -696,18 +746,17 @@ export default {
           }
         });
       }, 300);
-       setTimeout(() => {
-         
-         lineDoms.forEach((element) => {
-            var clazz = element.getAttribute("class");
-            if (reg.test(clazz)) {
-              element.setAttribute(
-                "class",
-                clazz.replace(/\s*is\-auto\-layouting\s*/g, "")
-              );
-            }
-          });
-       }, 3000);
+      setTimeout(() => {
+        lineDoms.forEach((element) => {
+          var clazz = element.getAttribute("class");
+          if (reg.test(clazz)) {
+            element.setAttribute(
+              "class",
+              clazz.replace(/\s*is\-auto\-layouting\s*/g, "")
+            );
+          }
+        });
+      }, 3000);
     },
   },
 
@@ -732,6 +781,7 @@ export default {
         statePageVue.setBp(data.blockId);
       }
     });
+    
   },
   mounted() {
     window.statePageVue = this;
@@ -751,8 +801,10 @@ export default {
 
     //刷新iframe内容，从localstorage中读取blockly.xml,
     var blocklyXml = window.localStorage.getItem("blocklyXml");
-    var qblockJson = Util.blockly2state(blocklyXml);
-    this.loadData(qblockJson);
+    if(blocklyXml !== ""){
+      var qblockJson = Util.blockly2state(blocklyXml);
+      this.loadData(qblockJson);
+    }
   },
   beforeDestroy() {
     //将Blockly图面数据更新到localstorage的blockly.xml
@@ -763,6 +815,9 @@ export default {
 </script>
 
 <style lang="less" scoped>
+* {
+  user-select: none;
+}
 #statePage {
   h4.title {
     margin: 0;

@@ -6,9 +6,10 @@
   >
     <path
       :lineId="line.lineId"
+      :id="line.lineId"
       :d="linePath"
-      :class="lineType === 'default' ? 'connect-line': 'temp-line'"
-      :style="{ strokeWidth: lineType === 'default' ? strokeWidth : '1px'}"
+      :class="genClass(lineType)"
+      :style="{ strokeWidth: lineType === 'tempLine' ? '1px' : strokeWidth }"
     >
     </path>
     <path
@@ -48,7 +49,7 @@ export default {
     return {
       strokeWidth: STROKE_WIDTH,
       descLimit: DESC_LIMIT,
-      forceRefreshFlag: false
+      forceRefreshFlag: false,
     };
   },
   methods: {
@@ -67,15 +68,33 @@ export default {
       return false;
     },
     genClass(type) {
-      return this.lineClass ? this.lineClass : "connect-line";
+      var clazz = "";
+      switch (type) {
+        case "tempLine":
+          clazz = "temp-line";
+          break;
+        case "default":
+          clazz = "connect-line";
+          break;
+        case "loopIn":
+          clazz = "loop-in";
+          break;
+        case "loopOut":
+          clazz = "loop-out";
+          break;
+        default:
+          clazz = "connect-line";
+      }
+      return clazz;
     },
     generatePath(startPoint, endPoint, startState, endState) {
+      //TODO:连线可配置时如何处理
       let isDynamicRadiusFlag =
         Math.abs(startPoint.y - endPoint.y) < 2 * LINE_RADIUS;
       let path;
       if (endPoint.y === startPoint.y && endPoint.x > startPoint.x) {
         path = this.drawStraightConnectLine(startPoint, endPoint);
-      } else if (startPoint.x > endPoint.x) {
+      } else if (startPoint.x + LINE_H + 2 * LINE_RADIUS > endPoint.x) {
         path = this.drawLine5ByStateAndPoint(
           startPoint,
           endPoint,
@@ -142,6 +161,41 @@ export default {
       }
       return line.endPoint;
     },
+    //TODO: 找到连线在对应可配置线段的中点，并用正方形块表示，暂时只对应前向连线的情况
+    getFirstMovableLinePoint(line) {
+      let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
+        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
+      let firstMovablePoint = {
+        x: 0,
+        y: 0,
+      };
+      firstMovablePoint.x = startPoint.x + LINE_H / 2;
+      firstMovablePoint.y = startPoint.y;
+      return firstMovablePoint;
+    },
+    getSecondMovablePoint(line) {
+      let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
+        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
+      let secondMovablePoint = {
+        x: 0,
+        y: 0,
+      };
+      secondMovablePoint.x = startPoint.x + LINE_H;
+      secondMovablePoint.y = (startPoint.y + endPoint.y) / 2;
+      return secondMovablePoint;
+    },
+    getThirdMovablePoint(line) {
+      let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
+        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
+      halflineInputH = (endPoint.x - startPoint.x - LINE_H) / 2;
+      let thirdMovablePoint = {
+        x: 0,
+        y: 0,
+      };
+      thirdMovablePoint.x = endPoint.x - halflineInputH;
+      thirdMovablePoint.y = endPoint.y;
+      return thirdMovablePoint;
+    },
     /*
      * 获取连线中点，然后以这个中点为起点绘制文字的路径
      *
@@ -151,13 +205,11 @@ export default {
         startY,
         endY,
         midPointPath,
-        midPoint,
         startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
         endPoint = QBlock.Line.getEndPoint(line, this.threadIndex);
       startX = startPoint.x;
       startY = startPoint.y;
       endY = endPoint.y;
-      //console.log([startX, line_h, startY, endY]);
       midPointPath = `M ${startX + LINE_H} ${(startY + endY) / 2} h 300`;
       return midPointPath;
     },
@@ -213,10 +265,23 @@ export default {
     },
 
     //分段处理向后和向前的连线
-    drawLineOutputH(startPoint, endPoint, lineRadius) {
+    //TODO:是否需要实现当两个状态的右边缘距离差小于LINE_H时，根据右边缘最靠右的状态绘制连出状态的连线
+    drawLine5OutputH(startPoint, endPoint, startState, endState) {
       let tempLinePath = "";
       tempLinePath += this.moveToStartPoint(startPoint);
       tempLinePath += this.drawHorizontalSetLine();
+      tempLinePath += this.drawLineFirstArc(startPoint, endPoint, LINE_RADIUS);
+      return tempLinePath;
+    },
+    drawLine3OutputH(startPoint, endPoint, lineRadius) {
+      let tempLinePath = "";
+      tempLinePath += this.moveToStartPoint(startPoint);
+      tempLinePath += this.drawHorizontalSetLine();
+      tempLinePath += this.drawLineFirstArc(startPoint, endPoint, lineRadius);
+      return tempLinePath;
+    },
+    drawLineFirstArc(startPoint, endPoint, lineRadius) {
+      let tempLinePath = "";
       let firstArcEnd = {
         x: 0,
         y: 0,
@@ -225,56 +290,60 @@ export default {
       if (startPoint.y > endPoint.y) {
         firstArcEnd.x = startPoint.x + LINE_H + lineRadius;
         firstArcEnd.y = startPoint.y - lineRadius;
-        tempLinePath += this.drawArc(
-          lineRadius,
-          1,
-          0,
-          firstArcEnd
-        );
+        tempLinePath += this.drawArc(lineRadius, 1, 0, firstArcEnd);
       } else {
         firstArcEnd.x = startPoint.x + LINE_H + lineRadius;
         firstArcEnd.y = startPoint.y + lineRadius;
-        tempLinePath += this.drawArc(
-          lineRadius,
-          0,
-          1,
-          firstArcEnd
-        );
+        tempLinePath += this.drawArc(lineRadius, 0, 1, firstArcEnd);
       }
+      return tempLinePath;
+    },
+    drawLine5SecondArcUp(startPoint, endPoint, stateTop) {
+      let tempLinePath = "";
+      let secondArcEnd = {
+        x: 0,
+        y: 0,
+      };
+      secondArcEnd.x = startPoint.x + LINE_H;
+      secondArcEnd.y = stateTop - LINE_V + lineCfg.threadTitleHeight;
+      tempLinePath += this.drawArc(LINE_RADIUS, 0, 0, secondArcEnd);
       return tempLinePath;
     },
     //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
     drawLine5OutputVUp(startPoint, endPoint, startStateTop, endStateTop) {
       let tempLinePath = "";
       let secondArcStart;
+      if (startStateTop < endStateTop) {
+        //比较起始状态和结束状态的上边缘的高低，根据上边缘高的状态决定垂直绘制连线的坐标
+        secondArcStart =
+          startStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+        tempLinePath += this.drawVerticalLine(secondArcStart);
+        tempLinePath += this.drawLine5SecondArcUp(
+          startPoint,
+          endPoint,
+          startStateTop
+        );
+      } else {
+        secondArcStart =
+          endStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+        tempLinePath += this.drawVerticalLine(secondArcStart);
+        tempLinePath += this.drawLine5SecondArcUp(
+          startPoint,
+          endPoint,
+          endStateTop
+        );
+      }
+      return tempLinePath;
+    },
+    drawLine5SecondArcDown(startPoint, endPoint, stateBottom) {
+      let tempLinePath = "";
       let secondArcEnd = {
         x: 0,
         y: 0,
       };
-      if (startStateTop < endStateTop) {
-        //比较起始状态和结束状态的上边缘的高低，根据上边缘高的状态决定垂直绘制连线的坐标
-        secondArcStart = startStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawVerticalLine(secondArcStart);
-        secondArcEnd.x = startPoint.x + LINE_H;
-        secondArcEnd.y = startStateTop - LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          0,
-          secondArcEnd
-        );
-      } else {
-        secondArcStart = endStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawVerticalLine(secondArcStart);
-        secondArcEnd.x = startPoint.x + LINE_H;
-        secondArcEnd.y = endStateTop - LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          0,
-          secondArcEnd
-        );
-      }
+      secondArcEnd.x = startPoint.x + LINE_H;
+      secondArcEnd.y = stateBottom + LINE_V + lineCfg.threadTitleHeight;
+      tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, secondArcEnd);
       return tempLinePath;
     },
     //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
@@ -292,26 +361,22 @@ export default {
       };
       if (startStateBottom < endStateBottom) {
         //比较起始状态和结束状态的下边缘的高低，根据下边缘低的状态决定垂直绘制连线的坐标
-        secondArcStart = endStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+        secondArcStart =
+          endStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
-        secondArcEnd.x = startPoint.x + LINE_H;
-        secondArcEnd.y = endStateBottom + LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          secondArcEnd
+        tempLinePath += this.drawLine5SecondArcDown(
+          startPoint,
+          endPoint,
+          endStateBottom
         );
       } else {
-        secondArcStart = startStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+        secondArcStart =
+          startStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
-        secondArcEnd.x = startPoint.x + LINE_H;
-        secondArcEnd.y = startStateBottom + LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          secondArcEnd
+        tempLinePath += this.drawLine5SecondArcDown(
+          startPoint,
+          endPoint,
+          startStateBottom
         );
       }
       return tempLinePath;
@@ -355,6 +420,7 @@ export default {
       return tempLinePath;
     },
     //在临时连线未找到结束state时，使用此方法绘制垂直连线
+    //NOTE:由于不需要考虑临时连线的连线拖动重绘，这里绘制拐角圆弧的方法不进行拆分
     drawLine5OutputVWithoutEndState(startPoint, endPoint) {
       let tempLinePath = "";
       let secondArcStart;
@@ -367,25 +433,27 @@ export default {
         tempLinePath += this.drawVerticalLine(secondArcStart);
         secondArcEnd.x = startPoint.x + LINE_H;
         secondArcEnd.y = endPoint.y - LINE_V;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          0,
-          secondArcEnd
-        );
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 0, secondArcEnd);
       } else {
         secondArcStart = endPoint.y + LINE_V - LINE_RADIUS;
         tempLinePath += this.drawVerticalLine(secondArcStart);
         secondArcEnd.x = startPoint.x + LINE_H;
         secondArcEnd.y = endPoint.y + LINE_V;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          secondArcEnd
-        );
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, secondArcEnd);
       }
       tempLinePath += " ";
+      return tempLinePath;
+    },
+    drawLine5ThirdArcUp(startPoint, endPoint, stateTop) {
+      let tempLinePath = "";
+      let thirdArcEnd = {
+        x: 0,
+        y: 0,
+      };
+      thirdArcEnd.x = endPoint.x - LINE_H;
+      thirdArcEnd.y =
+        stateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+      tempLinePath += this.drawArc(LINE_RADIUS, 1, 0, thirdArcEnd);
       return tempLinePath;
     },
     //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
@@ -395,42 +463,38 @@ export default {
         x: 0,
         y: 0,
       };
-      let thirdArcEnd = {
-        x: 0,
-        y: 0,
-      };
       //比较起始状态和结束状态的上边缘的高低，根据上边缘高的状态决定水平绘制连线的坐标
       if (startStateTop < endStateTop) {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = startStateTop - LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
-
-        thirdArcEnd.x = endPoint.x - LINE_H;
-        thirdArcEnd.y = startStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          1,
-          0,
-          thirdArcEnd
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
+        tempLinePath += this.drawLine5ThirdArcUp(
+          startPoint,
+          endPoint,
+          startStateTop
         );
       } else {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = endStateTop - LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
-
-        thirdArcEnd.x = endPoint.x - LINE_H;
-        thirdArcEnd.y = endStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          1,
-          0,
-          thirdArcEnd
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
+        tempLinePath += this.drawLine5ThirdArcUp(
+          startPoint,
+          endPoint,
+          endStateTop
         );
       }
+      return tempLinePath;
+    },
+    drawLine5ThirdArcDown(startPoint, endPoint, stateBottom) {
+      let tempLinePath = "";
+      let thirdArcEnd = {
+        x: 0,
+        y: 0,
+      };
+      thirdArcEnd.x = endPoint.x - LINE_H;
+      thirdArcEnd.y =
+        stateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+      tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, thirdArcEnd);
       return tempLinePath;
     },
     //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
@@ -440,40 +504,24 @@ export default {
         x: 0,
         y: 0,
       };
-      let thirdArcEnd = {
-        x: 0,
-        y: 0,
-      };
       //比较起始状态和结束状态的下边缘的高低，根据下边缘低的状态决定水平绘制连线的坐标
       if (startStateBottom < endStateBottom) {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = endStateBottom + LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
-
-        thirdArcEnd.x = endPoint.x - LINE_H;
-        thirdArcEnd.y = endStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          thirdArcEnd
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
+        tempLinePath += this.drawLine5ThirdArcDown(
+          startPoint,
+          endPoint,
+          endStateBottom
         );
       } else {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = startStateBottom + LINE_V + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
-
-        thirdArcEnd.x = endPoint.x - LINE_H;
-        thirdArcEnd.y = startStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          thirdArcEnd
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
+        tempLinePath += this.drawLine5ThirdArcDown(
+          startPoint,
+          endPoint,
+          startStateBottom
         );
       }
       return tempLinePath;
@@ -492,10 +540,10 @@ export default {
       endStateTop = QBlock.State.getXY2Canvas(endState, this.threadIndex).y;
       startStateBottom =
         QBlock.State.getXY2Canvas(startState, this.threadIndex).y +
-        startStateHeight
+        startStateHeight;
       endStateBottom =
         QBlock.State.getXY2Canvas(endState, this.threadIndex).y +
-        endStateHeight
+        endStateHeight;
       let tempLinePath = "";
       if (startPoint.y > endPoint.y) {
         tempLinePath += this.drawLine5HUp(
@@ -516,6 +564,7 @@ export default {
       return tempLinePath;
     },
     //在临时连线未找到结束state时，使用此方法绘制横向连线
+    //NOTE:由于不需要考虑临时连线的连线拖动重绘，这里绘制拐角圆弧的方法不进行拆分
     drawLine5HWithoutEndState(startPoint, endPoint) {
       let thirdArcStartX, thirdArcStartY, thirdArcEndX, thirdArcEndY;
       let thirdArcStart = {
@@ -530,103 +579,46 @@ export default {
       if (startPoint.y > endPoint.y) {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = endPoint.y - LINE_V;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
 
         thirdArcEnd.x = endPoint.x - LINE_H;
         thirdArcEnd.y = endPoint.y - LINE_V + LINE_RADIUS;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          1,
-          0,
-          thirdArcEnd
-        );
+        tempLinePath += this.drawArc(LINE_RADIUS, 1, 0, thirdArcEnd);
       } else {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
         thirdArcStart.y = endPoint.y + LINE_V;
-        tempLinePath += this.drawLineToEndPoint(
-          thirdArcStart
-        );
+        tempLinePath += this.drawLineToEndPoint(thirdArcStart);
 
         thirdArcEnd.x = endPoint.x - LINE_H;
         thirdArcEnd.y = endPoint.y + LINE_V - LINE_RADIUS;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          thirdArcEnd
-        );
+        tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, thirdArcEnd);
       }
       tempLinePath += " ";
       return tempLinePath;
     },
-
-    drawLine3V(startPoint, endPoint, lineRadius) {
-      let secondArcStart;
-      let secondArcEnd = {
-        x: 0,
-        y: 0,
-      };
+    drawLine5FourthArc(endPoint, sweepFlag) {
       let tempLinePath = "";
-      if (startPoint.y > endPoint.y) {
-        secondArcStart = endPoint.y + lineRadius;
-        tempLinePath += this.drawVerticalLine(secondArcStart);
-
-        secondArcEnd.x = startPoint.x + LINE_H + 2 * lineRadius;
-        secondArcEnd.y = endPoint.y;
-        tempLinePath += this.drawArc(
-          lineRadius,
-          0,
-          1,
-          secondArcEnd
-        );
-      } else {
-        secondArcStart = endPoint.y - lineRadius;
-        tempLinePath += this.drawVerticalLine(secondArcStart);
-
-        secondArcEnd.x = startPoint.x + LINE_H + 2 * lineRadius;
-        secondArcEnd.y = endPoint.y;
-        tempLinePath += this.drawArc(
-          lineRadius,
-          0,
-          0,
-          secondArcEnd
-        );
-      }
-      return tempLinePath;
-    },
-    drawLineInputV(startPoint, endPoint) {
-      let FourthArcStart;
       let fourthArcEnd = {
         x: 0,
         y: 0,
       };
+      fourthArcEnd.x = endPoint.x - LINE_H + LINE_RADIUS;
+      fourthArcEnd.y = endPoint.y;
+      tempLinePath += this.drawArc(LINE_RADIUS, 0, sweepFlag, fourthArcEnd);
+      return tempLinePath;
+    },
+    drawLine5InputV(startPoint, endPoint) {
       let tempLinePath = "";
+      let FourthArcStart;
+
       if (startPoint.y > endPoint.y) {
         FourthArcStart = endPoint.y - LINE_RADIUS;
         tempLinePath += this.drawVerticalLine(FourthArcStart);
-
-        fourthArcEnd.x = endPoint.x - LINE_H + LINE_RADIUS;
-        fourthArcEnd.y = endPoint.y;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          0,
-          fourthArcEnd
-        );
+        tempLinePath += this.drawLine5FourthArc(endPoint, 0);
       } else {
         FourthArcStart = endPoint.y + LINE_RADIUS;
         tempLinePath += this.drawVerticalLine(FourthArcStart);
-
-        fourthArcEnd.x = endPoint.x - LINE_H + LINE_RADIUS;
-        fourthArcEnd.y = endPoint.y;
-        tempLinePath += this.drawArc(
-          LINE_RADIUS,
-          0,
-          1,
-          fourthArcEnd
-        );
+        tempLinePath += this.drawLine5FourthArc(endPoint, 1);
       }
       return tempLinePath;
     },
@@ -634,11 +626,52 @@ export default {
       let tempLinePath = this.drawLineToEndPoint(endPoint);
       return tempLinePath;
     },
+    drawLine3SecondArc(startPoint, endPoint, lineRadius, sweepFlag) {
+      let tempLinePath = "";
+      let secondArcEnd = {
+        x: 0,
+        y: 0,
+      };
+      secondArcEnd.x = startPoint.x + LINE_H + 2 * lineRadius;
+      secondArcEnd.y = endPoint.y;
+      tempLinePath += this.drawArc(lineRadius, 0, sweepFlag, secondArcEnd);
+      return tempLinePath;
+    },
+    drawLine3V(startPoint, endPoint, lineRadius) {
+      let tempLinePath = "";
+      let secondArcStart;
+      if (startPoint.y > endPoint.y) {
+        secondArcStart = endPoint.y + lineRadius;
+        tempLinePath += this.drawVerticalLine(secondArcStart);
+        tempLinePath += this.drawLine3SecondArc(
+          startPoint,
+          endPoint,
+          lineRadius,
+          1
+        );
+      } else {
+        secondArcStart = endPoint.y - lineRadius;
+        tempLinePath += this.drawVerticalLine(secondArcStart);
+        tempLinePath += this.drawLine3SecondArc(
+          startPoint,
+          endPoint,
+          lineRadius,
+          0
+        );
+      }
+      return tempLinePath;
+    },
 
     //向后绘制连线
     drawLine5ByStateAndPoint(startPoint, endPoint, startState, endState) {
       let linePath = "";
-      let outputH = this.drawLineOutputH(startPoint, endPoint, LINE_RADIUS);
+      //TODO:添加一种新的情况：当两个状态的右边缘距离差小于LINE_H时，根据右边缘最靠右的状态绘制连出状态的连线
+      let outputH = this.drawLine5OutputH(
+        startPoint,
+        endPoint,
+        startState,
+        endState
+      );
       let outputV, output2InputH;
       if (!endState) {
         outputV = this.drawLine5OutputVWithoutEndState(startPoint, endPoint);
@@ -657,7 +690,7 @@ export default {
           endState
         );
       }
-      let inputV = this.drawLineInputV(startPoint, endPoint);
+      let inputV = this.drawLine5InputV(startPoint, endPoint);
       let inputH = this.drawLineInputH(endPoint);
       let arrow = this.drawArrow(endPoint);
       linePath = outputH + outputV + output2InputH + inputV + inputH + arrow;
@@ -667,37 +700,34 @@ export default {
     //向前绘制连线
     drawLine3ByPoint(startPoint, endPoint, lineRadius) {
       let linePath = "";
-      let outputH = this.drawLineOutputH(startPoint, endPoint, lineRadius);
+      let outputH = this.drawLine3OutputH(startPoint, endPoint, lineRadius);
       let output2InputV = this.drawLine3V(startPoint, endPoint, lineRadius);
       let inputH = this.drawLineInputH(endPoint);
       let arrow = this.drawArrow(endPoint);
       linePath = outputH + output2InputV + inputH + arrow;
       return linePath;
     },
-    refresh(){
+    refresh() {
       this.forceRefreshFlag = true;
-    }
+    },
   },
   created() {
     this.$set(this.line, "showdesc", false);
     if (!this.line.lineId) {
       this.line.lineId = this.genId();
     }
-    store.stateData.lineMap[this.line.lineId] = this;
+    if (this.line.type !== "tempLine") {
+      store.stateData.lineMap[this.line.lineId] = this;
+    }
   },
-  beforeDestroy(){
-    store.stateData.lineMap[this.line.lineId] = null;
-    delete store.stateData.lineMap[this.line.lineId];
-  },
-  mounted() {
-
-  },
+  mounted() {},
   computed: {
     linePath: function () {
       if (this.line.d && this.line.d !== "m 0 0 " && !this.forceRefreshFlag) {
         return this.line.d;
       }
       // if(!this.line.startPoint){
+      
       this.line.startPoint = QBlock.Line.getStartPoint(
         this.line,
         this.threadIndex
@@ -734,33 +764,52 @@ export default {
 @qkmOrange: #ffaf3d;
 @qkmRed: #e83e3e;
 @qkmYellow: #f8f837;
+@qkmPurple: #9373ec;
+@qkmLightGreen: #1cf9ea;
 .temp-line {
   stroke: @qkmRed;
   fill: none;
 }
-.connect-line{
+
+.loop-in {
+  stroke: @qkmLightGreen;
+  opacity: 0.9;
+  fill: none;
+}
+.loop-out {
+  stroke: @qkmPurple;
+  opacity: 0.9;
+  fill: none;
+}
+.connect-line {
   stroke: @qkmGrey;
   fill: none;
 }
- 
-.connect-line:hover {
+
+.connect-line:hover,
+.loop-in:hover,
+.loop-out:hover {
   stroke: @qkmLightBlue;
   fill: none;
   cursor: pointer;
 }
-.active .connect-line{
+.active .connect-line,
+.active .loop-in,
+.active .loop-out {
   stroke: @qkmLightBlue;
   fill: none;
 }
-.warning .connect-line{
+.warning .connect-line {
   stroke: @qkmOrange;
   fill: none;
 }
-.error .connect-line{
+.error .connect-line {
   stroke: @qkmRed;
   fill: none;
 }
-.showdesc .connect-line{
+.showdesc .connect-line,
+.showdesc .loop-in,
+.showdesc .loop-out {
   stroke: @qkmYellow;
   fill: none;
 }

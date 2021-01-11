@@ -28,11 +28,43 @@ window.store = {
         name: "Main_thread",
         width: 1200,
         height: 500,
-        stateAry: [],
+        stateAry: [
+          {
+            width: "76px",
+            height: "40px",
+            // name: "状态描述" + this.statenameIndex++,
+            name: "开始",
+            stateType: "stateDiv",
+            stateId: "state-start",
+            inputAry: [],
+            outputAry: [],
+            parent: null,
+            mode:'normal',
+            x: 50,
+            y: 50,
+            children:[],
+          },
+          {
+            width: "76px",
+            height: "40px",
+            // name: "状态描述" + this.statenameIndex++,
+            name: "结束",
+            stateType: "stateDiv",
+            stateId: "state-end",
+            inputAry: [],
+            outputAry: [],
+            parent: null,
+            mode:'normal',
+            x: 500,
+            y: 50,
+            children:[],
+          }
+        ],
         lineAry: [],
+        runningStatus: ''
       },
     ],
-    lineMap: []
+    lineMap: {}
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -73,6 +105,14 @@ window.store = {
     this.relateLine2endState(data);
   },
   /**
+   * 删除存储在lineMap内的对应连线
+   * @param {*} lineId 
+   */
+  deleteLineInLineMap(lineId){
+    this.stateData.lineMap[lineId] = null
+    delete this.stateData.lineMap[lineId]
+  },
+  /**
    * 删除连线 
    * 参数：连线id， 线程索引（TODO:后续考虑修改为线程id）
    * @param {lineId, threadIndex} data
@@ -82,6 +122,7 @@ window.store = {
       lineItem,
       line,
       i;
+    
     for (i = 0; i < lineAry.length; i++) {
       lineItem = lineAry[i];
       if (lineItem.lineId === data.lineId) {
@@ -107,6 +148,7 @@ window.store = {
         return false;
       }
     });
+    this.deleteLineInLineMap(line.lineId)
   },
   /**
    * 将连线数据和连线的首尾2个状态关联

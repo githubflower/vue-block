@@ -62,7 +62,7 @@ var QBlock = {
             let startState = store.getState(threadIndex, line.startState.stateId, false/**isThreadId: false */);
             let xy = QBlock.State.getXY2Canvas(startState, threadIndex);
             return {
-                x: xy.x + Util.translatePX2Num(startState.width),
+                x: xy.x + Util.translatePX2Num(startState.width) + 3,
                 y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight,
             };
             // return line.startPoint;
