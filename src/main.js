@@ -39,10 +39,10 @@ window.store = {
             inputAry: [],
             outputAry: [],
             parent: null,
-            mode:'normal',
+            mode: 'default',
             x: 50,
             y: 50,
-            children:[],
+            children: [],
           },
           {
             width: "76px",
@@ -54,10 +54,10 @@ window.store = {
             inputAry: [],
             outputAry: [],
             parent: null,
-            mode:'normal',
+            mode: 'default',
             x: 500,
             y: 50,
-            children:[],
+            children: [],
           }
         ],
         lineAry: [],
@@ -84,10 +84,10 @@ window.store = {
       inputAry: [],
       outputAry: [],
       parent: null,
-      mode:'normal',
+      mode: 'default',
       x: data.x,
       y: data.y,
-      children:[],
+      children: [],
     }
   },
   addState(data) {
@@ -108,7 +108,7 @@ window.store = {
    * 删除存储在lineMap内的对应连线
    * @param {*} lineId 
    */
-  deleteLineInLineMap(lineId){
+  deleteLineInLineMap(lineId) {
     this.stateData.lineMap[lineId] = null
     delete this.stateData.lineMap[lineId]
   },
@@ -122,7 +122,7 @@ window.store = {
       lineItem,
       line,
       i;
-    
+
     for (i = 0; i < lineAry.length; i++) {
       lineItem = lineAry[i];
       if (lineItem.lineId === data.lineId) {
@@ -201,25 +201,25 @@ window.store = {
    * @param {*} stateId 
    * @param {*} isThreadId 是否是线程id
    */
-  getState(threadIdOrIndex, stateId, isThreadId){
+  getState(threadIdOrIndex, stateId, isThreadId) {
     let state;
     let thread;
-    if (isThreadId){
+    if (isThreadId) {
       thread = this.stateData.threadAry.find(item => {
         return item.id === threadIdOrIndex;
       });
-    }else{
+    } else {
       thread = this.stateData.threadAry[threadIdOrIndex];
     }
-    if (thread){
+    if (thread) {
       state = this.getStateImplement(stateId, thread.stateAry);
     }
-    if(!state){
+    if (!state) {
       console.error('根据threadIdOrIndex和stateId获取状态失败---> threadId: ' + threadIdOrIndex + ' stateId: ' + stateId + ' isThreadId: ' + isThreadId);
     }
     return state;
   },
-  getStateImplement(stateId, stateAry){
+  getStateImplement(stateId, stateAry) {
     let state;
     stateAry.every(item => {
       let flag = true;
@@ -228,7 +228,7 @@ window.store = {
         flag = false
       } else if (item.children && item.children.length) {
         state = this.getStateImplement(stateId, item.children);
-        if(state){
+        if (state) {
           flag = false
         }
       }
@@ -238,9 +238,9 @@ window.store = {
   }
 }
 
-router.beforeEach((to, from, next)=>{
+router.beforeEach((to, from, next) => {
   console.log(to);
-  if ((from.name === 'blockly' && to.name === 'state') || (to.name === 'blockly' && from.name === 'state')){
+  if ((from.name === 'blockly' && to.name === 'state') || (to.name === 'blockly' && from.name === 'state')) {
     console.log('同步数据... '); //TODO
   }
   next();

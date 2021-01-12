@@ -76,11 +76,11 @@ export default {
         case "default":
           clazz = "connect-line";
           break;
-        case "loopIn":
-          clazz = "loop-in";
+        case "loopStart":
+          clazz = "connect-line";
           break;
-        case "loopOut":
-          clazz = "loop-out";
+        case "loopEnd":
+          clazz = "connect-line";
           break;
         default:
           clazz = "connect-line";
@@ -305,18 +305,26 @@ export default {
         y: 0,
       };
       secondArcEnd.x = startPoint.x + LINE_H;
-      secondArcEnd.y = stateTop - LINE_V + lineCfg.threadTitleHeight;
+      secondArcEnd.y =
+        stateTop -
+        LINE_V +
+        lineCfg.threadTitleHeight +
+        lineCfg.threadToolBoxHeight;
       tempLinePath += this.drawArc(LINE_RADIUS, 0, 0, secondArcEnd);
       return tempLinePath;
     },
-    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
+    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight与threadToolBoxHeight以获取连线的准确坐标
     drawLine5OutputVUp(startPoint, endPoint, startStateTop, endStateTop) {
       let tempLinePath = "";
       let secondArcStart;
       if (startStateTop < endStateTop) {
         //比较起始状态和结束状态的上边缘的高低，根据上边缘高的状态决定垂直绘制连线的坐标
         secondArcStart =
-          startStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+          startStateTop -
+          LINE_V +
+          LINE_RADIUS +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
         tempLinePath += this.drawLine5SecondArcUp(
           startPoint,
@@ -325,7 +333,11 @@ export default {
         );
       } else {
         secondArcStart =
-          endStateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+          endStateTop -
+          LINE_V +
+          LINE_RADIUS +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
         tempLinePath += this.drawLine5SecondArcUp(
           startPoint,
@@ -342,11 +354,15 @@ export default {
         y: 0,
       };
       secondArcEnd.x = startPoint.x + LINE_H;
-      secondArcEnd.y = stateBottom + LINE_V + lineCfg.threadTitleHeight;
+      secondArcEnd.y =
+        stateBottom +
+        LINE_V +
+        lineCfg.threadTitleHeight +
+        lineCfg.threadToolBoxHeight;
       tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, secondArcEnd);
       return tempLinePath;
     },
-    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
+    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight与threadToolBoxHeight以获取连线的准确坐标
     drawLine5OutputVDown(
       startPoint,
       endPoint,
@@ -362,7 +378,11 @@ export default {
       if (startStateBottom < endStateBottom) {
         //比较起始状态和结束状态的下边缘的高低，根据下边缘低的状态决定垂直绘制连线的坐标
         secondArcStart =
-          endStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+          endStateBottom +
+          LINE_V -
+          LINE_RADIUS +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
         tempLinePath += this.drawLine5SecondArcDown(
           startPoint,
@@ -371,7 +391,11 @@ export default {
         );
       } else {
         secondArcStart =
-          startStateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+          startStateBottom +
+          LINE_V -
+          LINE_RADIUS +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawVerticalLine(secondArcStart);
         tempLinePath += this.drawLine5SecondArcDown(
           startPoint,
@@ -390,7 +414,7 @@ export default {
         endStateBottom;
       startStateHeight = QBlock.State.getStateHeight(startState);
       endStateHeight = QBlock.State.getStateHeight(endState);
-      //因嵌套内部状态的xy是相对于父状态的，需手动计算状态的上边缘与下边缘的y坐标
+
       startStateTop = QBlock.State.getXY2Canvas(startState, this.threadIndex).y;
       endStateTop = QBlock.State.getXY2Canvas(endState, this.threadIndex).y;
       startStateBottom =
@@ -452,11 +476,15 @@ export default {
       };
       thirdArcEnd.x = endPoint.x - LINE_H;
       thirdArcEnd.y =
-        stateTop - LINE_V + LINE_RADIUS + lineCfg.threadTitleHeight;
+        stateTop -
+        LINE_V +
+        LINE_RADIUS +
+        lineCfg.threadTitleHeight +
+        lineCfg.threadToolBoxHeight;
       tempLinePath += this.drawArc(LINE_RADIUS, 1, 0, thirdArcEnd);
       return tempLinePath;
     },
-    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
+    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight与threadToolBoxHeight以获取连线的准确坐标
     drawLine5HUp(startPoint, endPoint, startStateTop, endStateTop) {
       let tempLinePath = "";
       let thirdArcStart = {
@@ -466,7 +494,11 @@ export default {
       //比较起始状态和结束状态的上边缘的高低，根据上边缘高的状态决定水平绘制连线的坐标
       if (startStateTop < endStateTop) {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
-        thirdArcStart.y = startStateTop - LINE_V + lineCfg.threadTitleHeight;
+        thirdArcStart.y =
+          startStateTop -
+          LINE_V +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawLineToEndPoint(thirdArcStart);
         tempLinePath += this.drawLine5ThirdArcUp(
           startPoint,
@@ -475,7 +507,11 @@ export default {
         );
       } else {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
-        thirdArcStart.y = endStateTop - LINE_V + lineCfg.threadTitleHeight;
+        thirdArcStart.y =
+          endStateTop -
+          LINE_V +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawLineToEndPoint(thirdArcStart);
         tempLinePath += this.drawLine5ThirdArcUp(
           startPoint,
@@ -493,11 +529,15 @@ export default {
       };
       thirdArcEnd.x = endPoint.x - LINE_H;
       thirdArcEnd.y =
-        stateBottom + LINE_V - LINE_RADIUS + lineCfg.threadTitleHeight;
+        stateBottom +
+        LINE_V -
+        LINE_RADIUS +
+        lineCfg.threadTitleHeight +
+        lineCfg.threadToolBoxHeight;
       tempLinePath += this.drawArc(LINE_RADIUS, 0, 1, thirdArcEnd);
       return tempLinePath;
     },
-    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight以获取连线的准确坐标
+    //因为连线的坐标是相对于svg元素的，所以需要加上threadTitleHeight与threadToolBoxHeight以获取连线的准确坐标
     drawLine5HDown(startPoint, endPoint, startStateBottom, endStateBottom) {
       let tempLinePath = "";
       let thirdArcStart = {
@@ -507,7 +547,11 @@ export default {
       //比较起始状态和结束状态的下边缘的高低，根据下边缘低的状态决定水平绘制连线的坐标
       if (startStateBottom < endStateBottom) {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
-        thirdArcStart.y = endStateBottom + LINE_V + lineCfg.threadTitleHeight;
+        thirdArcStart.y =
+          endStateBottom +
+          LINE_V +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawLineToEndPoint(thirdArcStart);
         tempLinePath += this.drawLine5ThirdArcDown(
           startPoint,
@@ -516,7 +560,11 @@ export default {
         );
       } else {
         thirdArcStart.x = endPoint.x - LINE_H + LINE_RADIUS;
-        thirdArcStart.y = startStateBottom + LINE_V + lineCfg.threadTitleHeight;
+        thirdArcStart.y =
+          startStateBottom +
+          LINE_V +
+          lineCfg.threadTitleHeight +
+          lineCfg.threadToolBoxHeight;
         tempLinePath += this.drawLineToEndPoint(thirdArcStart);
         tempLinePath += this.drawLine5ThirdArcDown(
           startPoint,
@@ -535,7 +583,6 @@ export default {
         endStateBottom;
       startStateHeight = QBlock.State.getStateHeight(startState);
       endStateHeight = QBlock.State.getStateHeight(endState);
-      //因嵌套内部状态的xy是相对于父状态的，需手动计算状态的上边缘与下边缘的y坐标
       startStateTop = QBlock.State.getXY2Canvas(startState, this.threadIndex).y;
       endStateTop = QBlock.State.getXY2Canvas(endState, this.threadIndex).y;
       startStateBottom =
@@ -727,7 +774,7 @@ export default {
         return this.line.d;
       }
       // if(!this.line.startPoint){
-      
+
       this.line.startPoint = QBlock.Line.getStartPoint(
         this.line,
         this.threadIndex
@@ -771,31 +818,17 @@ export default {
   fill: none;
 }
 
-.loop-in {
-  stroke: @qkmLightGreen;
-  opacity: 0.9;
-  fill: none;
-}
-.loop-out {
-  stroke: @qkmPurple;
-  opacity: 0.9;
-  fill: none;
-}
 .connect-line {
   stroke: @qkmGrey;
   fill: none;
 }
 
-.connect-line:hover,
-.loop-in:hover,
-.loop-out:hover {
+.connect-line:hover {
   stroke: @qkmLightBlue;
   fill: none;
   cursor: pointer;
 }
-.active .connect-line,
-.active .loop-in,
-.active .loop-out {
+.active .connect-line {
   stroke: @qkmLightBlue;
   fill: none;
 }
@@ -807,9 +840,7 @@ export default {
   stroke: @qkmRed;
   fill: none;
 }
-.showdesc .connect-line,
-.showdesc .loop-in,
-.showdesc .loop-out {
+.showdesc .connect-line {
   stroke: @qkmYellow;
   fill: none;
 }

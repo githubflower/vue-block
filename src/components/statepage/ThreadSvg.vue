@@ -6,7 +6,7 @@
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResize"
-    @mousemove="onMousemove"
+    @mousemove="onResizingState"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -16,7 +16,7 @@
       class="thread-svg"
     >
       <g>
-        <foreignObject y="0" width="100%" height="100%" @mouseup="onMouseup">
+        <foreignObject y="0" width="100%" height="100%" @mouseup="onMouseup" @mousemove="onConnecting">
           <div class="toggle-thread">
             <el-button v-if="showThread" plain icon="el-icon-arrow-up" @click="toggleShowThread"></el-button>
             <el-button v-else plain icon="el-icon-arrow-down" @click="toggleShowThread"></el-button>
@@ -36,8 +36,10 @@
           <h4 class="title" contenteditable="true" :style="titleStyle">
             {{ thread.name }}
           </h4>
-
-          <div class="thread-body">
+          <div class="tools">
+            <el-button plain icon="el-icon-aim" @click="leftTopPosition"></el-button>
+          </div>
+          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas">
             <state-wrap
               v-for="(stateItem, index) in thread.stateAry"
               :key="index"
@@ -54,6 +56,28 @@
             />
           </div>
         </foreignObject>
+        <g class="lines">
+          <line-comp
+          class="temp-line"
+          :line="tempLineData"
+          :lineType="'tempLine'"
+          :threadIndex="threadIndex"
+          v-if="showTempLine"
+          ></line-comp>
+          <line-comp
+            v-for="(line, index2) in thread.lineAry"
+            :key="index2"
+            :line="line"
+            :activeLines="activeLines"
+            :lineType="line.type"
+            :threadIndex="threadIndex"
+            @updateActiveLine="updateActiveLine"
+          />
+        </g>
+        <path-animation
+          v-if="isLineInCurrentThread(runningLineId)"
+          :runningLineId="runningLineId"
+        ></path-animation>
       </g>
       <defs>
         <filter id="f1" x="0" y="0" width="200%" height="200%">
@@ -62,28 +86,6 @@
           <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
         </filter>
       </defs>
-      <g class="lines">
-        <line-comp
-        class="temp-line"
-        :line="tempLineData"
-        :lineType="'tempLine'"
-        :threadIndex="threadIndex"
-        v-if="showTempLine"
-      ></line-comp>
-      <line-comp
-        v-for="(line, index2) in thread.lineAry"
-        :key="index2"
-        :line="line"
-        :activeLines="activeLines"
-        :lineType="line.type"
-        :threadIndex="threadIndex"
-        @updateActiveLine="updateActiveLine"
-      />
-      </g>
-      <path-animation
-        v-if="isLineInCurrentThread(runningLineId)"
-        :runningLineId="runningLineId"
-      ></path-animation>
     </svg>
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
     <i
@@ -113,32 +115,6 @@ const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
 const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
-const deepCopy = (obj) => {
-  if (typeof obj !== "object") {
-    return obj;
-  }
-
-  let type = Object.prototype.toString.apply(obj);
-  let ret = type === "[object Array]" ? [] : {};
-
-  if (type === "[object Array]") {
-    ret = [];
-    let i = 0;
-    while (i < obj.length) {
-      ret[i] = deepCopy(obj[i]);
-      i++;
-    }
-  } else {
-    ret = {};
-    for (let k in obj) {
-      if (obj.hasOwnProperty(k)) {
-        ret[k] = deepCopy(obj[k]);
-      }
-    }
-  }
-
-  return ret;
-};
 
 export default {
   name: "ThreadSvg",
@@ -193,11 +169,36 @@ export default {
     };
   },
   methods: {
-    isNotMainThread(){
-      if (this.threadIndex === 0){
-        return false
+    getLeftMostState() {
+      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+      let smallestStateX = 10000;
+      let smallestStateXId;
+      stateAry.forEach((state) => {
+        if (state.x < smallestStateX) {
+          smallestStateX = state.x;
+          smallestStateXId = state.stateId;
+        }
+      });
+      let leftMostState = store.getState(this.threadIndex, smallestStateXId);
+      return leftMostState;
+    },
+    leftTopPosition() {
+      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+      let leftMostState = this.getLeftMostState();
+      let offset = {
+        x: leftMostState.x - 20,
+        y: leftMostState.y - 20,
+      };
+      stateAry.forEach((state) => {
+        state.x = state.x - offset.x;
+        state.y = state.y - offset.y;
+      });
+    },
+    isNotMainThread() {
+      if (this.threadIndex === 0) {
+        return false;
       }
-      return true
+      return true;
     },
     toggleShowThread() {
       this.showThread = !this.showThread;
@@ -206,7 +207,7 @@ export default {
       ];
       let threadheight = this.computedH;
       if (this.showThread === false) {
-        threadDom.style.height = "35px";
+        threadDom.style.height = this.titleHeight + "px";
       } else {
         threadDom.style.height = threadheight + "px";
       }
@@ -222,13 +223,13 @@ export default {
       } else {
         this.activeLines.push(selectedLine);
       }
-      this.$nextTick(function(){
-        let lineDom = document.getElementsByClassName("lines")[0]
-        let activeLineDom = document.getElementsByClassName("active")
-        for (let i=0; i<activeLineDom.length; i++){
-          lineDom.appendChild(activeLineDom[i])
+      this.$nextTick(function () {
+        let lineDom = document.getElementsByClassName("lines")[0];
+        let activeLineDom = document.getElementsByClassName("active");
+        for (let i = 0; i < activeLineDom.length; i++) {
+          lineDom.appendChild(activeLineDom[i]);
         }
-      })
+      });
     },
     updateActiveState(selectedState) {
       //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
@@ -253,13 +254,13 @@ export default {
         this.disHighlightLines(this.activeStates[i]);
         this.highlightLines(this.activeStates[i]);
       }
-      this.$nextTick(function(){
-        let lineDom = document.getElementsByClassName("lines")[0]
-        let activeLineDom = document.getElementsByClassName("active")
-        for (let i=0; i<activeLineDom.length; i++){
-          lineDom.appendChild(activeLineDom[i])
+      this.$nextTick(function () {
+        let lineDom = document.getElementsByClassName("lines")[0];
+        let activeLineDom = document.getElementsByClassName("active");
+        for (let i = 0; i < activeLineDom.length; i++) {
+          lineDom.appendChild(activeLineDom[i]);
         }
-      })
+      });
     },
 
     highlightLines(state) {
@@ -326,9 +327,59 @@ export default {
       this._resizingWidth = null;
       this._resizingHeight = null;
     },
-    //监测线程框内的鼠标移动，根据不同情况来判断是绘制临时连线还是改变状态或线程框的尺寸
-    onMousemove(e) {
+    //开始拖拽画布时，须记录状态原本的x坐标来计算状态在画布拖拽之后的位置
+    startMovingCanvas(e) {
+      this._movingCanvas = true;
+      this._canvasStartInfo = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+      this._stateOrigin = [];
+      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+      stateAry.forEach((state) => {
+        this._stateOrigin.push({
+          x: state.x,
+          y: state.y,
+        });
+      });
+    },
+    //拖拽画布时须动态更新状态的位置
+    updateStatePositionByCanvas(offset) {
+      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+      for (let i = 0; i < stateAry.length; i++) {
+        stateAry[i].x = this._stateOrigin[i].x + offset.x;
+        stateAry[i].y = this._stateOrigin[i].y + offset.y;
+      }
+    },
+    updateCanvas(e) {
+      this._canvasEndInfo = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+      let canvasOffset = {
+        x: this._canvasEndInfo.x - this._canvasStartInfo.x,
+        y: this._canvasEndInfo.y - this._canvasStartInfo.y,
+      };
+      this.updateStatePositionByCanvas(canvasOffset);
+    },
+    onMovingCanvas(e) {
+      if (!this._movingCanvas) {
+        return false;
+      } else {
+        //TODO: 1.拖拽状态时不能触发拖动画布
+        if (e.buttons === 1) {
+          this.updateCanvas(e);
+        } else {
+          this._movingCanvas = false;
+          this._canvasStartInfo = null;
+          this._canvasEndInfo = null;
+          this._stateOrigin = null;
+        }
+      }
+    },
+    onConnecting(e) {
       if (stateManage.isConnecting) {
+        this._movingCanvas = false;
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
         if (e.buttons === 1) {
           //绘制临时的连接线
@@ -341,57 +392,60 @@ export default {
           this.showTempLine = false;
           return;
         }
-      } else {
-        if (!this._isResizingState) {
-          return false;
-        }
-        this.updateMoveData({
-          endPoint: {
-            x: e.pageX,
-            y: e.pageY,
-          },
-        });
-        let moveData = this.moveData;
-        let resizingState = store.getState(this.threadIndex, moveData.stateId);
-        if (!this._resizingWidth) {
-          this._resizingWidth = Util.translatePX2Num(resizingState.width);
-        }
-        if (!this._resizingHeight) {
-          this._resizingHeight = Util.translatePX2Num(resizingState.height);
-        }
-
-        let offsetX = moveData.endPoint.x - moveData.startPoint.x;
-        let offsetY = moveData.endPoint.y - moveData.startPoint.y;
-        let stateWidth = this._resizingWidth + offsetX;
-        let stateHeight = this._resizingHeight + offsetY;
-
-        if (resizingState.parent) {
-          let resizingStateParent = store.getState(
-            this.threadIndex,
-            resizingState.parent
-          );
-          let resizingStateParentWidth = Util.translatePX2Num(
-            resizingStateParent.width
-          );
-          let resizingStateParentHeight = Util.translatePX2Num(
-            resizingStateParent.height
-          );
-          if (
-            this._resizingWidth + offsetX + resizingState.x >
-            resizingStateParentWidth
-          ) {
-            stateWidth = resizingStateParentWidth - resizingState.x;
-          }
-          if (
-            this._resizingHeight + offsetY + resizingState.y >
-            resizingStateParentHeight
-          ) {
-            stateHeight = resizingStateParentHeight - resizingState.y;
-          }
-        }
-        resizingState.width = stateWidth + "px";
-        resizingState.height = stateHeight + "px";
       }
+    },
+    //监测线程框内的鼠标移动，改变状态的尺寸
+    onResizingState(e) {
+      if (!this._isResizingState) {
+        return false;
+      }
+      this._movingCanvas = false;
+      this.updateMoveData({
+        endPoint: {
+          x: e.pageX,
+          y: e.pageY,
+        },
+      });
+      let moveData = this.moveData;
+      let resizingState = store.getState(this.threadIndex, moveData.stateId);
+      if (!this._resizingWidth) {
+        this._resizingWidth = Util.translatePX2Num(resizingState.width);
+      }
+      if (!this._resizingHeight) {
+        this._resizingHeight = Util.translatePX2Num(resizingState.height);
+      }
+
+      let offsetX = moveData.endPoint.x - moveData.startPoint.x;
+      let offsetY = moveData.endPoint.y - moveData.startPoint.y;
+      let stateWidth = this._resizingWidth + offsetX;
+      let stateHeight = this._resizingHeight + offsetY;
+
+      if (resizingState.parent) {
+        let resizingStateParent = store.getState(
+          this.threadIndex,
+          resizingState.parent
+        );
+        let resizingStateParentWidth = Util.translatePX2Num(
+          resizingStateParent.width
+        );
+        let resizingStateParentHeight = Util.translatePX2Num(
+          resizingStateParent.height
+        );
+        if (
+          this._resizingWidth + offsetX + resizingState.x >
+          resizingStateParentWidth
+        ) {
+          stateWidth = resizingStateParentWidth - resizingState.x;
+        }
+        if (
+          this._resizingHeight + offsetY + resizingState.y >
+          resizingStateParentHeight
+        ) {
+          stateHeight = resizingStateParentHeight - resizingState.y;
+        }
+      }
+      resizingState.width = stateWidth + "px";
+      resizingState.height = stateHeight + "px";
     },
     titleStyle() {
       return `height: ${this.titleHeight}px;`;
@@ -409,26 +463,6 @@ export default {
         this.tempLineData[key] = lineData[key];
       });
     },
-    getLoopLineType(startState, endState) {
-      if (!startState.parent || !endState.parent) {
-        return "default";
-      }
-      let startStateParentCount = 0;
-      let endStateParentCount = 0;
-      while (startState.parent !== null) {
-        startStateParentCount += 1;
-        startState = store.getState(this.threadIndex, startState.parent);
-      }
-      while (endState.parent !== null) {
-        endStateParentCount += 1;
-        endState = store.getState(this.threadIndex, endState.parent);
-      }
-      if (startStateParentCount > endStateParentCount) {
-        return "loopOut";
-      } else {
-        return "loopIn";
-      }
-    },
     drawConnectLine(e) {
       let endStateId = this.getEndState(e).stateId;
       let lineData = this.copy(this.tempLineData);
@@ -441,13 +475,6 @@ export default {
       lineData.lineId = window.genId("line");
       lineData.desc = "";
       lineData.type = "default";
-      /*
-      if (startState.parent !== endState.parent) {
-        let lineType = this.getLoopLineType(startState, endState);
-        lineData.type = lineType;
-      } else {
-        lineData.type = "default";
-      }*/
       store.addLine({
         threadIndex: this.threadIndex,
         lineData: lineData,
@@ -456,7 +483,7 @@ export default {
       return lineData.lineId;
     },
     copy(obj) {
-      return deepCopy(obj);
+      return Tools.deepCopy(obj);
     },
     /**
      * 判断两根连线是否相同,如果连线1的开始状态==连线2的开始状态，且连线1的结束状态==连线2的结束状态，说明是同一根连线
@@ -556,7 +583,7 @@ export default {
             return;
           } else if (
             startState.parent !== endState.parent &&
-            typeof startState.parent !== 'undefined'
+            startState.parent !== endState.stateId
           ) {
             return;
           } else {
@@ -617,7 +644,7 @@ export default {
           loopStateData,
           statesInLoopLayer,
           lineAry
-        )
+        );
       }
     },
     /**
@@ -788,32 +815,6 @@ export default {
       return height;
     },
     /**
-     * 形成循环结构时，若形成循环结构的状态存在连入循环状态外状态的连线，或是存在循环状态外连入循环状态内状态的连线，则改变连线的种类
-     * @param {inLoopStatesId, currentState}
-     */
-    setInLoopLineType(inLoopStatesId, currentState) {
-      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
-      currentState.inputAry.forEach((line) => {
-        let lineObj = lineAry.find((item) => {
-          return item.lineId === line.lineId;
-        });
-        let startStateId = lineObj.startState.stateId;
-        if (inLoopStatesId.indexOf(startStateId) === -1) {
-          lineObj.type = "loopIn";
-        }
-      });
-
-      currentState.outputAry.forEach((line) => {
-        let lineObj = lineAry.find((item) => {
-          return item.lineId === line.lineId;
-        });
-        let endStateId = lineObj.endState.stateId;
-        if (inLoopStatesId.indexOf(endStateId) === -1) {
-          lineObj.type = "loopOut";
-        }
-      });
-    },
-    /**
      * 将形成循环的状态添加进循环状态
      * @param {inLoopStatesId, statesInLoopLayer, loopState, loopStateId}
      */
@@ -824,7 +825,6 @@ export default {
         currentState.y -= loopState.y;
         this.deleteDuplicateState(statesInLoopLayer, currentState.stateId);
         currentState.parent = loopStateId;
-        //this.setInLoopLineType(inLoopStatesId, currentState);
         loopState.children.push(currentState);
       }
     },
@@ -1121,6 +1121,7 @@ export default {
 
     startResize(e) {
       this.showVirtualBox = true;
+      this._movingCanvas = false;
       EventObj.$emit("operateChange", {
         operate: "resize-thread",
         index: this.threadIndex,
@@ -1252,18 +1253,31 @@ h4.title {
   float: right;
   position: relative;
 }
+.tools .el-button {
+  background-color: transparent;
+  color: #ffffff;
+  border: none;
+  font-size: 20px;
+  margin: 0;
+  text-align: center;
+  right: 0px;
+  position: absolute;
+}
 .delete-thread .el-button:hover,
-.toggle-thread .el-button:hover {
+.toggle-thread .el-button:hover,
+.tools .el-button:hover {
   background-color: transparent;
 }
 .delete-thread .el-button:focus,
-.toggle-thread .el-button:focus {
+.toggle-thread .el-button:focus,
+.tools .el-button:focus {
   background-color: transparent;
 }
 
 .thread-body {
   position: relative;
-  height: calc(100% - 35px);
+  top: 35px;
+  height: calc(100% - 70px);
   /* border: 1px solid #baed00; */
 }
 .resize-icon {

@@ -211,6 +211,7 @@ export default {
       //this._isResizing = false;
     },
     onDrag(e) {
+      //TODO:拖动速度过快时会导致endInfo记录的坐标错误，被拖动的状态块会飞出线程框
       if (this._isResizing) {
         this.$emit("stopMoving");
         return false;
@@ -219,7 +220,6 @@ export default {
         x: e.x,
         y: e.pageY,
       };
-
       this.judgeBoundary(e.target);
       this.updatePosition(e.target);
     },
@@ -303,7 +303,7 @@ export default {
         return false;
       }
       this.isDragging = false;
-
+      //console.log(this._endInfo)
       this._endInfo = {
         x: e.x,
         y: e.pageY,
@@ -373,7 +373,7 @@ export default {
           this.stateData.children.length <= 1 &&
           this.stateData.stateType !== "loopDiv"
         ) {
-          this.nestToNormal(this.stateData);
+          this.nestToDefault(this.stateData);
         }
         return false;
       }
@@ -388,19 +388,18 @@ export default {
 
       x = e.pageX - this.$el.getBoundingClientRect().left - leftGap;
       y = e.pageY - this.$el.getBoundingClientRect().top - topGap;
-
       theDragStateData.x = x;
       theDragStateData.y = y;
 
       this.stateData.children.push(theDragStateData);
       theDragStateData.parent = this.stateData.stateId;
-      this.setDragStateLineType(theDragStateData);
+      //this.setDragStateLineType(theDragStateData);
       //若状态从非嵌套变为嵌套状态，改变状态的模式与大小
       if (
         this.stateData.stateType === "stateDiv" &&
         this.stateData.mode !== "nest"
       ) {
-        this.normalToNest(this.stateData);
+        this.defaultToNest(this.stateData);
       }
 
       let dragStateParentStates = stateAry;
@@ -482,13 +481,13 @@ export default {
       });
       return;
     },
-    normalToNest(stateData) {
+    defaultToNest(stateData) {
       stateData.mode = "nest";
       stateData.width = "222px";
       stateData.height = "120px";
     },
-    nestToNormal(stateData) {
-      stateData.mode = "normal";
+    nestToDefault(stateData) {
+      stateData.mode = "default";
       stateData.width = "76px";
       stateData.height = "40px";
     },

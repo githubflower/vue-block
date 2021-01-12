@@ -25,12 +25,12 @@ var QBlock = {
          * @param {*} state 
          * @param {*} threadIndex 
          */
-        getXY2Canvas(state, threadIndex){
+        getXY2Canvas(state, threadIndex) {
             let xy = {
                 x: state.x,
                 y: state.y
             };
-            if(state.parent){
+            if (state.parent) {
                 let parent = store.getState(threadIndex, state.parent, false/**isThreadId: false */);
                 let parentXY = this.getXY2Canvas(parent, threadIndex);
                 xy.x += parentXY.x;
@@ -61,18 +61,38 @@ var QBlock = {
             } */
             let startState = store.getState(threadIndex, line.startState.stateId, false/**isThreadId: false */);
             let xy = QBlock.State.getXY2Canvas(startState, threadIndex);
+            //TODO：判断从循环起始点连入循环内部状态的连线的起始点
+            /*
+            if(line.type === 'loopStart'){
+                let data = {
+                    x: xy.x + 3,
+                    y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight,
+                }
+                //console.log(data)
+                return data
+            }*/
             return {
                 x: xy.x + Util.translatePX2Num(startState.width) + 3,
-                y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight,
+                y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight + lineCfg.threadToolBoxHeight,
             };
             // return line.startPoint;
         },
         getEndPoint(line, threadIndex) {
             let endState = store.getState(threadIndex, line.endState.stateId, false/**isThreadId: false */);
+            let startState = store.getState(threadIndex, line.startState.stateId, false)
             let xy = QBlock.State.getXY2Canvas(endState, threadIndex);
+            //TODO：判断从循环内部状态连入循环结束点的连线的结束点
+            /*
+            if(startState.parent === endState.stateId){
+                let data = {
+                    x: xy.x + Util.translatePX2Num(startState.width),
+                    y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight
+                }
+                return data
+            }*/
             return {
                 x: xy.x,
-                y: xy.y + Util.translatePX2Num(endState.height) / 2 + lineCfg.threadTitleHeight,
+                y: xy.y + Util.translatePX2Num(endState.height) / 2 + lineCfg.threadTitleHeight + lineCfg.threadToolBoxHeight,
             };
             // return line.endPoint;
         },

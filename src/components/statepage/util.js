@@ -162,19 +162,16 @@ var Util = {
                     return item.lineId === outputItem.lineId;
                 });
                 if (line) {
-                    triggerEventDom.setAttribute("d", line.d);
+                    Util.saveLineData(triggerEventDom, line);
                     if (line.desc) {
                         let commentDom = this.createCommentDom({
                             value: line.desc
                         });
                         triggerEventDom.appendChild(commentDom);
                     }
-                    /*  let state = thread.stateAry.find((item) => {
-                         return item.stateId === line.endState.stateId;
-                     }); */
                     let state = store.getStateImplement(line.endState.stateId, thread.stateAry);
                     if (state) {
-                        triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
+                        // triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
                         triggerEventStatement.appendChild(Util.state2dom(state, thread));
                     } else {
                         console.error("data error -^- ");
@@ -214,19 +211,22 @@ var Util = {
         el.setAttribute("s_width", state.width);
         el.setAttribute("s_height", state.height);
     },
+    saveStateMode(el, state){
+        el.setAttribute("mode", state.mode);
+    },
     /**
      * 保存状态块的数据到Dom中
      * @param {*} el 新建的和状态对应的Dom节点
      * @param {*} state 当前操作的状态
      */
     saveStateBlockDataInDom(el, state) {
+        console.log(state);
         switch (state.stateType) {
             case 'stateDiv': //状态执行
                 this.saveStateXY(el, state);
                 this.saveStateWidthHeight(el, state);
+                this.saveStateMode(el, state);
                 break;
-            case 'state_trigger_event': //连线
-                this.saveLineData(el, state);
             default:
                 break;
         }
@@ -237,9 +237,7 @@ var Util = {
      * @param {*} state 当前操作的状态
      */
     saveLineData(el, line) {
-        el.setAttribute("d", line.d);
-        el.setAttribute("start_state", JSON.stringify(line.startState));
-        el.setAttribute("end_state", JSON.stringify(line.startState));
+        el.setAttribute("s_type", line.type);
     },
     /**
      * 将一个状态块转为Dom节点
@@ -541,9 +539,11 @@ var Util = {
                     height: stateDom.getAttribute('s_height') || '40px',
                     // virtualHeight: Util.getVirtualHeight(outputAry), //TODO 开始状态为这个stateDom的所有状态高度之和
                     name: stateDom.children[0].textContent,
+                    mode: stateDom.getAttribute('mode') || 'default',
                     inputAry: [],
                     outputAry: [],
                     children: [],
+                    parent: null,
                     nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
                 }
             }
@@ -571,6 +571,7 @@ var Util = {
                             let newLine = {
                                 lineId: lineDom.getAttribute('id'),
                                 d: lineDom.getAttribute('d'),
+                                type: lineDom.getAttribute('s_type'),
                                 startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                                 endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
                             };
@@ -602,6 +603,7 @@ var Util = {
                     let newLine = {
                         lineId: lineDom.getAttribute('id'),
                         d: lineDom.getAttribute('d'),
+                        type: lineDom.getAttribute('s_type'),
                         startState: dom2State(Util.getPrevStateDom(lineDom)),
                         endState: dom2State(Util.getEndStateDomOfLine(lineDom))
                     };
@@ -654,6 +656,9 @@ var Util = {
                     var state = Util.getStateById(stateAry, xmlDom.getAttribute('id'));
                     if (state) {
                         state.children = stateAry2;
+                        stateAry2.forEach(item => {
+                            item.parent = state.stateId;
+                        })
                     }
                 }
             }
