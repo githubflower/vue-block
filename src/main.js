@@ -64,7 +64,9 @@ window.store = {
         runningStatus: ''
       },
     ],
-    lineMap: {}
+    lineMap: {},
+    copiedStates: [],
+
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);

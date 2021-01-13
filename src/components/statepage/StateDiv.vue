@@ -9,7 +9,7 @@
       { selected: isInActiveStates() },
       runningStatus,
     ]"
-    @click="selectState()"
+    @click.stop="selectState()"
   >
     <div :class="runningAnimation" :v-show="runningAnimation"></div>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->

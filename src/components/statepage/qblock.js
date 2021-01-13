@@ -73,7 +73,7 @@ var QBlock = {
             }*/
             return {
                 x: xy.x + Util.translatePX2Num(startState.width) + 3,
-                y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight + lineCfg.threadToolBoxHeight,
+                y: xy.y + Util.translatePX2Num(startState.height) / 2 + lineCfg.threadTitleHeight,
             };
             // return line.startPoint;
         },
@@ -92,7 +92,7 @@ var QBlock = {
             }*/
             return {
                 x: xy.x,
-                y: xy.y + Util.translatePX2Num(endState.height) / 2 + lineCfg.threadTitleHeight + lineCfg.threadToolBoxHeight,
+                y: xy.y + Util.translatePX2Num(endState.height) / 2 + lineCfg.threadTitleHeight,
             };
             // return line.endPoint;
         },

@@ -155,6 +155,8 @@
         :threadIndex="i"
         :runningLineId="runningLineId"
         :runningStateData="runningStateData"
+        :activeThreadIndex="activeThreadIndex"
+        @updateActiveThread="updateActiveThread"
       ></thread-svg>
     </div>
     <!--  <iframe
@@ -206,6 +208,7 @@ export default {
       tempLineData: null,
       operate: "default",
       threadAry: store.stateData.threadAry,
+      activeThreadIndex: null,
       lineContextMenuData: {
         show: false,
         lineId: null,
@@ -221,6 +224,13 @@ export default {
     };
   },
   methods: {
+    updateActiveThread(threadIndex) {
+      if (this.activeThreadIndex === threadIndex) {
+        this.activeThreadIndex = null;
+      } else {
+        this.activeThreadIndex = threadIndex;
+      }
+    },
     showDemo(runningStatus) {
       let demoData = {
         stateId: store.demoStateData.stateId,
@@ -690,6 +700,9 @@ export default {
     },
 
     testLayout() {
+      if (this.activeThreadIndex === null) {
+        return false;
+      }
       var stateDoms = document.querySelectorAll(".state-wrap");
       var lineDoms = document.querySelectorAll(".connect-line");
 
@@ -712,11 +725,15 @@ export default {
       });
 
       //对与线程框最外层同级的状态进行自动布局
-      let lineAry = this.threadAry[0].lineAry;
-      Util.testLayout(this.threadAry[0], lineAry);
+      let lineAry = this.threadAry[this.activeThreadIndex].lineAry;
+      Util.testLayout(
+        this.activeThreadIndex,
+        this.threadAry[this.activeThreadIndex],
+        lineAry
+      );
       this.executeAutoLayout(stateDoms, lineDoms, reg);
 
-      let stateAry = this.threadAry[0].stateAry;
+      let stateAry = this.threadAry[this.activeThreadIndex].stateAry;
       let autoLayoutData = {
         stateDoms: stateDoms,
         lineDoms: lineDoms,
@@ -730,7 +747,11 @@ export default {
     traverseExecuteAutoLayout(autoLayoutData, stateAry) {
       for (let i = 0; i < stateAry.length; i++) {
         if (stateAry[i].children) {
-          Util.testLayout(stateAry[i], autoLayoutData.lineAry);
+          Util.testLayout(
+            this.activeThreadIndex,
+            stateAry[i],
+            autoLayoutData.lineAry
+          );
           this.executeAutoLayout(
             autoLayoutData.stateDoms,
             autoLayoutData.lineDoms,

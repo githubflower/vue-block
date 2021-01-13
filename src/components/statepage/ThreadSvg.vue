@@ -1,7 +1,7 @@
 <template>
   <!-- <div class="thread" :style="{width: thread.width + 'px', height: thread.height + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize"  -->
   <div
-    :class="['thread', showThread ? 'is-expanded' : 'is-collapsed']"
+    :class="['thread', showThread ? 'is-expanded' : 'is-collapsed', {selected: isInActiveThread()}]"
     :style="{ width: thread.width + 'px', height: computedH + 'px' }"
     @drop.prevent="drop"
     @dragover.prevent
@@ -18,11 +18,11 @@
       <g>
         <foreignObject y="0" width="100%" height="100%" @mouseup="onMouseup" @mousemove="onConnecting">
           <div class="toggle-thread">
-            <el-button v-if="showThread" plain icon="el-icon-arrow-up" @click="toggleShowThread"></el-button>
-            <el-button v-else plain icon="el-icon-arrow-down" @click="toggleShowThread"></el-button>
+            <el-button v-if="showThread" plain icon="el-icon-arrow-up" @click.stop="toggleShowThread"></el-button>
+            <el-button v-else plain icon="el-icon-arrow-down" @click.stop="toggleShowThread"></el-button>
           </div>
           <div class="delete-thread">
-            <el-button plain icon="el-icon-delete" @click="deleteThread" v-show="isNotMainThread()"></el-button>
+            <el-button plain icon="el-icon-delete" @click.stop="deleteThread" v-show="isNotMainThread()"></el-button>
           </div>
           <div class="operating" v-show="thread.runningStatus == 'operating'" style="color: rgb(26,250,41);">
             <img src="../../../static/imgs/operating.png">运行中
@@ -37,9 +37,9 @@
             {{ thread.name }}
           </h4>
           <div class="tools">
-            <el-button plain icon="el-icon-aim" @click="leftTopPosition"></el-button>
+            <el-button plain icon="el-icon-aim" @click.stop="leftTopPosition"></el-button>
           </div>
-          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas">
+          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas" @click="updateActiveThread">
             <state-wrap
               v-for="(stateItem, index) in thread.stateAry"
               :key="index"
@@ -124,6 +124,7 @@ export default {
     "runningLineId",
     "runningStateData",
     "threadRunningData",
+    "activeThreadIndex",
   ],
   components: {
     StateWrap,
@@ -133,7 +134,7 @@ export default {
   data() {
     return {
       // bgImg: '../../../../static/imgs/grid3-50x50.png',
-      bgImg: "../../../static/imgs/tmp3.png",
+      bgImg: "./static/imgs/tmp3.png",
       showVirtualBox: false,
       showTempLine: false,
       showThread: true,
@@ -156,8 +157,8 @@ export default {
       },
       //threadCount: 1,
       titleHeight: lineCfg.threadTitleHeight,
-      moveVerticalImg: "../../../static/imgs/move-vertical.png",
-      resizableImg: "../../../static/imgs/resizable.png",
+      moveVerticalImg: "./static/imgs/move-vertical.png",
+      resizableImg: "./static/imgs/resizable.png",
       moveData: {
         stateIndex: 0,
         startPoint: {
@@ -169,6 +170,28 @@ export default {
     };
   },
   methods: {
+    isInActiveThread() {
+      if (this.activeThreadIndex === this.threadIndex) {
+        return true;
+      }
+      return false;
+    },
+    updateActiveThread() {
+      if (stateManage.hasDrawedLine) {
+        stateManage.hasDrawedLine = false;
+        return false;
+      } else if (this.showVirtualBox) {
+        this.showVirtualBox = false;
+        return false;
+      } else if (stateManage.resizingState) {
+        stateManage.resizingState = false;
+        return false;
+      } else if (stateManage.hasMovedCanvas) {
+        stateManage.hasMovedCanvas = false;
+        return false;
+      }
+      this.$emit("updateActiveThread", this.threadIndex);
+    },
     getLeftMostState() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
       let smallestStateX = 10000;
@@ -182,12 +205,26 @@ export default {
       let leftMostState = store.getState(this.threadIndex, smallestStateXId);
       return leftMostState;
     },
+    getUpMostState() {
+      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+      let smallestStateY = 10000;
+      let smallestStateYId;
+      stateAry.forEach((state) => {
+        if (state.y < smallestStateY) {
+          smallestStateY = state.y;
+          smallestStateYId = state.stateId;
+        }
+      });
+      let upMostState = store.getState(this.threadIndex, smallestStateYId);
+      return upMostState;
+    },
     leftTopPosition() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
       let leftMostState = this.getLeftMostState();
+      let upMostState = this.getUpMostState();
       let offset = {
         x: leftMostState.x - 20,
-        y: leftMostState.y - 20,
+        y: upMostState.y - 20,
       };
       stateAry.forEach((state) => {
         state.x = state.x - offset.x;
@@ -224,8 +261,10 @@ export default {
         this.activeLines.push(selectedLine);
       }
       this.$nextTick(function () {
-        let lineDom = document.getElementsByClassName("lines")[0];
-        let activeLineDom = document.getElementsByClassName("active");
+        let lineDom = document.getElementsByClassName("lines")[
+          this.threadIndex
+        ];
+        let activeLineDom = lineDom.getElementsByClassName("active");
         for (let i = 0; i < activeLineDom.length; i++) {
           lineDom.appendChild(activeLineDom[i]);
         }
@@ -255,8 +294,10 @@ export default {
         this.highlightLines(this.activeStates[i]);
       }
       this.$nextTick(function () {
-        let lineDom = document.getElementsByClassName("lines")[0];
-        let activeLineDom = document.getElementsByClassName("active");
+        let lineDom = document.getElementsByClassName("lines")[
+          this.threadIndex
+        ];
+        let activeLineDom = lineDom.getElementsByClassName("active");
         for (let i = 0; i < activeLineDom.length; i++) {
           lineDom.appendChild(activeLineDom[i]);
         }
@@ -329,19 +370,24 @@ export default {
     },
     //开始拖拽画布时，须记录状态原本的x坐标来计算状态在画布拖拽之后的位置
     startMovingCanvas(e) {
-      this._movingCanvas = true;
-      this._canvasStartInfo = {
-        x: e.pageX,
-        y: e.pageY,
-      };
-      this._stateOrigin = [];
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      stateAry.forEach((state) => {
-        this._stateOrigin.push({
-          x: state.x,
-          y: state.y,
+      //获取当前鼠标点下位置的path，若在path内index为1的dom的class不为null，则是在状态块以及循环状态上按下，此时不触发画布移动
+      if (e.path[1].getAttribute("class") !== null) {
+        return false;
+      } else {
+        stateManage.movingCanvas = true;
+        this._canvasStartInfo = {
+          x: e.pageX,
+          y: e.pageY,
+        };
+        this._stateOrigin = [];
+        let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
+        stateAry.forEach((state) => {
+          this._stateOrigin.push({
+            x: state.x,
+            y: state.y,
+          });
         });
-      });
+      }
     },
     //拖拽画布时须动态更新状态的位置
     updateStatePositionByCanvas(offset) {
@@ -361,29 +407,33 @@ export default {
         y: this._canvasEndInfo.y - this._canvasStartInfo.y,
       };
       this.updateStatePositionByCanvas(canvasOffset);
+      return canvasOffset;
     },
     onMovingCanvas(e) {
-      if (!this._movingCanvas) {
+      if (!stateManage.movingCanvas) {
         return false;
       } else {
-        //TODO: 1.拖拽状态时不能触发拖动画布
         if (e.buttons === 1) {
-          this.updateCanvas(e);
+          let canvasOffset = this.updateCanvas(e);
+          if (canvasOffset.x !== 0 && canvasOffset.y !== 0) {
+            stateManage.hasMovedCanvas = true;
+          }
         } else {
-          this._movingCanvas = false;
           this._canvasStartInfo = null;
           this._canvasEndInfo = null;
           this._stateOrigin = null;
+          stateManage.movingCanvas = false;
         }
       }
     },
     onConnecting(e) {
       if (stateManage.isConnecting) {
-        this._movingCanvas = false;
+        stateManage.movingCanvas = false;
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
         if (e.buttons === 1) {
           //绘制临时的连接线
           stateManage.isConnecting = true;
+          stateManage.hasDrawedLine = true;
           this.showTempLine = true;
           let endPoint = this.getEndPoint(e);
           this.updateTempLineData({ endPoint: endPoint });
@@ -399,7 +449,8 @@ export default {
       if (!this._isResizingState) {
         return false;
       }
-      this._movingCanvas = false;
+      stateManage.movingCanvas = false;
+      stateManage.resizingState = true;
       this.updateMoveData({
         endPoint: {
           x: e.pageX,
@@ -580,11 +631,13 @@ export default {
           //绘制连接线
           existedLine = this.isDuplicateLine(this.tempLineData, endStateId);
           if (existedLine) {
+            this.showTempLine = false;
             return;
           } else if (
             startState.parent !== endState.parent &&
             startState.parent !== endState.stateId
           ) {
+            this.showTempLine = false;
             return;
           } else {
             //TODO: 添加循环组件内部的连线
@@ -597,7 +650,6 @@ export default {
           }
         }
         this.showTempLine = false;
-        stateManage.isConnecting = false;
       }
     },
     /**
@@ -1121,7 +1173,7 @@ export default {
 
     startResize(e) {
       this.showVirtualBox = true;
-      this._movingCanvas = false;
+      stateManage.movingCanvas = false;
       EventObj.$emit("operateChange", {
         operate: "resize-thread",
         index: this.threadIndex,
@@ -1137,11 +1189,79 @@ export default {
       if (!this.showVirtualBox) {
         return false;
       }
-      this.showVirtualBox = false;
       EventObj.$emit("operateChange", {
         operate: "default",
       });
       this._lastHeight = this.thread.height;
+    },
+    //复制被选中的状态，开始与结束状态不可被复制
+    copyState() {
+      let currentActiveStates = Tools.deepCopy(this.activeStates);
+      for (let i = 0; i < currentActiveStates.length; i++) {
+        if (
+          currentActiveStates[i].stateId === "state-end" ||
+          currentActiveStates[i].stateId === "state-start"
+        ) {
+          currentActiveStates.splice(i, 1);
+        } else {
+          if (currentActiveStates[i].inputAry.length !== 0) {
+            currentActiveStates[i].inputAry = [];
+          }
+          if (currentActiveStates[i].outputAry.length !== 0) {
+            currentActiveStates[i].outputAry = [];
+          }
+        }
+      }
+      store.stateData.copiedStates = currentActiveStates;
+    },
+    //粘贴被复制嵌套状态内的子状态
+    pasteStateChildren(parent, copiedStateChildren) {
+      copiedStateChildren.forEach((state) => {
+        let newChildrenStateData = {
+          stateType: state.stateType,
+          x: state.x,
+          y: state.y,
+        };
+        let newChildrenState = store.getDefaultStateCfg(newChildrenStateData);
+        newChildrenState.width = state.width;
+        newChildrenState.height = state.height;
+        newChildrenState.mode = state.mode;
+        newChildrenState.name = state.name;
+        newChildrenState.parent = parent.stateId;
+        if (state.children.length !== 0) {
+          //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
+          setTimeout(() => {
+            this.pasteStateChildren(newChildrenState, state.children);
+          }, 10);
+        }
+        parent.children.push(newChildrenState);
+      });
+    },
+    //粘贴被复制的状态
+    pasteState() {
+      let copiedStateAry = store.stateData.copiedStates;
+      copiedStateAry.forEach((state) => {
+        if (typeof state.parent !== "string") {
+          state.parent = null;
+        }
+        let newStateData = {
+          stateType: state.stateType,
+          x: state.x + 76,
+          y: state.y + 40,
+        };
+        let copiedStateChildren = state.children;
+        let newState = store.getDefaultStateCfg(newStateData);
+        newState.width = state.width;
+        newState.height = state.height;
+        newState.mode = state.mode;
+        newState.name = state.name;
+        newState.parent = state.parent;
+        //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
+        setTimeout(() => {
+          this.pasteStateChildren(newState, state.children);
+        }, 10);
+        store.stateData.threadAry[this.threadIndex].stateAry.push(newState);
+      });
     },
   },
 
@@ -1151,6 +1271,7 @@ export default {
     if (elm) {
       this.stateBlock = new PlainDraggable(elm);
     }
+    var _this = this;
     /* var states = el.getElementsByClassName('state-div');
         var lineOption = {
             color: '#aaaaaa',
@@ -1161,6 +1282,21 @@ export default {
         }
         this.line = new LeaderLine(states[0], states[1], lineOption);
         this.line2 =  new LeaderLine(states[0], states[2], lineOption); */
+    document.onkeyup = function (e) {
+      let key = window.event.keyCode;
+      e.preventDefault();
+      if (key === 67 && event.ctrlKey) {
+        //console.log("ctrl+c");
+        _this.copyState();
+      } else if (key === 86 && event.ctrlKey) {
+        //console.log("ctrl+v");
+        _this.pasteState();
+      } else if (key === 89 && event.ctrlKey) {
+        console.log("ctrl+y");
+      } else if (key === 90 && event.ctrlKey) {
+        console.log("ctrl+z");
+      }
+    };
   },
   created() {},
   computed: {
@@ -1197,7 +1333,7 @@ export default {
 };
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
 div.thread {
   position: relative;
   display: inline-block;
@@ -1210,6 +1346,10 @@ div.thread {
   foreignObject {
     // border: 1px solid #00cd9a;
     border: 1px solid #487afe;
+    border-radius: 4px;
+  }
+  &.selected {
+    border: 2px solid #43baff;
     border-radius: 4px;
   }
 }
@@ -1253,6 +1393,15 @@ h4.title {
   float: right;
   position: relative;
 }
+.tools {
+  width: 150px;
+  height: 35px;
+  position: absolute;
+  right: 0px;
+  border-left: 1px solid #487afe;
+  border-bottom: 1px solid #487afe;
+  z-index: 2;
+}
 .tools .el-button {
   background-color: transparent;
   color: #ffffff;
@@ -1260,8 +1409,8 @@ h4.title {
   font-size: 20px;
   margin: 0;
   text-align: center;
-  right: 0px;
-  position: absolute;
+  float: right;
+  position: relative;
 }
 .delete-thread .el-button:hover,
 .toggle-thread .el-button:hover,
@@ -1276,8 +1425,7 @@ h4.title {
 
 .thread-body {
   position: relative;
-  top: 35px;
-  height: calc(100% - 70px);
+  height: calc(100% - 35px);
   /* border: 1px solid #baed00; */
 }
 .resize-icon {

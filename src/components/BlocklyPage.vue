@@ -2,7 +2,7 @@
   <div id="blocklyPage">
     <iframe
       id="blocklyIframe"
-      :src="`./static/blockly/demos/code/index.html`"
+      src="./static/blockly/demos/code/index.html"
       frameborder="0"
       width="100%"
       height="100%"

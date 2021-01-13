@@ -211,7 +211,7 @@ var Util = {
         el.setAttribute("s_width", state.width);
         el.setAttribute("s_height", state.height);
     },
-    saveStateMode(el, state){
+    saveStateMode(el, state) {
         el.setAttribute("mode", state.mode);
     },
     /**
@@ -520,7 +520,7 @@ var Util = {
             <field name="field_state" id="state-1607658086399">状态描述0</field>
         </block> */
         const STATE_BLOCK = 'state_opr';
-        if (stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
+        if (stateDom && stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
             let stateId = Util.getEntityStateId(stateDom);
             // 这个stateId有可能已经存在 看一下xml数据就能明白了
             let stateObj = stateAry.find(item => {
@@ -568,6 +568,9 @@ var Util = {
                     if (child.tagName === 'next') { //所有next节点的children都只有1个
                         if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
                             let lineDom = child.children[0];
+                            if(!lineDom.getAttribute('id').indexOf('line') === 0){
+                                debugger;
+                            }
                             let newLine = {
                                 lineId: lineDom.getAttribute('id'),
                                 d: lineDom.getAttribute('d'),
@@ -636,7 +639,7 @@ var Util = {
             }
         }
 
-        if (stateDom.children && stateDom.children.length) {
+        if (stateDom && stateDom.children && stateDom.children.length) {
             for (let j = 0; j < stateDom.children.length; j++) {
                 let child = stateDom.children[j];
                 Util.extractStateAndLine(child, stateAry, lineAry);
@@ -644,7 +647,7 @@ var Util = {
         }
     },
     updateChildrenOfState(stateAry, xmlDom, lineAry) {
-        if (xmlDom.tagName === 'block' && xmlDom.getAttribute('type') === 'state_def') {
+        if (xmlDom && xmlDom.tagName === 'block' && xmlDom.getAttribute('type') === 'state_def') {
             if (xmlDom.childNodes) {
                 var ary = Array.prototype.slice.call(xmlDom.childNodes);
                 var subStatesDom = ary.find(element => {
@@ -663,10 +666,13 @@ var Util = {
                 }
             }
         } else {
-            var ary2 = Array.prototype.slice.call(xmlDom.childNodes);
-            ary2.forEach(item => {
-                Util.updateChildrenOfState(stateAry, item, lineAry);
-            })
+            if (xmlDom) {
+                var ary2 = Array.prototype.slice.call(xmlDom.childNodes);
+                ary2.forEach(item => {
+                    Util.updateChildrenOfState(stateAry, item, lineAry);
+                })
+            }
+
         }
 
     },
@@ -687,7 +693,7 @@ var Util = {
     },
     getListStateDom(dom) {
         var result;
-        if (dom.tagName === 'block' && dom.getAttribute('type') === 'lists_state') {
+        if (dom && dom.tagName && dom.tagName === 'block' && dom.getAttribute('type') === 'lists_state') {
             result = dom;
         } else {
             var children = Array.prototype.slice.call(dom.childNodes);
@@ -832,7 +838,7 @@ var Util = {
      * @param {*} lineAry 
      * 
      */
-    genGraphByLayer(layer, lineAry) {
+    genGraphByLayer(threadIndex, layer, lineAry) {
         var g = new dagre.graphlib.Graph({
             //multigraph: true,
         });
@@ -842,7 +848,7 @@ var Util = {
             edgesep: 0,
             ranksep: 70,
         });
-        g.setDefaultEdgeLabel(function() {
+        g.setDefaultEdgeLabel(function () {
             return {};
         });
         let stateInCurrentLayer
@@ -863,14 +869,14 @@ var Util = {
                 let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId
                 })
-                let startState = store.getState(0, lineObj.startState.stateId)
+                let startState = store.getState(threadIndex, lineObj.startState.stateId)
                 //处理可能存在的从循环状态内连接至循环状态外的连线，若存在这种连线，则将连线起始点模拟到与被连入状态处在同一层级的父状态上
                 if (startState.parent !== state.parent) {
                     while (startState.parent !== state.parent) {
                         if (startState.parent === null && startState.parent !== state.parent) {
                             return
                         } else {
-                            startState = store.getState(0, startState.parent)
+                            startState = store.getState(threadIndex, startState.parent)
                         }
                     }
                     g.setEdge(startState.stateId, state.stateId, {
@@ -883,14 +889,14 @@ var Util = {
                 let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId;
                 })
-                let endState = store.getState(0, lineObj.endState.stateId)
+                let endState = store.getState(threadIndex, lineObj.endState.stateId)
                 if (endState.parent !== state.parent) {
                     //处理可能存在的从循环状态外连接至循环状态内的连线，若存在这种连线，则将连线结束点模拟到与被连入状态处在同一层级的父状态上
                     while (endState.parent !== state.parent) {
                         if (endState.parent === null && endState.parent !== state.parent) {
                             return
                         } else {
-                            endState = store.getState(0, endState.parent)
+                            endState = store.getState(threadIndex, endState.parent)
                         }
                     }
                 }
@@ -909,16 +915,16 @@ var Util = {
         state.y = node.y - halfStateHeight + 20
         return
     },
-    setStateXYbyLayer(g, layer) {
+    setStateXYbyLayer(threadIndex, g, layer) {
         let stateInCurrentLayer
         if (layer.stateAry) {
             stateInCurrentLayer = layer.stateAry
         } else {
             stateInCurrentLayer = layer.children
         }
-        g.nodes().forEach(function(nodeId) {
+        g.nodes().forEach(function (nodeId) {
             let node = g.node(nodeId);
-            let state = store.getState(0, nodeId)
+            let state = store.getState(threadIndex, nodeId)
             if (state) {
                 Util.setStateXYbyNode(state, node) //重设状态位置信息
                 if (state.inputAry && state.inputAry.length) {
@@ -930,10 +936,10 @@ var Util = {
             console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
         });
     },
-    testLayout(thread, lineAry) {
-        let g = this.genGraphByLayer(thread, lineAry)
+    testLayout(threadIndex, thread, lineAry) {
+        let g = this.genGraphByLayer(threadIndex, thread, lineAry)
         dagre.layout(g); //布局分析
-        this.setStateXYbyLayer(g, thread)
+        this.setStateXYbyLayer(threadIndex, g, thread)
     },
 }
 export default Util;

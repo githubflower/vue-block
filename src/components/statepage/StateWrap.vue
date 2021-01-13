@@ -129,7 +129,7 @@ export default {
       isDragging: false,
       operate: null, // IS_MOVING    IS_CONNECTING
       stateId: null,
-      resizableImg: "../../../static/imgs/resizable.png",
+      resizableImg: "./static/imgs/resizable.png",
     };
   },
   methods: {
@@ -703,7 +703,7 @@ export default {
 };
 </script>
 
-<style lang="less" scoped>
+<style lang="less">
 * {
   user-select: none;
 }
@@ -753,28 +753,7 @@ export default {
 .out {
   right: 0;
 }
-.connect-point {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 10px;
-  border-radius: 10px;
-}
-.connect-point:hover {
-  border: 2px solid #ff0000 !important;
-  cursor: default;
-}
-.state-wrap:hover .connect-point {
-  border: 2px solid blue;
-  cursor: default;
-}
-.connect-point.in {
-  transform: translate(-50%, -50%);
-}
-.connect-point.out {
-  transform: translate(50%, -50%);
-}
+
 .is-dragging {
   cursor: move;
 }
@@ -801,5 +780,21 @@ export default {
 .input-list > li:hover,
 .output-list > li:hover {
   background-color: #e6f7ff;
+}
+.resize-icon {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+}
+.resize-icon.resizable {
+  right: 1px;
+  bottom: 1px;
+  left: initial;
+  cursor: nwse-resize;
+}
+.resize-icon.resizable:hover {
+  cursor: nwse-resize;
 }
 </style>    
