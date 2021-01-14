@@ -54,6 +54,7 @@ export default {
   },
   methods: {
     activeLineChange() {
+      this.moveLine(this.line);
       this.$emit("updateActiveLine", this.line.lineId);
     },
     isInActiveLines() {
@@ -162,9 +163,9 @@ export default {
       return line.endPoint;
     },
     //TODO: 找到连线在对应可配置线段的中点，并用正方形块表示，暂时只对应前向连线的情况
-    getFirstMovableLinePoint(line) {
+    getFirstMovablePoint(line) {
       let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
-        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
+        endPoint = QBlock.Line.getEndPoint(line, this.threadIndex);
       let firstMovablePoint = {
         x: 0,
         y: 0,
@@ -175,7 +176,7 @@ export default {
     },
     getSecondMovablePoint(line) {
       let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
-        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
+        endPoint = QBlock.Line.getEndPoint(line, this.threadIndex);
       let secondMovablePoint = {
         x: 0,
         y: 0,
@@ -186,8 +187,8 @@ export default {
     },
     getThirdMovablePoint(line) {
       let startPoint = QBlock.Line.getStartPoint(line, this.threadIndex),
-        endPoint = QBlock.Line.getEndPoint(line, thie.threadIndex);
-      halflineInputH = (endPoint.x - startPoint.x - LINE_H) / 2;
+        endPoint = QBlock.Line.getEndPoint(line, this.threadIndex),
+        halflineInputH = (endPoint.x - startPoint.x - LINE_H) / 2;
       let thirdMovablePoint = {
         x: 0,
         y: 0,
@@ -195,6 +196,12 @@ export default {
       thirdMovablePoint.x = endPoint.x - halflineInputH;
       thirdMovablePoint.y = endPoint.y;
       return thirdMovablePoint;
+    },
+    moveLine(line) {
+      let firstMovablePoint = this.getFirstMovablePoint(line);
+      let secondMovablePoint = this.getSecondMovablePoint(line);
+      let thirdMovablePoint = this.getThirdMovablePoint(line);
+      console.log(firstMovablePoint, secondMovablePoint, thirdMovablePoint);
     },
     /*
      * 获取连线中点，然后以这个中点为起点绘制文字的路径

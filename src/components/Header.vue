@@ -15,7 +15,7 @@
           :index="subItem.id"
           :key="subItem.id"
         >
-          <template>{{ subItem.name }}-2</template>
+          <template>{{ subItem.name }}</template>
           <el-submenu
             v-for="thirdLevelItem in subItem.children"
             :index="thirdLevelItem.id"
@@ -93,6 +93,13 @@ export default {
               router: null,
               children: [],
             },
+            {
+              id: "1-3",
+              name: "运行工程",
+              callback: null,
+              router: null,
+              children: [],
+            },
           ],
         },
       ],
@@ -105,8 +112,15 @@ export default {
     handleSelect(key, keyPath) {
       //保存工程
       console.log(key);
-      if(key === '1-2'){
-        this.saveProject();
+      switch(key){
+        case '1-2':
+          this.saveProject();
+          break;
+        case '1-3':
+          this.run();
+          break;
+        default: 
+          //do none;  
       }
     },
 
@@ -136,20 +150,36 @@ export default {
     },
 
     saveProject() {
-      let blocklyXml = Util.state2blockly(store.stateData.threadAry);
-      let code;
-
+      let stateData = Tools.deepCopy(statePageVue.threadAry);
+     
+      // save blockly xml
+      let blocklyWindow = document.getElementsByTagName('iframe')[0].contentWindow;
+      let blocklyData = blocklyWindow.Blockly.Xml.workspaceToDom(blocklyWindow.Code.workspace);
+      // save qrl
+      let code = blocklyWindow.Blockly.Lua.workspaceToCode(blocklyWindow.Code.workspace);
+      debugger;
       this.axios({
-        url: "/service/saveProject",
-        method: "post",
-        data: {
-          blocklyXml: blocklyXml,
-          code: code,
-        },
-      }).then((res) => {
-        // debugger;
-      });
+          url: '/service/saveProject',
+          method: 'post',
+          data: {
+            stateData: stateData,
+            blocklyData: blocklyData, //blocklyData,
+            code: code
+          }
+        }).then((res)=>{
+          // debugger;
+        })
     },
+    run(){
+      this.axios({
+        url: '/service/run',
+        method: 'post',
+        data: {
+          path: ''
+        }
+      })
+    },
+
     /**
      * 获取所有插件菜单并入到内置菜单
      */

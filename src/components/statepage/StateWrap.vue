@@ -30,11 +30,14 @@
       :index="index"
       :threadIndex="threadIndex"
       :activeStates="activeStates"
+      :showDeleteStateMenu="showDeleteStateMenu"
+      :showLineContextMenu="showLineContextMenu"
       @updateTempLineData="updateTempLineData"
       @updateMoveData="updateMoveData"
       @updateActiveState="updateActiveState"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
+      @hideMenus="hideMenus"
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -47,11 +50,14 @@
       :activeStates="activeStates"
       :runningStatus="runningStatus"
       :runningAnimation="runningAnimation"
+      :showDeleteStateMenu="showDeleteStateMenu"
+      :showLineContextMenu="showLineContextMenu"
       @updateTempLineData="updateTempLineData"
       @updateActiveState="updateActiveState"
       @updateMoveData="updateMoveData"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
+      @hideMenus="hideMenus"
     ></state-div>
     <!-- <div> -->
     <state-wrap
@@ -65,12 +71,15 @@
       :index="cIndex"
       :threadIndex="threadIndex"
       :activeStates="activeStates"
+      :showDeleteStateMenu="showDeleteStateMenu"
+      :showLineContextMenu="showLineContextMenu"
       @updateStateData="updateStateData"
       @updateTempLineData="updateTempLineData"
       @updateActiveState="updateActiveState"
       @updateMoveData="updateMoveData"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
+      @hideMenus="hideMenus"
     ></state-wrap>
     <!-- </div> -->
     <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
@@ -105,9 +114,6 @@ import Util from "./util.js";
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
-const isNumber = (str) => {
-  return typeof str === "number";
-};
 export default {
   name: "StateWrap",
   props: [
@@ -116,6 +122,8 @@ export default {
     "threadIndex",
     "runningStateData",
     "activeStates",
+    "showDeleteStateMenu",
+    "showLineContextMenu",
   ],
   components: {
     LoopDiv,
@@ -297,6 +305,28 @@ export default {
       }
       return indexAry;
     },
+    //处理deepCopy后状态的parent不正确的问题
+    handleNullParent(stateAry) {
+      stateAry.forEach((state) => {
+        if (typeof state.parent !== "string") {
+          state.parent = null;
+        }
+      });
+      return stateAry;
+    },
+    updateUndoData() {
+      let undoData = {
+        stateAry: store.stateData.threadAry[this.threadIndex].stateAry,
+        lineAry: store.stateData.threadAry[this.threadIndex].lineAry,
+      };
+      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
+      if (undoList.length >= 10) {
+        undoList.splice(0, 1);
+      }
+      undoList.push(undoData);
+      console.log(undoList);
+      return;
+    },
     dragEnd(e) {
       if (this._isResizing) {
         this._isResizing = false;
@@ -375,11 +405,13 @@ export default {
         ) {
           this.nestToDefault(this.stateData);
         }
+        //store.stateData.stateAryStorage.push(stateAry)
         return false;
       }
 
       let TargetInFlag = isTargetInParent(this.$el, e);
       if (!TargetInFlag) {
+        //store.stateData.stateAryStorage.push(stateAry)
         return;
       }
 
@@ -603,6 +635,7 @@ export default {
           y: e.pageY,
         },
         indexAry: indexAry,
+        stateId: e.currentTarget.getAttribute("stateid"),
       });
     },
 
@@ -623,6 +656,9 @@ export default {
       this.$emit("updateStateData", {
         stateId: data.stateId,
       });
+    },
+    hideMenus() {
+      this.$emit("hideMenus");
     },
     onResizeIconMousedown(e) {
       let stateId = this.$el.getAttribute("stateid");

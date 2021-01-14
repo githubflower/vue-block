@@ -25,7 +25,7 @@ window.store = {
   stateData: {
     threadAry: [
       {
-        name: "Main_thread",
+        name: "主线程",
         width: 1200,
         height: 500,
         stateAry: [
@@ -61,12 +61,13 @@ window.store = {
           }
         ],
         lineAry: [],
+        undoStatesList:[],
+        redoStatesList:[],
+        //传入的status必须为operating, pausing, stopping这三者中的一个
         runningStatus: ''
       },
     ],
     lineMap: {},
-    copiedStates: [],
-
   },
   addThread(obj) {
     this.stateData.threadAry.push(obj);
@@ -79,8 +80,8 @@ window.store = {
     return {
       width: data.stateType === "loopDiv" ? "300px" : "76px",
       height: data.stateType === "loopDiv" ? "120px" : "40px",
-      // name: "状态描述" + this.statenameIndex++,
-      name: STATE_NAME_POOL[this.statenameIndex++],
+      name: "状态描述" + this.statenameIndex++,
+      // name: STATE_NAME_POOL[this.statenameIndex++],
       stateType: data.stateType,
       stateId: window.genId("state"),
       inputAry: [],

@@ -8,7 +8,7 @@
       { active: isActive },
       { selected: isInActiveStates() },
     ]"
-    @click="selectState()"
+    @click="selectStateOrHideMenu()"
   >
     <span class="icon" :style="{ backgroundImage: `url( ${loopIcon})` }"></span>
     <el-input
@@ -81,7 +81,14 @@ const isNumber = (str) => {
 };
 export default {
   name: "LoopDiv",
-  props: ["stateData", "index", "threadIndex", "activeStates"],
+  props: [
+    "stateData",
+    "index",
+    "threadIndex",
+    "activeStates",
+    "showDeleteStateMenu",
+    "showLineContextMenu",
+  ],
 
   data() {
     return {
@@ -108,8 +115,12 @@ export default {
       }
       return false;
     },
-    selectState() {
-      this.$emit("updateActiveState", this.stateData);
+    selectStateOrHideMenu() {
+      if (this.showDeleteStateMenu || this.showLineContextMenu) {
+        this.$emit("hideMenus");
+      } else {
+        this.$emit("updateActiveState", this.stateData);
+      }
     },
     genId() {
       return window.genId("state");

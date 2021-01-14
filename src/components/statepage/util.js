@@ -748,7 +748,7 @@ var Util = {
         hiddenInput.setAttribute("value", blocklyXml);
         hiddenInput.setAttribute("style", "height: 0; overflow: hidden;");
         document.body.appendChild(hiddenInput);
-        hiddenInput.focus();
+        //hiddenInput.focus();
         hiddenInput.select();
         document.execCommand("copy");
         document.body.removeChild(hiddenInput);

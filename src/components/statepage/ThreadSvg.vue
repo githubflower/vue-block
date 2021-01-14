@@ -48,11 +48,14 @@
               :threadIndex="threadIndex"
               :runningStateData="runningStateData"
               :activeStates="activeStates"
+              :showDeleteStateMenu="showDeleteStateMenu"
+              :showLineContextMenu="showLineContextMenu"
               @updateStateData="updateStateData"
               @updateTempLineData="updateTempLineData"
               @updateMoveData="updateMoveData"
               @updateActiveState="updateActiveState"
               @stopMoving="stopMoving"
+              @hideMenus="hideMenus"
             />
           </div>
         </foreignObject>
@@ -125,6 +128,8 @@ export default {
     "runningStateData",
     "threadRunningData",
     "activeThreadIndex",
+    "showDeleteStateMenu",
+    "showLineContextMenu",
   ],
   components: {
     StateWrap,
@@ -170,13 +175,17 @@ export default {
     };
   },
   methods: {
+    hideMenus() {
+      this.$emit("hideMenus");
+    },
     isInActiveThread() {
       if (this.activeThreadIndex === this.threadIndex) {
         return true;
       }
       return false;
     },
-    updateActiveThread() {
+    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态和线程框的尺寸时，不触发高亮线程框的事件
+    isNotMoving() {
       if (stateManage.hasDrawedLine) {
         stateManage.hasDrawedLine = false;
         return false;
@@ -190,11 +199,16 @@ export default {
         stateManage.hasMovedCanvas = false;
         return false;
       }
-      this.$emit("updateActiveThread", this.threadIndex);
+      return true;
+    },
+    updateActiveThread() {
+      if (this.isNotMoving()) {
+        this.$emit("updateActiveThread", this.threadIndex);
+      }
     },
     getLeftMostState() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let smallestStateX = 10000;
+      let smallestStateX = 1000000;
       let smallestStateXId;
       stateAry.forEach((state) => {
         if (state.x < smallestStateX) {
@@ -207,7 +221,7 @@ export default {
     },
     getUpMostState() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let smallestStateY = 10000;
+      let smallestStateY = 1000000;
       let smallestStateYId;
       stateAry.forEach((state) => {
         if (state.y < smallestStateY) {
@@ -633,10 +647,7 @@ export default {
           if (existedLine) {
             this.showTempLine = false;
             return;
-          } else if (
-            startState.parent !== endState.parent &&
-            startState.parent !== endState.stateId
-          ) {
+          } else if (startState.parent !== endState.parent) {
             this.showTempLine = false;
             return;
           } else {
@@ -650,6 +661,7 @@ export default {
           }
         }
         this.showTempLine = false;
+        stateManage.isConnecting = false;
       }
     },
     /**
@@ -970,8 +982,33 @@ export default {
         }
       });
     },
+    /*
+    getNearestLine(state){
+      let lineDom = document.getElementsByClassName("lines")[
+          this.threadIndex
+      ]
+      let connectLineDom = lineDom.getElementsByClassName("connect-line")
+      let linePosition = []
+      for (let i=0; i<connectLineDom.length; i++){
+        linePosition.push(connectLineDom[i].getBoundingClientRect()[0])
+      }
+      return linePosition
+    },*/
+    updateUndoData() {
+      let undoData = {
+        stateAry: store.stateData.threadAry[this.threadIndex].stateAry,
+        lineAry: store.stateData.threadAry[this.threadIndex].lineAry,
+      };
+      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
+      if (undoList.length >= 10) {
+        undoList.splice(0, 1);
+      }
+      undoList.push(undoData);
 
+      return;
+    },
     drop(e) {
+      //TODO：需要处理不允许用户跨线程拖拽状态块的问题
       if (e.dataTransfer.getData("operate") === "addState") {
         this.addStateToThread(e);
       } else {
@@ -996,6 +1033,7 @@ export default {
           this.thread
         );
         if (stateInThreadFlag) {
+          this.updateUndoData();
           return false;
         }
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
@@ -1011,7 +1049,7 @@ export default {
         theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
 
         theDragStateData.parent = null;
-        this.setDragStateLineType(theDragStateData);
+        //this.setDragStateLineType(theDragStateData);
         statePageVue.threadAry[this.threadIndex].stateAry.push(
           theDragStateData
         );
@@ -1027,6 +1065,7 @@ export default {
         setTimeout(() => {
           dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
         }, 10);
+        //store.stateData.stateAryStorage.push(stateAry)
       }
     },
     getStateParentCount(state) {
@@ -1189,14 +1228,30 @@ export default {
       if (!this.showVirtualBox) {
         return false;
       }
+      this.showVirtualBox = false;
       EventObj.$emit("operateChange", {
         operate: "default",
       });
       this._lastHeight = this.thread.height;
     },
+    isSameStatesCopied(prevCopiedStates, currentCopiedStates) {
+      for (let i = 0; i < prevCopiedStates.length; i++) {
+        if (prevCopiedStates[i].stateId !== currentCopiedStates[i].stateId) {
+          return false;
+        }
+      }
+      return true;
+    },
     //复制被选中的状态，开始与结束状态不可被复制
     copyState() {
       let currentActiveStates = Tools.deepCopy(this.activeStates);
+      if (!this._CopiedStates) {
+        this._CopiedStates = currentActiveStates;
+      } else if (
+        !this.isSameStatesCopied(this._CopiedStates, currentActiveStates)
+      ) {
+        this._offsetCount = 1;
+      }
       for (let i = 0; i < currentActiveStates.length; i++) {
         if (
           currentActiveStates[i].stateId === "state-end" ||
@@ -1213,65 +1268,108 @@ export default {
         }
       }
       store.stateData.copiedStates = currentActiveStates;
+      this._CopiedStates = currentActiveStates;
+    },
+    genCopiedStateChildren(parent, state) {
+      let newChildrenStateData = {
+        stateType: state.stateType,
+        x: state.x,
+        y: state.y,
+      };
+      let newChildrenState = store.getDefaultStateCfg(newChildrenStateData);
+      newChildrenState.width = state.width;
+      newChildrenState.height = state.height;
+      newChildrenState.mode = state.mode;
+      newChildrenState.name = state.name;
+      newChildrenState.parent = parent.stateId;
+      return newChildrenState;
     },
     //粘贴被复制嵌套状态内的子状态
     pasteStateChildren(parent, copiedStateChildren) {
-      copiedStateChildren.forEach((state) => {
-        let newChildrenStateData = {
-          stateType: state.stateType,
-          x: state.x,
-          y: state.y,
-        };
-        let newChildrenState = store.getDefaultStateCfg(newChildrenStateData);
-        newChildrenState.width = state.width;
-        newChildrenState.height = state.height;
-        newChildrenState.mode = state.mode;
-        newChildrenState.name = state.name;
-        newChildrenState.parent = parent.stateId;
-        if (state.children.length !== 0) {
-          //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
-          setTimeout(() => {
-            this.pasteStateChildren(newChildrenState, state.children);
-          }, 10);
-        }
-        parent.children.push(newChildrenState);
+      copiedStateChildren.forEach((state, timeOutIndex) => {
+        //由于stateId的计算机制是根据当前时间来的，复制完状态后需要间隔一段时间再复制同层的别的状态
+        setTimeout(() => {
+          let newChildrenState = this.genCopiedStateChildren(parent, state);
+          if (state.children.length !== 0) {
+            //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
+            setTimeout(() => {
+              this.pasteStateChildren(newChildrenState, state.children);
+            }, 10 * (timeOutIndex + 1));
+          }
+          parent.children.push(newChildrenState);
+        }, 10 * (timeOutIndex + 1));
       });
+    },
+    genCopiedState(state) {
+      if (typeof state.parent !== "string") {
+        state.parent = null;
+      }
+      let newStateData = {
+        stateType: state.stateType,
+        x: state.x + Util.translatePX2Num(state.width) * this._offsetCount,
+        y: state.y + Util.translatePX2Num(state.height) * this._offsetCount,
+      };
+      let copiedStateChildren = state.children;
+      let newState = store.getDefaultStateCfg(newStateData);
+      newState.width = state.width;
+      newState.height = state.height;
+      newState.mode = state.mode;
+      newState.name = state.name;
+      newState.parent = state.parent;
+      return newState;
     },
     //粘贴被复制的状态
     pasteState() {
-      let copiedStateAry = store.stateData.copiedStates;
-      copiedStateAry.forEach((state) => {
+      let copiedStateAry = this._CopiedStates;
+      copiedStateAry.forEach((state, timeOutIndex) => {
+        //由于stateId的计算机制是根据当前时间来的，复制完状态后需要间隔一段时间再复制同层的别的状态
+        setTimeout(() => {
+          let newState = this.genCopiedState(state);
+          //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
+          setTimeout(() => {
+            this.pasteStateChildren(newState, state.children);
+          }, 10 * (timeOutIndex + 1));
+          store.stateData.threadAry[this.threadIndex].stateAry.push(newState);
+          this._offsetCount += 1;
+        }, 10 * (timeOutIndex + 1));
+      });
+    },
+    //处理deepCopy后状态的parent不正确的问题
+    handleNullParent(stateAry) {
+      stateAry.forEach((state) => {
         if (typeof state.parent !== "string") {
           state.parent = null;
         }
-        let newStateData = {
-          stateType: state.stateType,
-          x: state.x + 76,
-          y: state.y + 40,
-        };
-        let copiedStateChildren = state.children;
-        let newState = store.getDefaultStateCfg(newStateData);
-        newState.width = state.width;
-        newState.height = state.height;
-        newState.mode = state.mode;
-        newState.name = state.name;
-        newState.parent = state.parent;
-        //由于stateId的计算机制是根据当前时间来的，需要间隔一段时间再将子状态复制过来
-        setTimeout(() => {
-          this.pasteStateChildren(newState, state.children);
-        }, 10);
-        store.stateData.threadAry[this.threadIndex].stateAry.push(newState);
       });
+      return stateAry;
     },
+    //撤销上一个操作
+    undo() {},
+    //恢复上一个操作
+    redo() {},
   },
 
   mounted() {
+    this._offsetCount = 1;
+    this._prevCopiedStates = null;
+    var _this = this;
     let el = this.$el;
     var elm = el.querySelector("#test");
     if (elm) {
       this.stateBlock = new PlainDraggable(elm);
     }
-    var _this = this;
+    //TODO：实现撤销恢复
+    let initStateAry = this.handleNullParent(
+      Tools.deepCopy(store.stateData.threadAry[this.threadIndex].stateAry)
+    );
+    let initLineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+    let initData = {
+      stateAry: initStateAry,
+      lineAry: initLineAry,
+    };
+    store.stateData.threadAry[this.threadIndex].undoStatesList = [];
+    store.stateData.threadAry[this.threadIndex].undoStatesList.push(initData);
+    console.log(store.stateData.threadAry[this.threadIndex].undoStatesList);
     /* var states = el.getElementsByClassName('state-div');
         var lineOption = {
             color: '#aaaaaa',
@@ -1286,10 +1384,8 @@ export default {
       let key = window.event.keyCode;
       e.preventDefault();
       if (key === 67 && event.ctrlKey) {
-        //console.log("ctrl+c");
         _this.copyState();
       } else if (key === 86 && event.ctrlKey) {
-        //console.log("ctrl+v");
         _this.pasteState();
       } else if (key === 89 && event.ctrlKey) {
         console.log("ctrl+y");
@@ -1349,7 +1445,7 @@ div.thread {
     border-radius: 4px;
   }
   &.selected {
-    border: 2px solid #43baff;
+    box-shadow: 0px 0px 2px 2px #5280ff;
     border-radius: 4px;
   }
 }
@@ -1398,8 +1494,7 @@ h4.title {
   height: 35px;
   position: absolute;
   right: 0px;
-  border-left: 1px solid #487afe;
-  border-bottom: 1px solid #487afe;
+  background-color: rgba(255, 255, 255, 0.05);
   z-index: 2;
 }
 .tools .el-button {

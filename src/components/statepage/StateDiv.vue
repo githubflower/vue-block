@@ -9,7 +9,7 @@
       { selected: isInActiveStates() },
       runningStatus,
     ]"
-    @click.stop="selectState()"
+    @click.stop="selectStateOrHideMenu()"
   >
     <div :class="runningAnimation" :v-show="runningAnimation"></div>
     <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
@@ -91,6 +91,8 @@ export default {
     "showDescData",
     "runningStatus",
     "runningAnimation",
+    "showDeleteStateMenu",
+    "showLineContextMenu",
   ],
   data() {
     return {
@@ -113,8 +115,12 @@ export default {
       }
       return false;
     },
-    selectState() {
-      this.$emit("updateActiveState", this.stateData);
+    selectStateOrHideMenu() {
+      if (this.showDeleteStateMenu || this.showLineContextMenu) {
+        this.$emit("hideMenus");
+      } else {
+        this.$emit("updateActiveState", this.stateData);
+      }
     },
     genId() {
       return window.genId("state");
@@ -519,7 +525,7 @@ p {
   border: 2px solid rgb(251, 255, 0);
   cursor: default;
 }
-.connect-point.in {
+.state-div .connect-point.in {
   transform: translate(-50%, -50%);
 }
 .connect-point.out {

@@ -156,7 +156,10 @@
         :runningLineId="runningLineId"
         :runningStateData="runningStateData"
         :activeThreadIndex="activeThreadIndex"
+        :showDeleteStateMenu="showDeleteStateMenu"
+        :showLineContextMenu="lineContextMenuData.show"
         @updateActiveThread="updateActiveThread"
+        @hideMenus="hideMenus"
       ></thread-svg>
     </div>
     <!--  <iframe
@@ -208,7 +211,7 @@ export default {
       tempLineData: null,
       operate: "default",
       threadAry: store.stateData.threadAry,
-      activeThreadIndex: null,
+      activeThreadIndex: 0,
       lineContextMenuData: {
         show: false,
         lineId: null,
@@ -219,7 +222,6 @@ export default {
           y: 0,
         },
       },
-
       fileList: [],
     };
   },
@@ -279,12 +281,29 @@ export default {
         runningStatus: "",
       });
     },
+    //右键状态时展示删除按钮，不允许删除开始与结束状态
     deleteState(data) {
+      //判断是否在没有关闭删除按钮的情况下右键别的状态打开删除按钮
+      if (this._currentmenuXY) {
+        if (
+          this._currentmenuXY.x !== data.mousedownPoint.x ||
+          this._currentmenuXY.y !== data.mousedownPoint.y
+        ) {
+          this._deleteStateData = null;
+        }
+      }
+      if (data.stateId === "state-start" || data.stateId === "state-end") {
+        return false;
+      }
       this.contextmenuXY.x = data.mousedownPoint.x;
       this.contextmenuXY.y = data.mousedownPoint.y;
+      this._currentmenuXY = this.contextmenuXY;
       this.showDeleteStateMenu = true;
       //由于事件是从stateDiv一层层发送到statePage的，会产生无法正确获取最底层的状态的indexAry的问题，需要进行以下的处理
-      if (typeof this._deleteStateData === "undefined") {
+      if (
+        typeof this._deleteStateData === "undefined" ||
+        this._deleteStateData === null
+      ) {
         this._deleteStateData = data;
       } else if (this._deleteStateData.indexAry.length < data.indexAry.length) {
         this._deleteStateData = data;
@@ -811,7 +830,6 @@ export default {
   },
   mounted() {
     window.statePageVue = this;
-
     /* var importFileBtn = document.getElementById("importFile");
     if (importFileBtn) {
       importFileBtn.addEventListener("change", function (e) {
