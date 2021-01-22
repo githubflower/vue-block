@@ -226,12 +226,10 @@ export default {
     };
   },
   methods: {
+    //TODO: 当前视图按照当前激活的状态自动左右平移
+    move2CurrentRunningState(){},
     updateActiveThread(threadIndex) {
-      if (this.activeThreadIndex === threadIndex) {
-        this.activeThreadIndex = null;
-      } else {
-        this.activeThreadIndex = threadIndex;
-      }
+      this.activeThreadIndex = threadIndex;
     },
     showDemo(runningStatus) {
       let demoData = {
@@ -279,6 +277,10 @@ export default {
         stateAry: [startState, endState],
         lineAry: [],
         runningStatus: "",
+        undoStatesList: [],
+        redoStatesList: [],
+        newestThreadStatus: {},
+        presentStateStatus: {},
       });
     },
     //右键状态时展示删除按钮，不允许删除开始与结束状态
@@ -342,6 +344,8 @@ export default {
     deleteStateFn() {
       let data = this._deleteStateData;
       let threadIndex = data.indexAry.pop(); //线程索引
+      store.updateUndoData(threadIndex);
+      store.focusCurrentThread(threadIndex);
       let currentStateAry = this.threadAry[threadIndex].stateAry;
       while (data.indexAry.length > 1) {
         let i = data.indexAry.pop();
@@ -367,6 +371,7 @@ export default {
           targetParent.height = "40px";
         }
       }
+      store.updatePresentData(threadIndex);
       this.showDeleteStateMenu = false;
     },
     /* generateDefaultPos(index){
@@ -700,8 +705,17 @@ export default {
     },
 
     loadData(data) {
+      let refreshedLineAry = this.handleNullPath(data.lineAry);
       this.threadAry[0].stateAry = data.stateAry;
-      this.threadAry[0].lineAry = data.lineAry;
+      this.threadAry[0].lineAry = refreshedLineAry;
+    },
+    handleNullPath(lineAry) {
+      for (let i = 0; i < lineAry.length; i++) {
+        if (lineAry[i].d === null) {
+          lineAry[i].d = "";
+        }
+      }
+      return lineAry;
     },
     clearBlocklyXmlOfLocalStorage() {
       window.localStorage.setItem("blocklyXml", "");
@@ -722,6 +736,8 @@ export default {
       if (this.activeThreadIndex === null) {
         return false;
       }
+      store.updateUndoData(this.activeThreadIndex);
+      store.focusCurrentThread(this.activeThreadIndex);
       var stateDoms = document.querySelectorAll(".state-wrap");
       var lineDoms = document.querySelectorAll(".connect-line");
 
@@ -761,6 +777,7 @@ export default {
       };
       //对嵌套状态进行自动布局
       this.traverseExecuteAutoLayout(autoLayoutData, stateAry);
+      store.updatePresentData(this.activeThreadIndex);
     },
 
     traverseExecuteAutoLayout(autoLayoutData, stateAry) {

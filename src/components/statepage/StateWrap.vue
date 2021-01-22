@@ -111,8 +111,10 @@ import StateDiv from "./StateDiv";
 import StatePageVue from "./StatePage.vue";
 import Tools from "@/Tools.js";
 import Util from "./util.js";
+import { lineCfg } from "./graphCfg.js";
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
+const UNDO_REDO_LIMIT = lineCfg.undo_redo_limit;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
 export default {
   name: "StateWrap",
@@ -160,9 +162,6 @@ export default {
     genId() {
       return window.genId("state");
     },
-    /* generateStatePos(stateData){
-            return (isNumber(stateData.x) && isNumber(stateData.y)) ? `transform: translate(${stateData.x}px, ${stateData.y}px)` : 'transform: translate(0, 0)';
-        }, */
     /**
      * 将状态的位置信息转成像素字符串
      */
@@ -233,6 +232,7 @@ export default {
     },
 
     dragStart(e) {
+      store.updateUndoData(this.threadIndex);
       let movingState = store.getState(
         this.threadIndex,
         this.stateData.stateId
@@ -305,28 +305,6 @@ export default {
       }
       return indexAry;
     },
-    //处理deepCopy后状态的parent不正确的问题
-    handleNullParent(stateAry) {
-      stateAry.forEach((state) => {
-        if (typeof state.parent !== "string") {
-          state.parent = null;
-        }
-      });
-      return stateAry;
-    },
-    updateUndoData() {
-      let undoData = {
-        stateAry: store.stateData.threadAry[this.threadIndex].stateAry,
-        lineAry: store.stateData.threadAry[this.threadIndex].lineAry,
-      };
-      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
-      if (undoList.length >= 10) {
-        undoList.splice(0, 1);
-      }
-      undoList.push(undoData);
-      console.log(undoList);
-      return;
-    },
     dragEnd(e) {
       if (this._isResizing) {
         this._isResizing = false;
@@ -395,6 +373,7 @@ export default {
         let TargetInFlag = isTargetInParent(this.$el, e);
         if (TargetInFlag) {
           //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
+          store.updatePresentData(this.threadIndex);
           e.stopPropagation();
         }
         //若没有嵌套在嵌套状态内的子状态，将嵌套状态变回为普通状态
@@ -405,16 +384,13 @@ export default {
         ) {
           this.nestToDefault(this.stateData);
         }
-        //store.stateData.stateAryStorage.push(stateAry)
         return false;
       }
 
       let TargetInFlag = isTargetInParent(this.$el, e);
       if (!TargetInFlag) {
-        //store.stateData.stateAryStorage.push(stateAry)
         return;
       }
-
       // 无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
       let x, y;
 
@@ -455,6 +431,7 @@ export default {
         setTimeout(() => {
           //从工具栏直接拖拽下来的状态块默认添加到线程框的最外面一层，需要在最外面一层进行删除
           stateAry.splice(dropStateIndex, 1);
+          store.updatePresentData(this.threadIndex);
         }, 10);
       } else {
         setTimeout(() => {
@@ -465,6 +442,7 @@ export default {
           );
         }, 10);
       }
+      store.focusCurrentThread(this.threadIndex);
       e.stopPropagation();
     },
     getStateParentCount(state) {
@@ -527,6 +505,7 @@ export default {
     dragInType(e, stateAry) {
       let theDragStateData;
       if (e.dataTransfer.getData("operate") === "addState") {
+        store.updateUndoData(this.threadIndex);
         let threadPosInfo = e.target.getBoundingClientRect();
         let data = {
           index: this.threadIndex,
@@ -537,6 +516,7 @@ export default {
         let stateDataToAdd = store.getDefaultStateCfg(data);
         stateAry.push(stateDataToAdd);
         theDragStateData = stateAry[stateAry.length - 1];
+        store.focusCurrentThread(this.threadIndex);
         e.stopPropagation();
       } else {
         theDragStateData = JSON.parse(
@@ -661,6 +641,7 @@ export default {
       this.$emit("hideMenus");
     },
     onResizeIconMousedown(e) {
+      store.updateUndoData(this.threadIndex);
       let stateId = this.$el.getAttribute("stateid");
       this.draggable = false;
       this._isResizing = true;

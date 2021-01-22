@@ -3,6 +3,8 @@ const SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn
 
 import dagre from 'dagre'
 import QBlock from './qblock.js'
+import { lineCfg } from "./graphCfg.js";
+const RANKSEP = lineCfg.rankSep
 var Util = {
     isDefined(a) {
         return !((a === '') || (a === null) || (typeof a === 'undefined'));
@@ -846,7 +848,7 @@ var Util = {
             rankdir: 'LR',
             align: 'UL',
             edgesep: 0,
-            ranksep: 70,
+            ranksep: RANKSEP,
         });
         g.setDefaultEdgeLabel(function () {
             return {};
@@ -864,12 +866,13 @@ var Util = {
                 width: QBlock.State.getStateWidth(state),
                 height: QBlock.State.getStateHeight(state)
             });
-
+            /*
             state.inputAry.forEach(line => {
                 let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId
                 })
                 let startState = store.getState(threadIndex, lineObj.startState.stateId)
+                
                 //处理可能存在的从循环状态内连接至循环状态外的连线，若存在这种连线，则将连线起始点模拟到与被连入状态处在同一层级的父状态上
                 if (startState.parent !== state.parent) {
                     while (startState.parent !== state.parent) {
@@ -883,13 +886,14 @@ var Util = {
                         label: line.lineId
                     })
                 }
-            })
+            })*/
 
             state.outputAry.forEach(line => {
                 let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId;
                 })
                 let endState = store.getState(threadIndex, lineObj.endState.stateId)
+                /*
                 if (endState.parent !== state.parent) {
                     //处理可能存在的从循环状态外连接至循环状态内的连线，若存在这种连线，则将连线结束点模拟到与被连入状态处在同一层级的父状态上
                     while (endState.parent !== state.parent) {
@@ -899,7 +903,7 @@ var Util = {
                             endState = store.getState(threadIndex, endState.parent)
                         }
                     }
-                }
+                }*/
                 // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
                 g.setEdge(state.stateId, endState.stateId, {
                     label: line.lineId
@@ -937,6 +941,7 @@ var Util = {
         });
     },
     testLayout(threadIndex, thread, lineAry) {
+        //处理在自动布局前被用户所调整过的连线
         let g = this.genGraphByLayer(threadIndex, thread, lineAry)
         dagre.layout(g); //布局分析
         this.setStateXYbyLayer(threadIndex, g, thread)

@@ -26,8 +26,6 @@
           : stateData.name
       }}
     </p>
-    <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
-    <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
     <div
       v-show="stateData.inputAry && stateData.inputAry.length"
       class="in event-count"
@@ -62,10 +60,14 @@
         </li>
       </ul>
     </div>
-    <div class="connect-point in"></div>
+    <div
+      class="connect-point in"
+      @mousedown.prevent="onConnectPointMousedown"
+    ></div>
     <div
       class="connect-point out"
       @mousedown.prevent="onConnectPointMousedown"
+      @mouseup="onMouseup"
     ></div>
   </div>
 </template>

@@ -6,7 +6,9 @@
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResize"
-    @mousemove="onResizingState"
+    @mousemove="resizingStateOrMoveLine"
+    @keyup.ctrl="handleShortcutKeys"
+    tabindex="0"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -39,7 +41,7 @@
           <div class="tools">
             <el-button plain icon="el-icon-aim" @click.stop="leftTopPosition"></el-button>
           </div>
-          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas" @click="updateActiveThread">
+          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas" @click="updateActiveThread" @mouseup="stopMovingLine">
             <state-wrap
               v-for="(stateItem, index) in thread.stateAry"
               :key="index"
@@ -75,6 +77,8 @@
             :lineType="line.type"
             :threadIndex="threadIndex"
             @updateActiveLine="updateActiveLine"
+            @updateMoveLineData="updateMoveLineData"
+            @stopMovingLine="stopMovingLine"
           />
         </g>
         <path-animation
@@ -118,7 +122,7 @@ const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
 const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
-
+const UNDO_REDO_LIMIT = lineCfg.undo_redo_limit;
 export default {
   name: "ThreadSvg",
   props: [
@@ -148,6 +152,7 @@ export default {
       activeLines: [],
       tempLineData: {
         type: "tempLine",
+        verticalOffset: 0,
         startState: null,
         endState: null,
         startPoint: {
@@ -164,8 +169,13 @@ export default {
       titleHeight: lineCfg.threadTitleHeight,
       moveVerticalImg: "./static/imgs/move-vertical.png",
       resizableImg: "./static/imgs/resizable.png",
+      moveLineData: {
+        startPoint: {
+          y: 0,
+        },
+        endPoint: {},
+      },
       moveData: {
-        stateIndex: 0,
         startPoint: {
           x: 0,
           y: 0,
@@ -184,25 +194,28 @@ export default {
       }
       return false;
     },
-    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态和线程框的尺寸时，不触发高亮线程框的事件
-    isNotMoving() {
+    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态，配置连线和线程框的尺寸时，不触发高亮线程框的事件
+    hasNotMovedInThread() {
       if (stateManage.hasDrawedLine) {
         stateManage.hasDrawedLine = false;
         return false;
       } else if (this.showVirtualBox) {
         this.showVirtualBox = false;
         return false;
-      } else if (stateManage.resizingState) {
-        stateManage.resizingState = false;
+      } else if (stateManage.hasResizedState) {
+        stateManage.hasResizedState = false;
         return false;
       } else if (stateManage.hasMovedCanvas) {
         stateManage.hasMovedCanvas = false;
+        return false;
+      } else if (stateManage.hasMovedLine) {
+        stateManage.hasMovedLine = false;
         return false;
       }
       return true;
     },
     updateActiveThread() {
-      if (this.isNotMoving()) {
+      if (this.hasNotMovedInThread()) {
         this.$emit("updateActiveThread", this.threadIndex);
       }
     },
@@ -280,7 +293,7 @@ export default {
         ];
         let activeLineDom = lineDom.getElementsByClassName("active");
         for (let i = 0; i < activeLineDom.length; i++) {
-          lineDom.appendChild(activeLineDom[i]);
+          lineDom.appendChild(activeLineDom[0]);
         }
       });
     },
@@ -313,7 +326,7 @@ export default {
         ];
         let activeLineDom = lineDom.getElementsByClassName("active");
         for (let i = 0; i < activeLineDom.length; i++) {
-          lineDom.appendChild(activeLineDom[i]);
+          lineDom.appendChild(activeLineDom[0]);
         }
       });
     },
@@ -381,6 +394,7 @@ export default {
       this._isResizingState = false;
       this._resizingWidth = null;
       this._resizingHeight = null;
+      store.updatePresentData(this.threadIndex);
     },
     //开始拖拽画布时，须记录状态原本的x坐标来计算状态在画布拖拽之后的位置
     startMovingCanvas(e) {
@@ -446,7 +460,6 @@ export default {
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
         if (e.buttons === 1) {
           //绘制临时的连接线
-          stateManage.isConnecting = true;
           stateManage.hasDrawedLine = true;
           this.showTempLine = true;
           let endPoint = this.getEndPoint(e);
@@ -458,20 +471,71 @@ export default {
         }
       }
     },
+    updateMoveLineData(data) {
+      if (data.startMovingLine) {
+        this._isMovingLine = true;
+        this._isResizingState = false;
+      }
+      Object.keys(data).forEach((key) => {
+        this.moveLineData[key] = data[key];
+      });
+    },
+    stopMovingLine() {
+      this._isMovingLine = false;
+      this._movingVerticalOffset = null;
+      store.updatePresentData(this.threadIndex);
+    },
     //监测线程框内的鼠标移动，改变状态的尺寸
-    onResizingState(e) {
-      if (!this._isResizingState) {
+    resizingStateOrMoveLine(e) {
+      if (!this._isResizingState && !this._isMovingLine) {
         return false;
       }
       stateManage.movingCanvas = false;
-      stateManage.resizingState = true;
-      this.updateMoveData({
-        endPoint: {
-          x: e.pageX,
-          y: e.pageY,
-        },
-      });
+      stateManage.hasMovedLine = true;
+      if (this.moveData.operate === "resize-state") {
+        this.updateMoveData({
+          endPoint: {
+            x: e.pageX,
+            y: e.pageY,
+          },
+        });
+      } else {
+        this.updateMoveLineData({
+          endPoint: {
+            y: e.pageY,
+          },
+        });
+      }
       let moveData = this.moveData;
+      let moveLineData = this.moveLineData;
+      if (this._isResizingState) {
+        this._isMovingLine = false;
+        stateManage.hasResizedState = true;
+        this.resizingState(moveData);
+      } else if (this._isMovingLine) {
+        this._isResizingState = false;
+        stateManage.hasMovedLine = true;
+        this.movingLine(moveLineData);
+      }
+    },
+    //调节连线，根据鼠标位移的距离更新line.verticalOffset，以供重绘连线
+    movingLine(moveLineData) {
+      let offsetY = moveLineData.endPoint.y - moveLineData.startPoint.y;
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      let lineData;
+      lineAry.forEach((line) => {
+        if (line.lineId === moveLineData.lineId) {
+          lineData = line;
+        }
+      });
+      if (!this._movingVerticalOffset) {
+        this._movingVerticalOffset = lineData.verticalOffset;
+      }
+      let lineVerticalOffset = this._movingVerticalOffset + offsetY;
+      lineData.verticalOffset = lineVerticalOffset;
+    },
+    //改变状态的尺寸，嵌套状态内部的状态的尺寸不得大于其父状态
+    resizingState(moveData) {
       let resizingState = store.getState(this.threadIndex, moveData.stateId);
       if (!this._resizingWidth) {
         this._resizingWidth = Util.translatePX2Num(resizingState.width);
@@ -515,20 +579,14 @@ export default {
     titleStyle() {
       return `height: ${this.titleHeight}px;`;
     },
-    /* generateDefaultPos(index) {
-      const gap = 35;
-      return `translate(50, ${(300 + gap) * (index - 1)})`;
-    },
-    generateStatePos(index) {
-      const gapX = 60;
-      return `translate(${(90 + gapX) * (index - 1)}, 40)`;
-    }, */
     updateTempLineData(lineData) {
       Object.keys(lineData).forEach((key) => {
         this.tempLineData[key] = lineData[key];
       });
     },
     drawConnectLine(e) {
+      store.updateUndoData(this.threadIndex);
+      store.focusCurrentThread(this.threadIndex);
       let endStateId = this.getEndState(e).stateId;
       let lineData = this.copy(this.tempLineData);
       let startState = store.getState(
@@ -540,10 +598,12 @@ export default {
       lineData.lineId = window.genId("line");
       lineData.desc = "";
       lineData.type = "default";
+      lineData.verticalOffset = 0;
       store.addLine({
         threadIndex: this.threadIndex,
         lineData: lineData,
       });
+      store.updatePresentData(this.threadIndex);
       //需要通过lineId来寻找可能需要删除的连线
       return lineData.lineId;
     },
@@ -650,6 +710,11 @@ export default {
           } else if (startState.parent !== endState.parent) {
             this.showTempLine = false;
             return;
+          } else if (
+            endState &&
+            endStateId === this.tempLineData.startState.stateId
+          ) {
+            return;
           } else {
             //TODO: 添加循环组件内部的连线
             let drawingLineId = this.drawConnectLine(e);
@@ -658,6 +723,7 @@ export default {
               endStateId,
               this.tempLineData.startState.stateId
             );
+            store.updatePresentData(this.threadIndex);
           }
         }
         this.showTempLine = false;
@@ -982,35 +1048,13 @@ export default {
         }
       });
     },
-    /*
-    getNearestLine(state){
-      let lineDom = document.getElementsByClassName("lines")[
-          this.threadIndex
-      ]
-      let connectLineDom = lineDom.getElementsByClassName("connect-line")
-      let linePosition = []
-      for (let i=0; i<connectLineDom.length; i++){
-        linePosition.push(connectLineDom[i].getBoundingClientRect()[0])
-      }
-      return linePosition
-    },*/
-    updateUndoData() {
-      let undoData = {
-        stateAry: store.stateData.threadAry[this.threadIndex].stateAry,
-        lineAry: store.stateData.threadAry[this.threadIndex].lineAry,
-      };
-      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
-      if (undoList.length >= 10) {
-        undoList.splice(0, 1);
-      }
-      undoList.push(undoData);
-
-      return;
-    },
     drop(e) {
       //TODO：需要处理不允许用户跨线程拖拽状态块的问题
       if (e.dataTransfer.getData("operate") === "addState") {
+        store.updateUndoData(this.threadIndex);
         this.addStateToThread(e);
+        store.focusCurrentThread(this.threadIndex);
+        store.updatePresentData(this.threadIndex);
       } else {
         let theDragStateData = JSON.parse(
           e.dataTransfer.getData("theDragStateData")
@@ -1033,7 +1077,6 @@ export default {
           this.thread
         );
         if (stateInThreadFlag) {
-          this.updateUndoData();
           return false;
         }
         //无论是从外层拖拽状态到循环组件内还是循环组件内的状态块移动，都应该将放开时的位置和当前循环块的位置做一次计算，得到目标位置
@@ -1045,11 +1088,10 @@ export default {
           topGap -
           this.titleHeight -
           1;
-        theDragStateData.x = x /* - statePageVue._dragData.mousedownPoint.x */;
-        theDragStateData.y = y /*  - statePageVue._dragData.mousedownPoint.y */;
+        theDragStateData.x = x;
+        theDragStateData.y = y;
 
         theDragStateData.parent = null;
-        //this.setDragStateLineType(theDragStateData);
         statePageVue.threadAry[this.threadIndex].stateAry.push(
           theDragStateData
         );
@@ -1065,7 +1107,8 @@ export default {
         setTimeout(() => {
           dragTargetParent.splice(statePageVue._dragData.indexAry.pop(), 1);
         }, 10);
-        //store.stateData.stateAryStorage.push(stateAry)
+        store.updatePresentData(this.threadIndex);
+        store.focusCurrentThread(this.threadIndex);
       }
     },
     getStateParentCount(state) {
@@ -1094,25 +1137,6 @@ export default {
       } else if (endStateParentCount > startStateParentCount) {
         return "loopIn";
       }
-    },
-    //对状态进行drop时设置状态的连线样式
-    setDragStateLineType(dragData) {
-      let lineAry = store.stateData.threadAry[0].lineAry;
-      let stateInputAry = dragData.inputAry;
-      let stateOutputAry = dragData.outputAry;
-      stateInputAry.forEach((line) => {
-        let lineObj = lineAry.find((item) => {
-          return item.lineId === line.lineId;
-        });
-        lineObj.type = this.getDragStateLineType(lineObj, dragData);
-      });
-      stateOutputAry.forEach((line) => {
-        let lineObj = lineAry.find((item) => {
-          return item.lineId === line.lineId;
-        });
-        lineObj.type = this.getDragStateLineType(lineObj, dragData);
-      });
-      return;
     },
     //将从工具栏上拖拽下来的状态添加进当前线程内
     addStateToThread(e) {
@@ -1190,12 +1214,6 @@ export default {
         }
       }
     },
-
-    createLinePath(line) {},
-    /* reUpdateLinePath(line, threadIndex){
-      this.updateLinePath(line, line.startState, line.endState, threadIndex);
-    }, */
-
     /**
      * 状态移动后更新与状态相连的连线的起始点与结束点，传入LineComp进行渲染
      */
@@ -1234,23 +1252,11 @@ export default {
       });
       this._lastHeight = this.thread.height;
     },
-    isSameStatesCopied(prevCopiedStates, currentCopiedStates) {
-      for (let i = 0; i < prevCopiedStates.length; i++) {
-        if (prevCopiedStates[i].stateId !== currentCopiedStates[i].stateId) {
-          return false;
-        }
-      }
-      return true;
-    },
     //复制被选中的状态，开始与结束状态不可被复制
     copyState() {
       let currentActiveStates = Tools.deepCopy(this.activeStates);
-      if (!this._CopiedStates) {
-        this._CopiedStates = currentActiveStates;
-      } else if (
-        !this.isSameStatesCopied(this._CopiedStates, currentActiveStates)
-      ) {
-        this._offsetCount = 1;
+      if (!this._copiedStates) {
+        this._copiedStates = currentActiveStates;
       }
       for (let i = 0; i < currentActiveStates.length; i++) {
         if (
@@ -1268,7 +1274,7 @@ export default {
         }
       }
       store.stateData.copiedStates = currentActiveStates;
-      this._CopiedStates = currentActiveStates;
+      this._copiedStates = currentActiveStates;
     },
     genCopiedStateChildren(parent, state) {
       let newChildrenStateData = {
@@ -1306,8 +1312,9 @@ export default {
       }
       let newStateData = {
         stateType: state.stateType,
-        x: state.x + Util.translatePX2Num(state.width) * this._offsetCount,
-        y: state.y + Util.translatePX2Num(state.height) * this._offsetCount,
+        x: state.x + Util.translatePX2Num(state.width) + this._offsetCount * 40,
+        y:
+          state.y + Util.translatePX2Num(state.height) + this._offsetCount * 40,
       };
       let copiedStateChildren = state.children;
       let newState = store.getDefaultStateCfg(newStateData);
@@ -1320,7 +1327,8 @@ export default {
     },
     //粘贴被复制的状态
     pasteState() {
-      let copiedStateAry = this._CopiedStates;
+      store.updateUndoData(this.threadIndex);
+      let copiedStateAry = this._copiedStates;
       copiedStateAry.forEach((state, timeOutIndex) => {
         //由于stateId的计算机制是根据当前时间来的，复制完状态后需要间隔一段时间再复制同层的别的状态
         setTimeout(() => {
@@ -1330,69 +1338,70 @@ export default {
             this.pasteStateChildren(newState, state.children);
           }, 10 * (timeOutIndex + 1));
           store.stateData.threadAry[this.threadIndex].stateAry.push(newState);
+          store.updatePresentData(this.threadIndex);
           this._offsetCount += 1;
         }, 10 * (timeOutIndex + 1));
       });
     },
-    //处理deepCopy后状态的parent不正确的问题
-    handleNullParent(stateAry) {
-      stateAry.forEach((state) => {
-        if (typeof state.parent !== "string") {
-          state.parent = null;
-        }
-      });
-      return stateAry;
-    },
     //撤销上一个操作
-    undo() {},
+    undo() {
+      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
+      let redoList = store.stateData.threadAry[this.threadIndex].redoStatesList;
+      if (undoList.length === 0) {
+        return;
+      }
+      redoList.push(store.stateData.threadAry[this.threadIndex].presentState);
+      store.stateData.threadAry[this.threadIndex].presentState = undoList.pop();
+      store.stateData.threadAry[this.threadIndex].lineAry =
+        store.stateData.threadAry[this.threadIndex].presentState.lineAry;
+      store.stateData.threadAry[this.threadIndex].stateAry =
+        store.stateData.threadAry[this.threadIndex].presentState.stateAry;
+      store.stateData.threadAry[this.threadIndex].hasUndone = true;
+    },
     //恢复上一个操作
-    redo() {},
+    redo() {
+      let undoList = store.stateData.threadAry[this.threadIndex].undoStatesList;
+      let redoList = store.stateData.threadAry[this.threadIndex].redoStatesList;
+      if (redoList.length === 0) {
+        return;
+      }
+      undoList.push(store.stateData.threadAry[this.threadIndex].presentState);
+      store.stateData.threadAry[this.threadIndex].presentState = redoList.pop();
+      store.stateData.threadAry[this.threadIndex].lineAry =
+        store.stateData.threadAry[this.threadIndex].presentState.lineAry;
+      store.stateData.threadAry[this.threadIndex].stateAry =
+        store.stateData.threadAry[this.threadIndex].presentState.stateAry;
+    },
+    handleShortcutKeys(e) {
+      switch (e.keyCode) {
+        case 67:
+          this.copyState();
+          break;
+        case 86:
+          this.pasteState();
+          break;
+        case 89:
+          this.redo();
+          break;
+        case 90:
+          this.undo();
+          break;
+        default:
+      }
+    },
   },
 
   mounted() {
     this._offsetCount = 1;
-    this._prevCopiedStates = null;
     var _this = this;
     let el = this.$el;
     var elm = el.querySelector("#test");
     if (elm) {
       this.stateBlock = new PlainDraggable(elm);
     }
-    //TODO：实现撤销恢复
-    let initStateAry = this.handleNullParent(
-      Tools.deepCopy(store.stateData.threadAry[this.threadIndex].stateAry)
-    );
-    let initLineAry = store.stateData.threadAry[this.threadIndex].lineAry;
-    let initData = {
-      stateAry: initStateAry,
-      lineAry: initLineAry,
-    };
+    //每次重新加载组建时初始化用于恢复和撤销对状态图的操作的列表
     store.stateData.threadAry[this.threadIndex].undoStatesList = [];
-    store.stateData.threadAry[this.threadIndex].undoStatesList.push(initData);
-    console.log(store.stateData.threadAry[this.threadIndex].undoStatesList);
-    /* var states = el.getElementsByClassName('state-div');
-        var lineOption = {
-            color: '#aaaaaa',
-            size: 2,
-            startSocket: 'right',
-            endSocket: 'left',
-            path: 'grid'
-        }
-        this.line = new LeaderLine(states[0], states[1], lineOption);
-        this.line2 =  new LeaderLine(states[0], states[2], lineOption); */
-    document.onkeyup = function (e) {
-      let key = window.event.keyCode;
-      e.preventDefault();
-      if (key === 67 && event.ctrlKey) {
-        _this.copyState();
-      } else if (key === 86 && event.ctrlKey) {
-        _this.pasteState();
-      } else if (key === 89 && event.ctrlKey) {
-        console.log("ctrl+y");
-      } else if (key === 90 && event.ctrlKey) {
-        console.log("ctrl+z");
-      }
-    };
+    store.stateData.threadAry[this.threadIndex].redoStatesList = [];
   },
   created() {},
   computed: {
@@ -1439,6 +1448,9 @@ div.thread {
   // left: 50%;
   // transform: translateX(-50%);
   margin: 25px;
+  &:focus {
+    outline: none;
+  }
   foreignObject {
     // border: 1px solid #00cd9a;
     border: 1px solid #487afe;

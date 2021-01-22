@@ -4,8 +4,10 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import Element from 'element-ui';
+import Tools from "@/Tools.js";
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
+const UNDO_REDO_LIMIT = 10//撤销与恢复的最大限制步数
 Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.prototype.axios = axios;
 
@@ -63,6 +65,8 @@ window.store = {
         lineAry: [],
         undoStatesList:[],
         redoStatesList:[],
+        presentState:{},
+        hasUndone: false,
         //传入的status必须为operating, pausing, stopping这三者中的一个
         runningStatus: ''
       },
@@ -238,7 +242,53 @@ window.store = {
       return flag
     });
     return state
-  }
+  },
+  //更新用于状态图撤销的数据
+  updateUndoData(threadIndex) {
+    let undoData = {
+      stateAry: this.handleNullParent(
+        Tools.deepCopy(this.stateData.threadAry[threadIndex].stateAry)
+      ),
+      lineAry: Tools.deepCopy(
+        this.stateData.threadAry[threadIndex].lineAry
+      ),
+    };
+    //若用户在撤销后进行了新的操作，则清空先前的redoStatesList
+    if(this.stateData.threadAry[threadIndex].hasUndone === true){
+      this.stateData.threadAry[threadIndex].redoStatesList = []
+    }
+    this.stateData.threadAry[threadIndex].undoStatesList.push(undoData);
+    if (this.stateData.threadAry[threadIndex].undoStatesList.length > UNDO_REDO_LIMIT) {
+      this.stateData.threadAry[threadIndex].undoStatesList.splice(0, 1);
+    }
+    return;
+  },
+  //更新用于撤销恢复的当前状态图的数据
+  updatePresentData(threadIndex){
+    let presentData = {
+      stateAry: this.handleNullParent(
+        Tools.deepCopy(this.stateData.threadAry[threadIndex].stateAry)
+      ),
+      lineAry: Tools.deepCopy(this.stateData.threadAry[threadIndex].lineAry)
+    }
+    this.stateData.threadAry[threadIndex].presentState = presentData
+  },
+  //处理deepCopy后状态的parent不正确的问题
+  handleNullParent(stateAry) {
+    stateAry.forEach((state) => {
+      if (typeof state.parent !== "string") {
+        state.parent = null;
+      }
+    });
+    return stateAry;
+  },
+  //在对当前线程框内的状态进行拖拽连线，以及从工具栏内拖拽状态到当前线程框时，自动focus该线程框，以供使用快捷键
+  focusCurrentThread(threadIndex) {
+    let currentThreadDom = document.getElementsByClassName("thread")[
+      threadIndex
+    ];
+    currentThreadDom.focus();
+  },
 }
 
 router.beforeEach((to, from, next) => {

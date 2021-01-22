@@ -12,8 +12,6 @@
     @click.stop="selectStateOrHideMenu()"
   >
     <div :class="runningAnimation" :v-show="runningAnimation"></div>
-    <!-- <div v-show="stateData.inCount > 1" class="in event-count" >{{stateData.inputAry.length}}</div> -->
-    <!-- <div v-show="stateData.outCount > 1" class="out event-count">{{stateData.outCount}}</div> -->
     <el-input
       v-if="showInput"
       :class="['state-name-input']"
@@ -63,10 +61,13 @@
         </li>
       </ul>
     </div>
-    <div class="connect-point in"></div>
+    <div
+      class="connect-point in"
+      @mousedown.prevent="onConnectPointMousedown"
+    ></div>
     <div
       class="connect-point out"
-      @mousedown="onConnectPointMousedown"
+      @mousedown.prevent="onConnectPointMousedown"
       @mouseup="onMouseup"
     ></div>
   </div>
