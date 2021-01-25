@@ -68,7 +68,6 @@
     <div
       class="connect-point out"
       @mousedown.prevent="onConnectPointMousedown"
-      @mouseup="onMouseup"
     ></div>
   </div>
 </template>

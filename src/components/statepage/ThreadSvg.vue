@@ -41,7 +41,13 @@
           <div class="tools">
             <el-button plain icon="el-icon-aim" @click.stop="leftTopPosition"></el-button>
           </div>
-          <div class="thread-body" @mousedown="startMovingCanvas" @mousemove="onMovingCanvas" @click="updateActiveThread" @mouseup="stopMovingLine">
+          <div class="thread-body" 
+               @mousedown="startMovingCanvas" 
+               @mousemove="onMovingCanvas" 
+               @click="updateActiveThread" 
+               @mouseup="stopMovingLine">
+            <div class="scrollbar-right"></div>
+            <div class="scrollbar-bottom"></div>
             <state-wrap
               v-for="(stateItem, index) in thread.stateAry"
               :key="index"
@@ -52,12 +58,14 @@
               :activeStates="activeStates"
               :showDeleteStateMenu="showDeleteStateMenu"
               :showLineContextMenu="showLineContextMenu"
+              :startMovingLine="moveLineData.startMovingLine"
               @updateStateData="updateStateData"
               @updateTempLineData="updateTempLineData"
               @updateMoveData="updateMoveData"
               @updateActiveState="updateActiveState"
               @stopMoving="stopMoving"
               @hideMenus="hideMenus"
+              @stopMovingLine="stopMovingLine"
             />
           </div>
         </foreignObject>
@@ -170,6 +178,7 @@ export default {
       moveVerticalImg: "./static/imgs/move-vertical.png",
       resizableImg: "./static/imgs/resizable.png",
       moveLineData: {
+        startMovingLine: false,
         startPoint: {
           y: 0,
         },
@@ -194,22 +203,19 @@ export default {
       }
       return false;
     },
-    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态，配置连线和线程框的尺寸时，不触发高亮线程框的事件
+    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态和线程框的尺寸时，不触发高亮线程框的事件
     hasNotMovedInThread() {
       if (stateManage.hasDrawedLine) {
         stateManage.hasDrawedLine = false;
         return false;
-      } else if (this.showVirtualBox) {
-        this.showVirtualBox = false;
+      } else if (stateManage.hasResizedThread) {
+        stateManage.hasResizedThread = false;
         return false;
       } else if (stateManage.hasResizedState) {
         stateManage.hasResizedState = false;
         return false;
       } else if (stateManage.hasMovedCanvas) {
         stateManage.hasMovedCanvas = false;
-        return false;
-      } else if (stateManage.hasMovedLine) {
-        stateManage.hasMovedLine = false;
         return false;
       }
       return true;
@@ -219,6 +225,7 @@ export default {
         this.$emit("updateActiveThread", this.threadIndex);
       }
     },
+    //获取当前状态图内最靠左的状态，以供状态图向左上角对齐使用
     getLeftMostState() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
       let smallestStateX = 1000000;
@@ -232,6 +239,7 @@ export default {
       let leftMostState = store.getState(this.threadIndex, smallestStateXId);
       return leftMostState;
     },
+    //获取当前状态图内最靠上的状态，以供状态图向左上角对齐使用
     getUpMostState() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
       let smallestStateY = 1000000;
@@ -474,13 +482,13 @@ export default {
     updateMoveLineData(data) {
       if (data.startMovingLine) {
         this._isMovingLine = true;
-        this._isResizingState = false;
       }
       Object.keys(data).forEach((key) => {
         this.moveLineData[key] = data[key];
       });
     },
     stopMovingLine() {
+      this.moveLineData.startMovingLine = false;
       this._isMovingLine = false;
       this._movingVerticalOffset = null;
       store.updatePresentData(this.threadIndex);
@@ -491,8 +499,7 @@ export default {
         return false;
       }
       stateManage.movingCanvas = false;
-      stateManage.hasMovedLine = true;
-      if (this.moveData.operate === "resize-state") {
+      if (this.moveLineData.startMovingLine !== true) {
         this.updateMoveData({
           endPoint: {
             x: e.pageX,
@@ -509,12 +516,9 @@ export default {
       let moveData = this.moveData;
       let moveLineData = this.moveLineData;
       if (this._isResizingState) {
-        this._isMovingLine = false;
         stateManage.hasResizedState = true;
         this.resizingState(moveData);
       } else if (this._isMovingLine) {
-        this._isResizingState = false;
-        stateManage.hasMovedLine = true;
         this.movingLine(moveLineData);
       }
     },
@@ -1050,6 +1054,11 @@ export default {
     },
     drop(e) {
       //TODO：需要处理不允许用户跨线程拖拽状态块的问题
+      if (this.moveLineData.startMovingLine) {
+        this.stopMovingLine();
+        this.moveLineData.startMovingLine = false;
+        return false;
+      }
       if (e.dataTransfer.getData("operate") === "addState") {
         store.updateUndoData(this.threadIndex);
         this.addStateToThread(e);
@@ -1230,6 +1239,7 @@ export default {
 
     startResize(e) {
       this.showVirtualBox = true;
+      stateManage.hasResizedThread = true;
       stateManage.movingCanvas = false;
       EventObj.$emit("operateChange", {
         operate: "resize-thread",
@@ -1439,6 +1449,9 @@ export default {
 </script>
 
 <style lang="less" scoped>
+* {
+  user-select: none;
+}
 div.thread {
   position: relative;
   display: inline-block;
@@ -1534,6 +1547,23 @@ h4.title {
   position: relative;
   height: calc(100% - 35px);
   /* border: 1px solid #baed00; */
+}
+/**TODO: 后续需要实现状态图内的滚动条功能 */
+.scrollbar-right {
+  height: 166px;
+  width: 13px;
+  border-radius: 13px;
+  background: rgba(224, 224, 224, 0.37);
+  position: absolute;
+  right: 3px;
+}
+.scrollbar-bottom {
+  height: 13px;
+  width: 312px;
+  border-radius: 13px;
+  background: rgba(224, 224, 224, 0.37);
+  position: absolute;
+  bottom: 3px;
 }
 .resize-icon {
   position: absolute;

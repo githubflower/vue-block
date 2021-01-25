@@ -151,6 +151,9 @@ var Util = {
                 triggerEventDom = this.createEl("block");
                 triggerEventDom.setAttribute("type", "state_trigger_event");
                 triggerEventDom.setAttribute("id", outputItem.lineId);
+                if (outputItem.lineId.indexOf('line') !== 0){
+                    debugger;
+                }
                 // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
                 let triggerEventStatement;
@@ -524,6 +527,7 @@ var Util = {
         const STATE_BLOCK = 'state_opr';
         if (stateDom && stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
             let stateId = Util.getEntityStateId(stateDom);
+            let existThisStateObj = false;
             // 这个stateId有可能已经存在 看一下xml数据就能明白了
             let stateObj = stateAry.find(item => {
                 return item.stateId === stateId;
@@ -548,8 +552,19 @@ var Util = {
                     parent: null,
                     nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
                 }
+                
+            }else{
+                //如果stateAry里面已经有了这个stateObj且stateObj.outputAry非空  则说明分析过了，不用再调用findOutputLinesOfStateDom进行分析
+                /* if (!stateObj.outputAry.length){
+                    findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
+                }
+                if (!stateObj.inputAry.length) {
+                    findInputLinesOfStateDom(stateDom, stateObj.inputAry);
+                }    */             
+                
             }
-
+            findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
+            findInputLinesOfStateDom(stateDom, stateObj.inputAry);
 
             function dom2State(dom) {
                 let stateId = dom.getAttribute('id');
@@ -580,7 +595,9 @@ var Util = {
                                 startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                                 endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
                             };
-
+                            if (newLine.lineId.indexOf('line') !== 0) {
+                                debugger;
+                            }
                             let existLineOfOutputLines = outputLines.find(item => {
                                 return item.lineId === lineDom.getAttribute('id');
                             })
@@ -589,7 +606,7 @@ var Util = {
                             }
 
                             let existLineOfLineAry = lineAry.find(item => {
-                                return item.lineId === lineDom.getAttribute('id')
+                                return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId) )
                             })
                             if (!existLineOfLineAry) {
                                 lineAry.push(newLine);
@@ -612,6 +629,9 @@ var Util = {
                         startState: dom2State(Util.getPrevStateDom(lineDom)),
                         endState: dom2State(Util.getEndStateDomOfLine(lineDom))
                     };
+                    if(newLine.lineId.indexOf('line') !== 0){
+                        debugger;
+                    }
 
                     let existLineOfInputLines = inputLines.find(item => {
                         return item.lineId === newLine.lineId;
@@ -621,7 +641,7 @@ var Util = {
                     }
 
                     let existLineOfLineAry = lineAry.find(item => {
-                        return item.lineId === newLine.lineId;
+                        return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                     })
                     if (!existLineOfLineAry) {
                         lineAry.push(newLine);
@@ -629,9 +649,6 @@ var Util = {
                 }
                 return inputLines;
             }
-
-            findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
-            findInputLinesOfStateDom(stateDom, stateObj.inputAry);
 
             let existStateInStateAry = stateAry.find(state => {
                 return state.stateId === stateObj.stateId;

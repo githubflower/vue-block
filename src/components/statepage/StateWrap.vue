@@ -126,6 +126,7 @@ export default {
     "activeStates",
     "showDeleteStateMenu",
     "showLineContextMenu",
+    "startMovingLine",
   ],
   components: {
     LoopDiv,
@@ -216,11 +217,15 @@ export default {
     onStateMouseup() {
       // console.info(this.stateData.name + ' --- ' + this.stateData.stateId);
       //this._isResizing = false;
+      this.$emit("stopMovingLine");
     },
     onDrag(e) {
       //TODO:拖动速度过快时会导致endInfo记录的坐标错误，被拖动的状态块会飞出线程框
       if (this._isResizing) {
         this.$emit("stopMoving");
+        return false;
+      }
+      if (this.startMovingLine) {
         return false;
       }
       this._endInfo = {
@@ -232,7 +237,6 @@ export default {
     },
 
     dragStart(e) {
-      store.updateUndoData(this.threadIndex);
       let movingState = store.getState(
         this.threadIndex,
         this.stateData.stateId
@@ -240,10 +244,16 @@ export default {
       if (this._isResizing) {
         return false;
       }
+      //若当前正在调整连线，则不触发drag
+      if (this.startMovingLine) {
+        e.preventDefault();
+        return false;
+      }
       if (this.operate === IS_CONNECTING) {
         e.preventDefault();
         return false;
       }
+      store.updateUndoData(this.threadIndex);
       e.dataTransfer.effectAllowed = "copyMove";
 
       let leftGap;
@@ -308,6 +318,9 @@ export default {
     dragEnd(e) {
       if (this._isResizing) {
         this._isResizing = false;
+        return false;
+      }
+      if (this.startMovingLine) {
         return false;
       }
       this.isDragging = false;
@@ -550,6 +563,9 @@ export default {
     onDragLeave(e) {
       //说明当前不是在进行状态的操作，此时不需要对此事件作出响应
       if (!this._startInfo) {
+        return;
+      }
+      if (this.startMovingLine) {
         return;
       }
 

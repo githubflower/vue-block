@@ -9,12 +9,15 @@ var _dagre = _interopRequireDefault(require("dagre"));
 
 var _qblock = _interopRequireDefault(require("./qblock.js"));
 
+var _graphCfg = require("./graphCfg.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
 var NAME_SPACE = "https://developers.google.com/blockly/xml";
 var SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+var RANKSEP = _graphCfg.lineCfg.rankSep;
 var Util = {
   isDefined: function isDefined(a) {
     return !(a === '' || a === null || typeof a === 'undefined');
@@ -56,9 +59,10 @@ var Util = {
   /**
    * 创建状态定义块Dom
    * @param {*} state 
-   * @param {*} index 
+   * @param {Number} index 
+   * @param {*} thread 
    */
-  createStateDefBlock: function createStateDefBlock(state, index) {
+  createStateDefBlock: function createStateDefBlock(state, index, thread) {
     var valueDom = this.createEl('value');
     valueDom.setAttribute('name', 'ADD' + index);
     var stateDom = this.createEl('block');
@@ -68,7 +72,20 @@ var Util = {
       name: 'NAME',
       value: state.name
     });
-    stateDom.appendChild(fieldDom);
+    stateDom.appendChild(fieldDom); //如果children不为空则说明是嵌套状态，此时需要将子状态逻辑放到“状态定义块”内部
+
+    if (state.children && state.children.length) {
+      //找到第一个子状态（inputAry为空）
+      var startChild = state.children.find(function (item) {
+        return !item.inputAry || item.inputAry.length === 0;
+      });
+      var childrenDom = Util.state2dom(startChild, thread);
+      var statementDom = this.createEl("statement");
+      statementDom.setAttribute("name", 'STACK');
+      statementDom.appendChild(childrenDom);
+      stateDom.appendChild(statementDom); // valueDom.appendChild(childrenDom);
+    }
+
     valueDom.appendChild(stateDom);
     return valueDom;
   },
@@ -108,9 +125,10 @@ var Util = {
         });
 
         if (line) {
-          var _state = thread.stateAry.find(function (item) {
-            return item.stateId === line.endState.stateId;
-          });
+          /* let state = thread.stateAry.find((item) => {
+              return item.stateId === line.endState.stateId;
+          }); */
+          var _state = store.getStateImplement(line.endState.stateId, thread.stateAry);
 
           if (_state) {
             outputStateDom.appendChild(Util.state2dom(_state, thread));
@@ -156,7 +174,12 @@ var Util = {
 
         triggerEventDom = _this2.createEl("block");
         triggerEventDom.setAttribute("type", "state_trigger_event");
-        triggerEventDom.setAttribute("id", outputItem.lineId); // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
+        triggerEventDom.setAttribute("id", outputItem.lineId);
+
+        if (outputItem.lineId.indexOf('line') !== 0) {
+          debugger;
+        } // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
+
 
         var triggerEventStatement;
         triggerEventStatement = _this2.createEl("statement");
@@ -170,7 +193,7 @@ var Util = {
         });
 
         if (line) {
-          triggerEventDom.setAttribute("d", line.d);
+          Util.saveLineData(triggerEventDom, line);
 
           if (line.desc) {
             var commentDom = _this2.createCommentDom({
@@ -180,13 +203,10 @@ var Util = {
             triggerEventDom.appendChild(commentDom);
           }
 
-          var _state2 = thread.stateAry.find(function (item) {
-            return item.stateId === line.endState.stateId;
-          });
+          var _state2 = store.getStateImplement(line.endState.stateId, thread.stateAry);
 
           if (_state2) {
-            triggerEventDom.setAttribute("end_state", JSON.stringify(_state2)); // TODO 按需简化存储的end_state数据
-
+            // triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
             triggerEventStatement.appendChild(Util.state2dom(_state2, thread));
           } else {
             console.error("data error -^- ");
@@ -228,6 +248,13 @@ var Util = {
     el.setAttribute("sx", state.x);
     el.setAttribute("sy", state.y);
   },
+  saveStateWidthHeight: function saveStateWidthHeight(el, state) {
+    el.setAttribute("s_width", state.width);
+    el.setAttribute("s_height", state.height);
+  },
+  saveStateMode: function saveStateMode(el, state) {
+    el.setAttribute("mode", state.mode);
+  },
 
   /**
    * 保存状态块的数据到Dom中
@@ -235,15 +262,15 @@ var Util = {
    * @param {*} state 当前操作的状态
    */
   saveStateBlockDataInDom: function saveStateBlockDataInDom(el, state) {
+    console.log(state);
+
     switch (state.stateType) {
       case 'stateDiv':
         //状态执行
         this.saveStateXY(el, state);
+        this.saveStateWidthHeight(el, state);
+        this.saveStateMode(el, state);
         break;
-
-      case 'state_trigger_event':
-        //连线
-        this.saveLineData(el, state);
 
       default:
         break;
@@ -256,9 +283,7 @@ var Util = {
    * @param {*} state 当前操作的状态
    */
   saveLineData: function saveLineData(el, line) {
-    el.setAttribute("d", line.d);
-    el.setAttribute("start_state", JSON.stringify(line.startState));
-    el.setAttribute("end_state", JSON.stringify(line.startState));
+    el.setAttribute("s_type", line.type);
   },
 
   /**
@@ -267,8 +292,7 @@ var Util = {
    * @param {*} threadData 
    */
   state2dom: function state2dom(rootState, threadData) {
-    var rootEl = this.createEl("block");
-    console.log(rootState.stateId + " --- " + rootState.name + " --- " + rootState.stateType); // rootEl.setAttribute("id", rootState.stateId);
+    var rootEl = this.createEl("block"); // rootEl.setAttribute("id", rootState.stateId);
 
     rootEl.setAttribute("type", this.genBlockType(rootState.stateType));
     this.saveStateBlockDataInDom(rootEl, rootState);
@@ -497,7 +521,7 @@ var Util = {
       mutationDom.setAttribute('items', thread.stateAry.length);
       listsDom.appendChild(mutationDom);
       thread.stateAry.forEach(function (state, i) {
-        var stateDefBlock = Util.createStateDefBlock(state, i);
+        var stateDefBlock = Util.createStateDefBlock(state, i, thread);
         listsDom.appendChild(stateDefBlock); // blocklyXml.appendChild(stateDefBlock);
       });
       var statesDom = Util.state2dom(firstState, thread);
@@ -535,99 +559,134 @@ var Util = {
       xmlDom = new DOMParser().parseFromString(xmlDom, 'text/xml');
     }
 
-    var STATE_BLOCK = 'state_opr';
+    var stateLogicDom = Util.getProceduresDefDom(xmlDom);
+    var listStateDom = Util.getListStateDom(xmlDom);
     var stateAry = []; //所有的状态数据集合
 
     var lineAry = []; //所有的连线数据集合
 
-    function extractStateAndLine(stateDom) {
-      /* <block type="state_opr" id="0eRjWo`*LW!O%5)$3!bj" sx="394" sy="201">
-          <field name="field_state" id="state-1607658086399">状态描述0</field>
-      </block> */
-      if (stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
-        var dom2State = function dom2State(dom) {
-          var stateId = dom.getAttribute('id');
+    Util.extractStateAndLine(stateLogicDom, stateAry, lineAry);
+    Util.updateChildrenOfState(stateAry, listStateDom, lineAry);
+    return {
+      stateAry: stateAry,
+      lineAry: lineAry
+    };
+  },
+  extractStateAndLine: function extractStateAndLine(stateDom, stateAry, lineAry) {
+    /* <block type="state_opr" id="0eRjWo`*LW!O%5)$3!bj" sx="394" sy="201">
+        <field name="field_state" id="state-1607658086399">状态描述0</field>
+    </block> */
+    var STATE_BLOCK = 'state_opr';
 
-          if (dom.getAttribute('type') === STATE_BLOCK) {
-            stateId = Util.getEntityStateId(dom);
-          }
+    if (stateDom && stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
+      var dom2State = function dom2State(dom) {
+        var stateId = dom.getAttribute('id');
 
-          return {
-            stateId: stateId,
-            stateType: STATE_BLOCK
-          };
+        if (dom.getAttribute('type') === STATE_BLOCK) {
+          stateId = Util.getEntityStateId(dom);
+        }
+
+        return {
+          stateId: stateId,
+          stateType: STATE_BLOCK
         };
+      };
 
-        var findOutputLinesOfStateDom = function findOutputLinesOfStateDom(stateDom, outputLines) {
-          // 如果stateDom中有next节点 且 next节点的children中有block.state_trigger_event 则将这个block.state_trigger_event push 到 outputLines
-          // 然后将这个block.state_trigger_event作为新的stateDom，查找其包含的block.state_trigger_event 这样遍历查找所有的block.state_trigger_event就找到了outputLines
-          var children = Util.getDomChildren(stateDom);
-          children.forEach(function (child) {
-            if (child.tagName === 'next') {
-              //所有next节点的children都只有1个
-              if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
-                var lineDom = child.children[0];
-                var newLine = {
-                  lineId: lineDom.getAttribute('id'),
-                  d: lineDom.getAttribute('d'),
-                  startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
-                  endState: dom2State(Util.getEndStateDomOfLine(lineDom))
-                };
-                var existLineOfOutputLines = outputLines.find(function (item) {
-                  return item.lineId === lineDom.getAttribute('id');
-                });
+      var findOutputLinesOfStateDom = function findOutputLinesOfStateDom(stateDom, outputLines) {
+        // 如果stateDom中有next节点 且 next节点的children中有block.state_trigger_event 则将这个block.state_trigger_event push 到 outputLines
+        // 然后将这个block.state_trigger_event作为新的stateDom，查找其包含的block.state_trigger_event 这样遍历查找所有的block.state_trigger_event就找到了outputLines
+        var children = Util.getDomChildren(stateDom);
+        children.forEach(function (child) {
+          if (child.tagName === 'next') {
+            //所有next节点的children都只有1个
+            if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
+              var lineDom = child.children[0];
 
-                if (!existLineOfOutputLines) {
-                  outputLines.push(newLine);
-                }
-
-                var existLineOfLineAry = lineAry.find(function (item) {
-                  return item.lineId === lineDom.getAttribute('id');
-                });
-
-                if (!existLineOfLineAry) {
-                  lineAry.push(newLine);
-                }
-
-                findOutputLinesOfStateDom(lineDom, outputLines);
+              if (!lineDom.getAttribute('id').indexOf('line') === 0) {
+                debugger;
               }
-            }
-          });
-          return outputLines;
-        };
 
-        var findInputLinesOfStateDom = function findInputLinesOfStateDom(stateDom, inputLines) {
-          //逐级往上寻找type === 'state_opr'的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
-          var lineDom = stateDom.parentNode && stateDom.parentNode.parentNode;
+              var newLine = {
+                lineId: lineDom.getAttribute('id'),
+                d: lineDom.getAttribute('d'),
+                type: lineDom.getAttribute('s_type'),
+                startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
+                endState: dom2State(Util.getEndStateDomOfLine(lineDom))
+              };
 
-          if (lineDom && lineDom.getAttribute('type') === 'state_trigger_event') {
-            var newLine = {
-              lineId: lineDom.getAttribute('id'),
-              d: lineDom.getAttribute('d'),
-              startState: dom2State(Util.getPrevStateDom(lineDom)),
-              endState: dom2State(Util.getEndStateDomOfLine(lineDom))
-            };
-            var existLineOfInputLines = inputLines.find(function (item) {
-              return item.lineId === newLine.lineId;
-            });
+              if (newLine.lineId.indexOf('line') !== 0) {
+                debugger;
+              }
 
-            if (!existLineOfInputLines) {
-              inputLines.push(newLine);
-            }
+              var existLineOfOutputLines = outputLines.find(function (item) {
+                return item.lineId === lineDom.getAttribute('id');
+              });
 
-            var existLineOfLineAry = lineAry.find(function (item) {
-              return item.lineId === newLine.lineId;
-            });
+              if (!existLineOfOutputLines) {
+                outputLines.push(newLine);
+              }
 
-            if (!existLineOfLineAry) {
-              lineAry.push(newLine);
+              var existLineOfLineAry = lineAry.find(function (item) {
+                return item.lineId === lineDom.getAttribute('id') || item.startState.stateId === newLine.startState.stateId && item.endState.stateId === newLine.endState.stateId;
+              });
+
+              if (!existLineOfLineAry) {
+                lineAry.push(newLine);
+              }
+
+              findOutputLinesOfStateDom(lineDom, outputLines);
             }
           }
+        });
+        return outputLines;
+      };
 
-          return inputLines;
-        };
+      var findInputLinesOfStateDom = function findInputLinesOfStateDom(stateDom, inputLines) {
+        //逐级往上寻找type === 'state_opr'的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
+        var lineDom = stateDom.parentNode && stateDom.parentNode.parentNode;
 
-        var stateObj = {
+        if (lineDom && lineDom.getAttribute('type') === 'state_trigger_event') {
+          var newLine = {
+            lineId: lineDom.getAttribute('id'),
+            d: lineDom.getAttribute('d'),
+            type: lineDom.getAttribute('s_type'),
+            startState: dom2State(Util.getPrevStateDom(lineDom)),
+            endState: dom2State(Util.getEndStateDomOfLine(lineDom))
+          };
+
+          if (newLine.lineId.indexOf('line') !== 0) {
+            debugger;
+          }
+
+          var existLineOfInputLines = inputLines.find(function (item) {
+            return item.lineId === newLine.lineId;
+          });
+
+          if (!existLineOfInputLines) {
+            inputLines.push(newLine);
+          }
+
+          var existLineOfLineAry = lineAry.find(function (item) {
+            return item.lineId === lineDom.getAttribute('id') || item.startState.stateId === newLine.startState.stateId && item.endState.stateId === newLine.endState.stateId;
+          });
+
+          if (!existLineOfLineAry) {
+            lineAry.push(newLine);
+          }
+        }
+
+        return inputLines;
+      };
+
+      var stateId = Util.getEntityStateId(stateDom);
+      var existThisStateObj = false; // 这个stateId有可能已经存在 看一下xml数据就能明白了
+
+      var stateObj = stateAry.find(function (item) {
+        return item.stateId === stateId;
+      });
+
+      if (!stateObj) {
+        stateObj = {
           stateId: Util.getEntityStateId(stateDom),
           //!!!这里的id不是block.state_opr的 id 哟，而是它下面的field.field_state的id
           stateType: stateDom.getAttribute('type') === STATE_BLOCK ? 'stateDiv' : 'loopDiv',
@@ -638,40 +697,130 @@ var Util = {
           x: Util.getStateXY(stateDom, stateAry).x,
           //stateDom.getAttribute('sx'),
           y: Util.getStateXY(stateDom, stateAry).y,
-          width: '76px',
-          height: '40px',
+          width: stateDom.getAttribute('s_width') || '76px',
+          height: stateDom.getAttribute('s_height') || '40px',
           // virtualHeight: Util.getVirtualHeight(outputAry), //TODO 开始状态为这个stateDom的所有状态高度之和
           name: stateDom.children[0].textContent,
+          mode: stateDom.getAttribute('mode') || 'default',
           inputAry: [],
           outputAry: [],
           children: [],
+          parent: null,
           nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
 
         };
-        findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
-        findInputLinesOfStateDom(stateDom, stateObj.inputAry);
-        var existStateInStateAry = stateAry.find(function (state) {
-          return state.stateId === stateObj.stateId;
-        });
+      } else {//如果stateAry里面已经有了这个stateObj且stateObj.outputAry非空  则说明分析过了，不用再调用findOutputLinesOfStateDom进行分析
 
-        if (!existStateInStateAry) {
-          stateAry.push(stateObj);
+        /* if (!stateObj.outputAry.length){
+            findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
         }
+        if (!stateObj.inputAry.length) {
+            findInputLinesOfStateDom(stateDom, stateObj.inputAry);
+        }    */
       }
 
-      if (stateDom.children && stateDom.children.length) {
-        for (var j = 0; j < stateDom.children.length; j++) {
-          var child = stateDom.children[j];
-          extractStateAndLine(child);
+      findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
+      findInputLinesOfStateDom(stateDom, stateObj.inputAry);
+      var existStateInStateAry = stateAry.find(function (state) {
+        return state.stateId === stateObj.stateId;
+      });
+
+      if (!existStateInStateAry) {
+        stateAry.push(stateObj);
+      }
+    }
+
+    if (stateDom && stateDom.children && stateDom.children.length) {
+      for (var j = 0; j < stateDom.children.length; j++) {
+        var child = stateDom.children[j];
+        Util.extractStateAndLine(child, stateAry, lineAry);
+      }
+    }
+  },
+  updateChildrenOfState: function updateChildrenOfState(stateAry, xmlDom, lineAry) {
+    if (xmlDom && xmlDom.tagName === 'block' && xmlDom.getAttribute('type') === 'state_def') {
+      if (xmlDom.childNodes) {
+        var ary = Array.prototype.slice.call(xmlDom.childNodes);
+        var subStatesDom = ary.find(function (element) {
+          return element.tagName === 'statement';
+        });
+
+        if (subStatesDom) {
+          var stateAry2 = [];
+          var childrenData = Util.extractStateAndLine(subStatesDom, stateAry2, lineAry);
+          var state = Util.getStateById(stateAry, xmlDom.getAttribute('id'));
+
+          if (state) {
+            state.children = stateAry2;
+            stateAry2.forEach(function (item) {
+              item.parent = state.stateId;
+            });
+          }
+        }
+      }
+    } else {
+      if (xmlDom) {
+        var ary2 = Array.prototype.slice.call(xmlDom.childNodes);
+        ary2.forEach(function (item) {
+          Util.updateChildrenOfState(stateAry, item, lineAry);
+        });
+      }
+    }
+  },
+  getProceduresDefDom: function getProceduresDefDom(dom) {
+    var result;
+
+    if (dom.tagName === 'block' && dom.getAttribute('type') === 'procedures_defnoreturn') {
+      result = dom;
+    } else {
+      var children = Array.prototype.slice.call(dom.childNodes);
+
+      for (var i = 0; i < children.length; i++) {
+        result = Util.getProceduresDefDom(children[i]);
+
+        if (result) {
+          break;
         }
       }
     }
 
-    extractStateAndLine(xmlDom);
-    return {
-      stateAry: stateAry,
-      lineAry: lineAry
-    };
+    return result;
+  },
+  getListStateDom: function getListStateDom(dom) {
+    var result;
+
+    if (dom && dom.tagName && dom.tagName === 'block' && dom.getAttribute('type') === 'lists_state') {
+      result = dom;
+    } else {
+      var children = Array.prototype.slice.call(dom.childNodes);
+
+      for (var i = 0; i < children.length; i++) {
+        result = Util.getListStateDom(children[i]);
+
+        if (result) {
+          break;
+        }
+      }
+    }
+
+    return result;
+  },
+  getStateById: function getStateById(stateAry, stateId) {
+    var item, result;
+
+    for (var i = 0; i < stateAry.length; i++) {
+      item = stateAry[i];
+
+      if (item.stateId === stateId) {
+        return item;
+      } else {
+        if (item.children && item.children.length) {
+          result = Util.getStateById(item.children, stateId);
+        }
+      }
+    }
+
+    return result;
   },
   getStartStateDomOfLine: function getStartStateDomOfLine(lineDom) {
     return this.getPrevStateDom(lineDom);
@@ -703,8 +852,8 @@ var Util = {
     hiddenInput.setAttribute("type", "text");
     hiddenInput.setAttribute("value", blocklyXml);
     hiddenInput.setAttribute("style", "height: 0; overflow: hidden;");
-    document.body.appendChild(hiddenInput);
-    hiddenInput.focus();
+    document.body.appendChild(hiddenInput); //hiddenInput.focus();
+
     hiddenInput.select();
     document.execCommand("copy");
     document.body.removeChild(hiddenInput);
@@ -790,51 +939,106 @@ var Util = {
       return item.getAttribute('stateid') === stateId;
     });
   },
-  testLayout: function testLayout(thread) {
-    var g = new _dagre["default"].graphlib.Graph({
-      //directed: true,
-      //compound: true,
-      multigraph: true
+
+  /**
+   * 根据当前所在的层级生成用于自动布局的graphlib图
+   * NOTE: 当前寻找state的代码为hardcode，需要讨论如何在statePage内获取当前线程的Index后修改
+   * @param {*} layer 
+   * @param {*} lineAry 
+   * 
+   */
+  genGraphByLayer: function genGraphByLayer(threadIndex, layer, lineAry) {
+    var g = new _dagre["default"].graphlib.Graph({//multigraph: true,
     });
     g.setGraph({
       rankdir: 'LR',
       align: 'UL',
       edgesep: 0,
-      ranksep: 70
+      ranksep: RANKSEP
     });
     g.setDefaultEdgeLabel(function () {
       return {};
     });
-    thread.stateAry.forEach(function (state) {
+    var stateInCurrentLayer; //获取处于当前所在层级内的状态
+
+    if (layer.stateAry) {
+      stateInCurrentLayer = layer.stateAry;
+    } else {
+      stateInCurrentLayer = layer.children;
+    }
+
+    stateInCurrentLayer.forEach(function (state) {
       g.setNode(state.stateId, {
         label: state.name,
-        // width: state.width || 76,
-        // height: state.height || 40
         width: _qblock["default"].State.getStateWidth(state),
         height: _qblock["default"].State.getStateHeight(state)
       });
+      /*
+      state.inputAry.forEach(line => {
+          let lineObj = lineAry.find(item => {
+              return item.lineId === line.lineId
+          })
+          let startState = store.getState(threadIndex, lineObj.startState.stateId)
+          
+          //处理可能存在的从循环状态内连接至循环状态外的连线，若存在这种连线，则将连线起始点模拟到与被连入状态处在同一层级的父状态上
+          if (startState.parent !== state.parent) {
+              while (startState.parent !== state.parent) {
+                  if (startState.parent === null && startState.parent !== state.parent) {
+                      return
+                  } else {
+                      startState = store.getState(threadIndex, startState.parent)
+                  }
+              }
+              g.setEdge(startState.stateId, state.stateId, {
+                  label: line.lineId
+              })
+          }
+      })*/
+
       state.outputAry.forEach(function (line) {
-        var lineObj = thread.lineAry.find(function (item) {
+        var lineObj = lineAry.find(function (item) {
           return item.lineId === line.lineId;
         });
-        var endState = thread.stateAry.find(function (item) {
-          return item.stateId === lineObj.endState.stateId;
-        }); // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
+        var endState = store.getState(threadIndex, lineObj.endState.stateId);
+        /*
+        if (endState.parent !== state.parent) {
+            //处理可能存在的从循环状态外连接至循环状态内的连线，若存在这种连线，则将连线结束点模拟到与被连入状态处在同一层级的父状态上
+            while (endState.parent !== state.parent) {
+                if (endState.parent === null && endState.parent !== state.parent) {
+                    return
+                } else {
+                    endState = store.getState(threadIndex, endState.parent)
+                }
+            }
+        }*/
+        // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
 
         g.setEdge(state.stateId, endState.stateId, {
           label: line.lineId
         });
       });
     });
+    return g;
+  },
+  setStateXYbyNode: function setStateXYbyNode(state, node) {
+    var halfStateWidth = _qblock["default"].State.getStateWidth(state) / 2;
+    var halfStateHeight = _qblock["default"].State.getStateHeight(state) / 2;
+    state.x = node.x - halfStateWidth + 20;
+    state.y = node.y - halfStateHeight + 20;
+    return;
+  },
+  setStateXYbyLayer: function setStateXYbyLayer(threadIndex, g, layer) {
+    var stateInCurrentLayer;
 
-    _dagre["default"].layout(g); //布局分析
-
+    if (layer.stateAry) {
+      stateInCurrentLayer = layer.stateAry;
+    } else {
+      stateInCurrentLayer = layer.children;
+    }
 
     g.nodes().forEach(function (nodeId) {
       var node = g.node(nodeId);
-      var state = thread.stateAry.find(function (item) {
-        return item.stateId === nodeId;
-      });
+      var state = store.getState(threadIndex, nodeId);
 
       if (state) {
         Util.setStateXYbyNode(state, node); //重设状态位置信息
@@ -848,27 +1052,15 @@ var Util = {
 
       console.log("Node " + nodeId + ": " + JSON.stringify(g.node(nodeId)));
     });
-    /*  thread.lineAry.forEach(item => {
-         item.forceRefresh = false;
-     }) */
-
-    /* setTimeout(() => {
-        
-        g.edges().forEach(function(line) {
-            console.log("Edge " + line.v + " -> " + line.w + ": " + JSON.stringify(g.edge(line)));
-            let lineObj = thread.lineAry.find(item => {
-                return item.lineId === g.edge(line).label;
-            });
-            lineObj.d = '';
-        });
-    }, 300); */
   },
-  setStateXYbyNode: function setStateXYbyNode(state, node) {
-    var halfStateWidth = _qblock["default"].State.getStateWidth(state) / 2;
-    var halfStateHeight = _qblock["default"].State.getStateHeight(state) / 2;
-    state.x = node.x - halfStateWidth;
-    state.y = node.y - halfStateHeight;
-    return;
+  testLayout: function testLayout(threadIndex, thread, lineAry) {
+    //处理在自动布局前被用户所调整过的连线
+    var g = this.genGraphByLayer(threadIndex, thread, lineAry);
+
+    _dagre["default"].layout(g); //布局分析
+
+
+    this.setStateXYbyLayer(threadIndex, g, thread);
   }
 };
 var _default = Util;
