@@ -174,12 +174,7 @@ var Util = {
 
         triggerEventDom = _this2.createEl("block");
         triggerEventDom.setAttribute("type", "state_trigger_event");
-        triggerEventDom.setAttribute("id", outputItem.lineId);
-
-        if (outputItem.lineId.indexOf('line') !== 0) {
-          debugger;
-        } // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
-
+        triggerEventDom.setAttribute("id", outputItem.lineId); // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
         var triggerEventStatement;
         triggerEventStatement = _this2.createEl("statement");
@@ -601,11 +596,6 @@ var Util = {
             //所有next节点的children都只有1个
             if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
               var lineDom = child.children[0];
-
-              if (!lineDom.getAttribute('id').indexOf('line') === 0) {
-                debugger;
-              }
-
               var newLine = {
                 lineId: lineDom.getAttribute('id'),
                 d: lineDom.getAttribute('d'),
@@ -613,13 +603,8 @@ var Util = {
                 startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                 endState: dom2State(Util.getEndStateDomOfLine(lineDom))
               };
-
-              if (newLine.lineId.indexOf('line') !== 0) {
-                debugger;
-              }
-
               var existLineOfOutputLines = outputLines.find(function (item) {
-                return item.lineId === lineDom.getAttribute('id');
+                return item.lineId === lineDom.getAttribute('id') || item.startState.stateId === newLine.startState.stateId && item.endState.stateId === newLine.endState.stateId;
               });
 
               if (!existLineOfOutputLines) {
@@ -653,13 +638,8 @@ var Util = {
             startState: dom2State(Util.getPrevStateDom(lineDom)),
             endState: dom2State(Util.getEndStateDomOfLine(lineDom))
           };
-
-          if (newLine.lineId.indexOf('line') !== 0) {
-            debugger;
-          }
-
           var existLineOfInputLines = inputLines.find(function (item) {
-            return item.lineId === newLine.lineId;
+            return item.lineId === newLine.lineId || item.startState.stateId === newLine.startState.stateId && item.endState.stateId === newLine.endState.stateId;
           });
 
           if (!existLineOfInputLines) {

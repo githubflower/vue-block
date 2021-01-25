@@ -151,9 +151,6 @@ var Util = {
                 triggerEventDom = this.createEl("block");
                 triggerEventDom.setAttribute("type", "state_trigger_event");
                 triggerEventDom.setAttribute("id", outputItem.lineId);
-                if (outputItem.lineId.indexOf('line') !== 0){
-                    debugger;
-                }
                 // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
                 let triggerEventStatement;
@@ -585,9 +582,6 @@ var Util = {
                     if (child.tagName === 'next') { //所有next节点的children都只有1个
                         if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
                             let lineDom = child.children[0];
-                            if(!lineDom.getAttribute('id').indexOf('line') === 0){
-                                debugger;
-                            }
                             let newLine = {
                                 lineId: lineDom.getAttribute('id'),
                                 d: lineDom.getAttribute('d'),
@@ -595,11 +589,8 @@ var Util = {
                                 startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                                 endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
                             };
-                            if (newLine.lineId.indexOf('line') !== 0) {
-                                debugger;
-                            }
                             let existLineOfOutputLines = outputLines.find(item => {
-                                return item.lineId === lineDom.getAttribute('id');
+                                return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                             })
                             if (!existLineOfOutputLines) {
                                 outputLines.push(newLine);
@@ -629,12 +620,8 @@ var Util = {
                         startState: dom2State(Util.getPrevStateDom(lineDom)),
                         endState: dom2State(Util.getEndStateDomOfLine(lineDom))
                     };
-                    if(newLine.lineId.indexOf('line') !== 0){
-                        debugger;
-                    }
-
                     let existLineOfInputLines = inputLines.find(item => {
-                        return item.lineId === newLine.lineId;
+                        return (item.lineId === newLine.lineId) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                     })
                     if (!existLineOfInputLines) {
                         inputLines.push(newLine);
