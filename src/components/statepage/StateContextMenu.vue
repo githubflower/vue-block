@@ -1,5 +1,5 @@
 <template>
-  <div class="menu-wrap" :style="{ top: xy.y + 'px', left: xy.x + 'px' }">
+  <div class="menu-wrap" :style="{ top: xy.y - 60 + 'px', left: xy.x + 'px' }">
     <el-form>
       <el-form-item>
         <el-button type="primary" @click="deleteStateFn">删除</el-button>

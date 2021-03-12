@@ -20,6 +20,10 @@ const BlocklyPage = () => {
   return import(/* webpackChunkName: "BlocklyPage" */ '@/components/BlocklyPage')
 }
 
+const QblockPage = () => {
+  return import(/* webpackChunkName: "QblockPage" */ '@/components/QblockPage')
+}
+
 Vue.use(Router)
 
 export default new Router({
@@ -32,8 +36,13 @@ export default new Router({
       path: '/',
       name: 'page',
       component: Home,
-      redirect: '/state',
+      redirect: '/qblock',
       children: [
+        {
+          path: 'qblock',
+          name: 'qblock',
+          component: QblockPage
+        },
         {
           path: 'test',
           component: Test

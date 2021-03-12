@@ -9,7 +9,10 @@ const lineCfg = {
     interval: 100, // 连线动画中矩形物块开始动画的时间差 毫秒
     highlight_limit: 1, //高亮状态块的最大个数
     threadTitleHeight: 35, //线程框标题的高度
-    rankSep: 90, //自动布局时不同rank状态之间相隔的距离
+    rank_sep: 110, //自动布局时不同rank状态之间相隔的距离
+    default_canvas_width: 1300, //默认的画布宽度
+    default_canvas_height: 600, //默认的画布高度,
+    line_displace: 10, //靠近连线的范围
 }
 
 export {

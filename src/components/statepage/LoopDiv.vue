@@ -8,7 +8,7 @@
       { active: isActive },
       { selected: isInActiveStates() },
     ]"
-    @click="selectStateOrHideMenu()"
+    @click="selectStateOrHideMenu"
   >
     <span class="icon" :style="{ backgroundImage: `url( ${loopIcon})` }"></span>
     <el-input
@@ -68,6 +68,13 @@
       class="connect-point out"
       @mousedown.prevent="onConnectPointMousedown"
     ></div>
+
+    <img
+      class="connect-point loop"
+      src="../../../static/imgs/looping.png"
+      width="20"
+      height="20"
+    />
   </div>
 </template>
 
@@ -116,11 +123,15 @@ export default {
       }
       return false;
     },
-    selectStateOrHideMenu() {
+    selectStateOrHideMenu(e) {
+      let data = {
+        stateData: this.stateData,
+        e: e,
+      };
       if (this.showDeleteStateMenu || this.showLineContextMenu) {
-        this.$emit("hideMenus");
+        EventObj.$emit("hideMenus");
       } else {
-        this.$emit("updateActiveState", this.stateData);
+        this.$emit("updateActiveState", data);
       }
     },
     genId() {
@@ -152,16 +163,14 @@ export default {
       let curSvg = e.target.closest("svg");
       let curSvgRect = curSvg.getBoundingClientRect();
       let stateId = this.$el.parentElement.getAttribute("stateid");
+      let startPointClass = e.path[0].getAttribute("class");
       let data = {
         threadIndex: this.threadIndex,
         startState: {
           stateId: stateId,
           stateIndex: this.index,
         },
-        startPoint: {
-          x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
-          y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
-        },
+        startPointClass: startPointClass,
       };
       this.$emit("updateTempLineData", data);
     },
@@ -352,11 +361,16 @@ span.icon {
   height: 13px;
   border-radius: 10px;
 }
-.connect-point:hover {
+.connect-point.in:hover,
+.connect-point.out:hover {
   border: 2px solid #ff0000 !important;
   cursor: default;
 }
-.loop-div:hover .connect-point {
+.connect-point.loop:hover {
+  border: 2px solid rgb(113, 255, 255) !important;
+  cursor: default;
+}
+.loop-div:hover .connect-point.in {
   border: 2px solid blue;
   cursor: default;
 }
@@ -370,7 +384,15 @@ span.icon {
 .connect-point.out {
   transform: translate(50%, -50%);
 }
-
+.connect-point.loop {
+  right: 0;
+  top: 25%;
+  transform: translate(50%);
+  border-radius: 20px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgb(113, 255, 255);
+}
 .is-dragging {
   cursor: move;
 }

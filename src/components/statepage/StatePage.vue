@@ -24,44 +24,13 @@
         <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
         <div class="template-loop" stateType="loopDiv">循环</div>
       </span>
-      <SwitchBtn />
+      <!-- <SwitchBtn /> -->
       <div class="demo">
         <!--
         <el-button type="primary" plain @click="showDemo('active')">运行至当前状态</el-button>
         <el-button type="primary" plain @click="showDemo('warning')">运行至当前状态警告</el-button>
         <el-button type="primary" plain @click="showDemo('error')">运行至当前状态错误</el-button>
         -->
-        <el-button
-          type="primary"
-          plain
-          @click="state2blockly"
-          title="生成blockly.xml"
-          >生成blockly.xml</el-button
-        >
-        <el-button
-          type="primary"
-          plain
-          @click="clearBlocklyXmlOfLocalStorage"
-          title="清空localStorage中blocklyXml数据"
-          >清空localStorage中blocklyXml数据</el-button
-        >
-        <el-button
-          type="primary"
-          plain
-          @click="reloadBlocklyXmlOfLocalStorage"
-          title="reload localStorage中blocklyXml数据"
-          >reload localStorage中blocklyXml数据</el-button
-        >
-        <el-button
-          type="primary"
-          plain
-          @click="saveQBlock2BlocklyXml"
-          title="save qblock2localStorage"
-          >save qblock2localStorage</el-button
-        >
-        <el-button type="primary" plain @click="testLayout" title="testLayout"
-          >test layout</el-button
-        >
       </div>
       <!-- <el-button type="primary" plain @click="save">保存</el-button> -->
       <!-- <el-button
@@ -138,9 +107,8 @@
         :threadIndex="lineContextMenuData.threadIndex"
         :style="{
           left: lineContextMenuData.position.x + 'px',
-          top: lineContextMenuData.position.y + 'px',
+          top: lineContextMenuData.position.y - 60 + 'px',
         }"
-        @selectItem="onSelect"
         @toggleLineContextMenu="toggleLineContextMenu"
       ></line-context-menu>
       <state-context-menu
@@ -159,7 +127,6 @@
         :showDeleteStateMenu="showDeleteStateMenu"
         :showLineContextMenu="lineContextMenuData.show"
         @updateActiveThread="updateActiveThread"
-        @hideMenus="hideMenus"
       ></thread-svg>
     </div>
     <!--  <iframe
@@ -182,8 +149,11 @@ import StateContextMenu from "./StateContextMenu";
 import Tools from "@/Tools.js";
 import Util from "./util.js";
 import { lineCfg } from "./graphCfg.js";
+import QBlock from "./qblock.js";
+const SCROLL_RATIO = lineCfg.scroll_ratio;
 export default {
   name: "StatePage",
+  props: ["ctrlPanelMenuData"],
   components: {
     ThreadSvg,
     StateDiv,
@@ -201,7 +171,10 @@ export default {
       // activeName: "statePage", //'statePage'
       runningLineId: "",
       //传入的runningStatus必须为active, warning, error中的任意一个
-      runningStateData: {},
+      runningStateData: {
+        stateId: "",
+        runningStatus: "",
+      },
       showTempLine: false,
       showDeleteStateMenu: false,
       contextmenuXY: {
@@ -226,11 +199,10 @@ export default {
     };
   },
   methods: {
-    //TODO: 当前视图按照当前激活的状态自动左右平移
-    move2CurrentRunningState(){},
     updateActiveThread(threadIndex) {
       this.activeThreadIndex = threadIndex;
     },
+    //TODO：开始循环，结束循环，继续循环的运行动画逻辑需要修改
     showDemo(runningStatus) {
       let demoData = {
         stateId: store.demoStateData.stateId,
@@ -240,15 +212,15 @@ export default {
 
       if (store.demoStateData.inputAry[0]) {
         let demoLineId = store.demoStateData.inputAry[0].lineId;
-        this.highlight(demoLineId, demoStateData, runningStatus);
+        this.runAnimation(demoLineId, demoStateData, runningStatus);
       } else {
-        this.highlightState(demoData);
+        this.runStateAnimation(demoData);
       }
     },
     generateStartState() {
       let startStateData = {
         stateType: "stateDiv",
-        x: 50,
+        x: 20,
         y: 50,
       };
       let startState = store.getDefaultStateCfg(startStateData);
@@ -279,8 +251,8 @@ export default {
         runningStatus: "",
         undoStatesList: [],
         redoStatesList: [],
-        newestThreadStatus: {},
-        presentStateStatus: {},
+        presentState: {},
+        hasUndone: false,
       });
     },
     //右键状态时展示删除按钮，不允许删除开始与结束状态
@@ -344,6 +316,7 @@ export default {
     deleteStateFn() {
       let data = this._deleteStateData;
       let threadIndex = data.indexAry.pop(); //线程索引
+      //删除状态时，需要在状态被删除前更新用于撤销的当前状态图的状态
       store.updateUndoData(threadIndex);
       store.focusCurrentThread(threadIndex);
       let currentStateAry = this.threadAry[threadIndex].stateAry;
@@ -367,8 +340,8 @@ export default {
           targetParent.stateType !== "loopDiv"
         ) {
           targetParent.mode = "default";
-          targetParent.width = "76px";
-          targetParent.height = "40px";
+          targetParent.width = store.default_state_width;
+          targetParent.height = store.default_state_height;
         }
       }
       store.updatePresentData(threadIndex);
@@ -429,15 +402,17 @@ export default {
     dragEnd() {
       // console.log("dragend");
     },
-
     onMouseMove(e) {
       if (this.operate === "resize-thread") {
         // default, resize-thread,
         let dx = e.pageX - this.operateData.startPosition.x,
           dy = e.pageY - this.operateData.startPosition.y,
           minH = this.getMinHeightOfThread(this.operateData.index);
-        this.threadAry[this.operateData.index].width =
-          this.operateData.originW + dx;
+        let newW = this.operateData.originW + dx;
+        if (newW > window.innerWidth - 60) {
+          newW = window.innerWidth - 60;
+        }
+        this.threadAry[this.operateData.index].width = newW;
         this.threadAry[this.operateData.index].height = Math.max(
           minH,
           this.operateData.originH + dy
@@ -502,19 +477,6 @@ export default {
             }; */
       this.tempLineData = data;
     },
-    /**
-     * 在连线上右键，然后在弹出的菜单中选择某一项操作
-     */
-    onSelect(data) {
-      switch (data.type) {
-        case "editDesc":
-          break;
-        case "delete":
-          break;
-        default:
-        // pass through
-      }
-    },
     updateContextMenu(data) {
       this.lineContextMenuData.show = true;
       this.lineContextMenuData.position.x = data.position.x;
@@ -526,13 +488,35 @@ export default {
     hideMenus(e) {
       this.lineContextMenuData.show = false;
       this.$refs.lineContextMenu.showForm = false;
+      this.$refs.lineContextMenu.showEvent = false;
       this.showDeleteStateMenu = false;
     },
-    updateLineData(data) {
+    hideLineContextMenu() {
+      this.lineContextMenuData.show = false;
+      if (this.$refs.lineContextMenu) {
+        this.$refs.lineContextMenu.showForm = false;
+        this.$refs.lineContextMenu.showEvent = false;
+      }
+    },
+    hideStateContextMenu() {
+      this.showDeleteStateMenu = false;
+    },
+    updateLineDesc(data) {
       let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
         return lineItem.lineId === data.lineId;
       });
       line.desc = data.desc;
+      this.lineContextMenuData.show = false;
+      if (this.$refs.lineContextMenu) {
+        this.$refs.lineContextMenu.showForm = false;
+        this.$refs.lineContextMenu.showEvent = false;
+      }
+    },
+    updateLineEvent(data) {
+      let line = this.threadAry[data.threadIndex].lineAry.find((lineItem) => {
+        return lineItem.lineId === data.lineId;
+      });
+      line.event = data.event;
       this.lineContextMenuData.show = false;
     },
     toggleLineContextMenu(bool) {
@@ -667,7 +651,7 @@ export default {
      * 将后台获取到的lineId传入runningLineId，提供给PathAnimation以运行动画
      *
      */
-    highlightLine(lineId) {
+    runLineAnimation(lineId) {
       this.runningStateData = {};
       this.runningLineId = lineId;
       const interval = lineCfg.interval; // @PathAnimation.vue > interval
@@ -684,12 +668,12 @@ export default {
     },
 
     //将后台获取到的stateId传入，提供给stateDiv运行动画
-    highlightState(stateData) {
+    runStateAnimation(stateData) {
       this.runningStateData = stateData;
     },
 
     //封装过后的高亮连线与状态的方法
-    highlight(lineId, state, runningStatus) {
+    runAnimation(lineId, state, runningStatus) {
       const interval = lineCfg.interval; // @PathAnimation.vue > interval
       const during = lineCfg.dur; // @PathAnimation.vue > dur
       const rectCount = lineCfg.rectCount; // @PathAnimation.vue > rectCount
@@ -698,16 +682,64 @@ export default {
         runningStatus: runningStatus,
       };
 
-      this.highlightLine(lineId);
+      this.runLineAnimation(lineId);
       setTimeout(() => {
-        this.highlightState(stateData);
+        this.runStateAnimation(stateData);
       }, during + interval * (rectCount - 1));
     },
 
-    loadData(data) {
+    loadData(data, index) {
+      if (typeof index !== "number") {
+        index = this.activeThreadIndex;
+      }
       let refreshedLineAry = this.handleNullPath(data.lineAry);
-      this.threadAry[0].stateAry = data.stateAry;
-      this.threadAry[0].lineAry = refreshedLineAry;
+      if (!this.threadAry[index]) {
+        this.threadAry[index] = {};
+      }
+
+      let threadAry = store.stateData.threadAry;
+      Object.keys(data.basicData).forEach((k) => {
+        this.$set(threadAry[index], k, Util.deepCopy(data.basicData[k]));
+      });
+      this.$set(threadAry[index], "stateAry", data.stateAry);
+      this.$set(threadAry[index], "lineAry", refreshedLineAry);
+    },
+    /**
+     * 加载所有线程的数据，与loadData的差别在于：loadData是加载某一个线程的数据
+     */
+    loadAllData(threadsData) {
+      if (!threadsData) {
+        threadsData = window.localStorage.getItem("threadsData");
+        if (threadsData) {
+          threadsData = JSON.parse(threadsData);
+        } else {
+          threadsData = [];
+        }
+      }
+
+      if (threadsData.length) {
+        let sl = store.stateData.threadAry.length,
+          tl = threadsData.length;
+        if (tl > sl) {
+          while (tl > sl) {
+            store.stateData.threadAry.push({});
+            tl--;
+          }
+        }
+        let i = 0;
+        while (i < store.stateData.threadAry.length) {
+          let threadObj = Util.blockly2state(threadsData[i].graphicData);
+          this.loadData(
+            {
+              basicData: threadsData[i].basicData,
+              stateAry: threadObj.stateAry,
+              lineAry: threadObj.lineAry,
+            },
+            i
+          );
+          i++;
+        }
+      }
     },
     handleNullPath(lineAry) {
       for (let i = 0; i < lineAry.length; i++) {
@@ -718,20 +750,18 @@ export default {
       return lineAry;
     },
     clearBlocklyXmlOfLocalStorage() {
-      window.localStorage.setItem("blocklyXml", "");
+      window.localStorage.setItem("threadsData", "");
       window.location.reload();
     },
     reloadBlocklyXmlOfLocalStorage() {
       var blocklyXml = window.localStorage.getItem("blocklyXml");
       var qblockJson = Util.blockly2state(blocklyXml);
-      debugger;
       this.loadData(qblockJson);
     },
     saveQBlock2BlocklyXml() {
       var blocklyXml = Util.state2blockly(this.threadAry);
       window.localStorage.setItem("blocklyXml", blocklyXml);
     },
-
     testLayout() {
       if (this.activeThreadIndex === null) {
         return false;
@@ -776,7 +806,11 @@ export default {
         lineAry: lineAry,
       };
       //对嵌套状态进行自动布局
-      this.traverseExecuteAutoLayout(autoLayoutData, stateAry);
+      this.traverseExecuteAutoLayout(
+        autoLayoutData,
+        stateAry,
+        this.activeThreadIndex
+      );
       store.updatePresentData(this.activeThreadIndex);
     },
 
@@ -828,22 +862,47 @@ export default {
       return 0;
     },
   },
-
+  watch: {
+    ctrlPanelMenuData: {
+      handler(newVal, oldVal) {
+        console.log(newVal.stateId);
+      },
+      deep: true,
+    },
+  },
   created() {
     // this.loadFromLocal();
     EventObj.$on("deleteState", this.deleteState, this);
     EventObj.$on("operateChange", this.operateChange, this);
     EventObj.$on("updateTempLineData", this.updateTempLineData, this);
-    EventObj.$on("updateLineData", this.updateLineData, this);
+    EventObj.$on("updateLineDesc", this.updateLineDesc, this);
+    EventObj.$on("updateLineEvent", this.updateLineEvent, this);
     EventObj.$on("updateContextMenu", this.updateContextMenu, this);
     EventObj.$on("saveDragData", this.saveDragData, this);
+    EventObj.$on("hideLineContextMenu", this.hideLineContextMenu, this);
+    EventObj.$on("hideStateContextMenu", this.hideStateContextMenu, this);
+    EventObj.$on("hideMenus", this.hideMenus, this);
 
+    EventObj.$on("state2blockly", this.state2blockly, this);
+    EventObj.$on(
+      "clearBlocklyXmlOfLocalStorage",
+      this.clearBlocklyXmlOfLocalStorage,
+      this
+    );
+    EventObj.$on(
+      "reloadBlocklyXmlOfLocalStorage",
+      this.reloadBlocklyXmlOfLocalStorage,
+      this
+    );
+    EventObj.$on("saveQBlock2BlocklyXml", this.saveQBlock2BlocklyXml, this);
+    EventObj.$on("testLayout", this.testLayout, this);
     window.addEventListener("message", function (e) {
       let data = e.data;
       if (data.eventType === "setBreakpoint") {
         statePageVue.setBp(data.blockId);
       }
     });
+    this.loadAllData();
   },
   mounted() {
     window.statePageVue = this;
@@ -859,13 +918,6 @@ export default {
       });
     }
     this.iframeHeight = window.innerHeight - 65; //header与toolbox的高度 */
-
-    //刷新iframe内容，从localstorage中读取blockly.xml,
-    var blocklyXml = window.localStorage.getItem("blocklyXml");
-    if (blocklyXml !== "") {
-      var qblockJson = Util.blockly2state(blocklyXml);
-      this.loadData(qblockJson);
-    }
   },
   beforeDestroy() {
     //将Blockly图面数据更新到localstorage的blockly.xml

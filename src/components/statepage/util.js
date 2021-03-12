@@ -1,17 +1,17 @@
 const NAME_SPACE = "https://developers.google.com/blockly/xml";
-const SOUP = '!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const SOUP = "!#$%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-import dagre from 'dagre'
-import QBlock from './qblock.js'
+import dagre from "dagre"
+import QBlock from "./qblock.js"
 import { lineCfg } from "./graphCfg.js";
-const RANKSEP = lineCfg.rankSep
+const RANKSEP = lineCfg.rank_sep
 var Util = {
     isDefined(a) {
-        return !((a === '') || (a === null) || (typeof a === 'undefined'));
+        return !((a === "") || (a === null) || (typeof a === "undefined"));
     },
     createEl(tagName, attrs) {
         var dom = document.createElementNS(NAME_SPACE, tagName);
-        if (typeof attrs === 'object') {
+        if (typeof attrs === "object") {
             for (var key in attrs) {
                 dom.setAttribute(key, attrs[key]);
             }
@@ -22,7 +22,7 @@ var Util = {
         let container = this.createEl("field");
         container.setAttribute("name", field.name);
         if (field.id) {
-            container.setAttribute('id', field.id);
+            container.setAttribute("id", field.id);
         }
         container.textContent = field.value;
         return container;
@@ -33,12 +33,82 @@ var Util = {
      * @param {*} comment 
      */
     createCommentDom(comment) {
-        let commentDom = this.createEl('comment');
-        commentDom.setAttribute('pinned', comment.pinned || false);
+        let commentDom = this.createEl("comment");
+        commentDom.setAttribute("pinned", comment.pinned || false);
         commentDom.textContent = comment.value;
         return commentDom;
     },
-
+    /**
+     * 创建用于嵌套在triggerEvent块中的条件Dom
+     * TODO
+     * @param {*} event 
+     */
+    createIfDom(event) {
+        let valueDom = this.createEl("value");
+        valueDom.setAttribute("name", "IF0");
+        let ifDom = this.createEl("block");
+        ifDom.setAttribute("type", "logic_compare");
+        let ifFieldDom = this.createFieldDom({
+            name: "OP",
+            value: "EQ"
+        })
+        let ifADom = this.createIfADom(event.ioStateNum)
+        let ifBDom = this.createIfBDom(event.ioStateBool)
+        ifDom.appendChild(ifFieldDom)
+        ifDom.appendChild(ifADom)
+        ifDom.appendChild(ifBDom)
+        valueDom.appendChild(ifDom)
+        return valueDom;
+    },
+    /**
+     * 创建用于获取输入/输出信号的块
+     * @param {*} ioStateNum 
+     */
+    createDigitalIostateDom(ioStateNum) {
+        let digitalIoStateDom = this.createEl("block")
+        digitalIoStateDom.setAttribute("type", "digital_iostate_get")
+        let fieldDom = this.createFieldDom({
+            name: "io_mode",
+            value: "DOUT"
+        })
+        let valueDom = this.createEl("value")
+        valueDom.setAttribute("name", "io_index")
+        let shadowDom = this.createEl("shadow")
+        shadowDom.setAttribute("type", "math_number")
+        let shadowDomField = this.createFieldDom({
+            name: "NUM",
+            value: ioStateNum
+        })
+        shadowDom.appendChild(shadowDomField)
+        valueDom.appendChild(shadowDom)
+        digitalIoStateDom.appendChild(fieldDom)
+        digitalIoStateDom.appendChild(valueDom)
+        return digitalIoStateDom
+    },
+    /**
+     * 
+     * @param {*} ioStateNum 
+     */
+    createIfADom(ioStateNum) {
+        let valueDom = this.createEl("value");
+        valueDom.setAttribute("name", "A")
+        let digitalIostateDom = this.createDigitalIostateDom(ioStateNum)
+        valueDom.appendChild(digitalIostateDom)
+        return valueDom
+    },
+    createIfBDom(ioStateBool) {
+        let valueDom = this.createEl("value");
+        valueDom.setAttribute("name", "B")
+        let numberDom = this.createEl("block")
+        numberDom.setAttribute("type", "math_number")
+        let fieldDom = this.createFieldDom({
+            name: "NUM",
+            value: ioStateBool
+        })
+        numberDom.appendChild(fieldDom)
+        valueDom.appendChild(numberDom)
+        return valueDom
+    },
     /**
      * 创建状态定义块Dom
      * @param {*} state 
@@ -46,38 +116,57 @@ var Util = {
      * @param {*} thread 
      */
     createStateDefBlock(state, index, thread) {
-        var valueDom = this.createEl('value');
-        valueDom.setAttribute('name', 'ADD' + index);
+        //debugger;
+        //TODO：处理循环状态的情况
+        var valueDom = this.createEl("value");
+        valueDom.setAttribute("name", "ADD" + index);
 
-        var stateDom = this.createEl('block');
-        stateDom.setAttribute('type', 'state_def');
-        stateDom.setAttribute('id', state.stateId);
+        var stateDom = this.createEl("block");
+        stateDom.setAttribute("type", "state_def");
+        stateDom.setAttribute("id", state.stateId);
+        this.saveStateBlockDataInDom(stateDom, state);
         var fieldDom = this.createFieldDom({
-            name: 'NAME',
+            name: "NAME",
             value: state.name
         });
         stateDom.appendChild(fieldDom);
 
+        if (state.stateType === "loopDiv") {
+            var loopStatementDom = this.createEl("statement");
+            loopStatementDom.setAttribute("name", "STACK")
+            let loopEl = this.createEl("block")
+            loopEl.setAttribute("type", "controls_whileUntil")
+            if (state.children && state.children.length) {
+                //TODO
+                var loopDoStatementDom = this.createEl("statement")
+                loopDoStatementDom.setAttribute("name", "DO")
+                var startChild = state.children.find(item => {
+                    return (!item.inputAry || item.inputAry.length === 0);
+                })
+                var childrenDom = Util.state2dom(startChild, thread);
+                loopDoStatementDom.appendChild(childrenDom);
+                loopEl.appendChild(loopDoStatementDom)
+            }
+            loopStatementDom.appendChild(loopEl)
+            stateDom.appendChild(loopStatementDom)
+        }
         //如果children不为空则说明是嵌套状态，此时需要将子状态逻辑放到“状态定义块”内部
-        if (state.children && state.children.length) {
+        //TODO
+        if (state.stateType !== "loopDiv" && state.children && state.children.length) {
             //找到第一个子状态（inputAry为空）
             var startChild = state.children.find(item => {
                 return (!item.inputAry || item.inputAry.length === 0);
             })
             var childrenDom = Util.state2dom(startChild, thread);
             var statementDom = this.createEl("statement");
-            statementDom.setAttribute("name", 'STACK');
+            statementDom.setAttribute("name", "STACK");
             statementDom.appendChild(childrenDom);
             stateDom.appendChild(statementDom);
-
             // valueDom.appendChild(childrenDom);
         }
-
         valueDom.appendChild(stateDom);
-
         return valueDom;
     },
-
     /**
      * 创建连线Dom以及其连接的状态块的Dom - 触发事件描述采用通用的if-else结构 controls_if 
      * ！此方法没有用到，代码暂时先放着
@@ -133,6 +222,7 @@ var Util = {
      * @param {*} thread 
      */
     createNextStatesDom2(state, thread) {
+        //debugger;
         let triggerEventDom;
         let nextStatesDom;
         if (state.outputAry.length) {
@@ -144,50 +234,59 @@ var Util = {
             let parentDom;
 
             state.outputAry.forEach((outputItem, index) => {
-                let nextDom = this.createEl("next");
-                if (!nextStatesDom) {
-                    nextStatesDom = nextDom;
-                }
-                triggerEventDom = this.createEl("block");
-                triggerEventDom.setAttribute("type", "state_trigger_event");
-                triggerEventDom.setAttribute("id", outputItem.lineId);
-                // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
-
-                let triggerEventStatement;
-                triggerEventStatement = this.createEl("statement");
-                triggerEventStatement.setAttribute("name", `DO0`);
-                // triggerEventStatement.setAttribute("id", `${outputItem.lineId}`);
-                //outputAry里面只存放了lineId 所以我们需要做以下事情：
-                //1 根据lineId找到对应的line数据
-                //2 根据line里面的endState的stateId找到对应的state数据
                 let line = thread.lineAry.find((item) => {
                     return item.lineId === outputItem.lineId;
                 });
-                if (line) {
-                    Util.saveLineData(triggerEventDom, line);
-                    if (line.desc) {
-                        let commentDom = this.createCommentDom({
-                            value: line.desc
-                        });
-                        triggerEventDom.appendChild(commentDom);
+                if (line.type === "default") {
+                    let nextDom = this.createEl("next");
+                    if (!nextStatesDom) {
+                        nextStatesDom = nextDom;
                     }
-                    let state = store.getStateImplement(line.endState.stateId, thread.stateAry);
-                    if (state) {
-                        // triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
-                        triggerEventStatement.appendChild(Util.state2dom(state, thread));
-                    } else {
-                        console.error("data error -^- ");
-                    }
-                }
-                if (triggerEventStatement) {
-                    triggerEventDom.appendChild(triggerEventStatement);
-                }
-                nextDom.appendChild(triggerEventDom);
-                if (parentDom) {
-                    parentDom.appendChild(nextDom);
-                }
-                parentDom = triggerEventDom;
+                    triggerEventDom = this.createEl("block");
+                    triggerEventDom.setAttribute("type", "state_trigger_event");
+                    triggerEventDom.setAttribute("id", outputItem.lineId);
+                    triggerEventDom.setAttribute("clazz", (index % 2) === 0 ? "odd" : "even");
+                    // triggerEventDom.setAttribute("start_state", JSON.stringify(state)); // TODO 按需简化存储的start_state数据
 
+                    let triggerEventStatement;
+                    triggerEventStatement = this.createEl("statement");
+                    triggerEventStatement.setAttribute("name", `DO0`);
+                    // triggerEventStatement.setAttribute("id", `${outputItem.lineId}`);
+                    //outputAry里面只存放了lineId 所以我们需要做以下事情：
+                    //1 根据lineId找到对应的line数据
+                    //2 根据line里面的endState的stateId找到对应的state数据
+                    if (line && line.type !== "startLoop" && line.type !== "endLoop") {
+                        Util.saveLineData(triggerEventDom, line);
+                        if (line.desc) {
+                            let commentDom = this.createCommentDom({
+                                value: line.desc
+                            });
+                            triggerEventDom.appendChild(commentDom);
+                        }
+                        //TODO：根据line内的event设置triggetEventDom的value块
+                        if (line.event && line.event.ioStateNum !== null && line.event.ioStateBool !== null) {
+                            let valueDom = this.createIfDom(line.event)
+                            triggerEventDom.appendChild(valueDom)
+                        }
+
+                        let state = store.getStateImplement(line.endState.stateId, thread.stateAry);
+                        if (state) {
+                            // triggerEventDom.setAttribute("end_state", JSON.stringify(state)); // TODO 按需简化存储的end_state数据
+                            triggerEventStatement.appendChild(Util.state2dom(state, thread));
+                        } else {
+                            console.error("data error -^- ");
+                        }
+                    }
+                    if (triggerEventStatement) {
+                        triggerEventDom.appendChild(triggerEventStatement);
+                    }
+                    nextDom.appendChild(triggerEventDom);
+                    if (parentDom) {
+                        parentDom.appendChild(nextDom);
+                    }
+                    parentDom = triggerEventDom;
+
+                }
             });
         }
         return nextStatesDom;
@@ -195,9 +294,10 @@ var Util = {
 
     genBlockType(type) {
         let ret = "state_opr";
+        /*
         if (type === "loopDiv") {
             ret = "controls_whileUntil";
-        }
+        }*/
         return ret;
     },
     /**
@@ -216,6 +316,9 @@ var Util = {
     saveStateMode(el, state) {
         el.setAttribute("mode", state.mode);
     },
+    saveStateType(el, state) {
+        el.setAttribute("s_type", state.stateType)
+    },
     /**
      * 保存状态块的数据到Dom中
      * @param {*} el 新建的和状态对应的Dom节点
@@ -224,11 +327,16 @@ var Util = {
     saveStateBlockDataInDom(el, state) {
         console.log(state);
         switch (state.stateType) {
-            case 'stateDiv': //状态执行
+            case "stateDiv": //状态执行
                 this.saveStateXY(el, state);
                 this.saveStateWidthHeight(el, state);
                 this.saveStateMode(el, state);
+                this.saveStateType(el, state);
                 break;
+            case "loopDiv":
+                this.saveStateXY(el, state);
+                this.saveStateWidthHeight(el, state);
+                this.saveStateType(el, state);
             default:
                 break;
         }
@@ -240,6 +348,16 @@ var Util = {
      */
     saveLineData(el, line) {
         el.setAttribute("s_type", line.type);
+        el.setAttribute("s_verticalOffset", line.verticalOffset);
+        el.setAttribute("s_startPointClass", line.startPointClass);
+        el.setAttribute("s_endPointClass", line.endPointClass);
+        if (line.desc !== "") {
+            el.setAttribute("s_desc", line.desc);
+        }
+        if (line.event && line.event.ioStateNum !== null && line.event.ioStateBool !== null) {
+            el.setAttribute("s_event_ioNum", line.event.ioStateNum);
+            el.setAttribute("s_event_ioBool", line.event.ioStateBool);
+        }
     },
     /**
      * 将一个状态块转为Dom节点
@@ -247,11 +365,11 @@ var Util = {
      * @param {*} threadData 
      */
     state2dom(rootState, threadData) {
+        //debugger
         let rootEl = this.createEl("block");
         // rootEl.setAttribute("id", rootState.stateId);
         rootEl.setAttribute("type", this.genBlockType(rootState.stateType));
         this.saveStateBlockDataInDom(rootEl, rootState);
-
 
         let fieldDom = this.createFieldDom({
             id: rootState.stateId,
@@ -281,23 +399,23 @@ var Util = {
             </statement>
         </block> */
         // const procedureDefId = this.genUid();
-        let threadDefDom = this.createEl('block', {
+        let threadDefDom = this.createEl("block", {
             type: "thread_def"
         });
-        let fieldDom = this.createEl('field', {
-            name: 'NAME',
+        let fieldDom = this.createEl("field", {
+            name: "NAME",
             textContent: thread.name
         });
         fieldDom.textContent = thread.name;
 
-        let statementDom = this.createEl('statement', {
-            name: 'CALLBACK'
+        let statementDom = this.createEl("statement", {
+            name: "CALLBACK"
         });
-        let procedureSelectBlockDom = this.createEl('block', {
-            type: 'procedure_select'
+        let procedureSelectBlockDom = this.createEl("block", {
+            type: "procedure_select"
         });
-        let fieldProcedureDom = this.createEl('field', {
-            name: 'field_procedure',
+        let fieldProcedureDom = this.createEl("field", {
+            name: "field_procedure",
             id: threadProcedureId,
         });
         fieldProcedureDom.textContent = thread.name + "_function";
@@ -315,24 +433,24 @@ var Util = {
      * @param {*} statesDom 所有连接的状态
      */
     createThreadProcedureDom(thread, threadProcedureId, statesDom) {
-        console.log('---thread.name---' + thread.name);
+        console.log("---thread.name---" + thread.name);
         /* <block type="procedures_defnoreturn" id="aewyJ+/)D`VHlrJ$BgFT" x="463" y="-113">
             <field name="NAME">thread_p</field>
             <comment pinned="false" h="80" w="160">Describe this function...</comment>
             <statement name="STACK">
             </statement>
         </block> */
-        let threadProcedureDom = this.createEl('block', {
-            type: 'procedures_defnoreturn',
+        let threadProcedureDom = this.createEl("block", {
+            type: "procedures_defnoreturn",
             id: threadProcedureId
         });
-        let fieldDom = this.createEl('field', {
-            name: 'NAME',
+        let fieldDom = this.createEl("field", {
+            name: "NAME",
 
         });
         fieldDom.textContent = thread.name + "_function";
-        let statementDom = this.createEl('statement', {
-            name: 'STACK'
+        let statementDom = this.createEl("statement", {
+            name: "STACK"
         });
         statementDom.appendChild(statesDom);
         threadProcedureDom.appendChild(fieldDom);
@@ -349,7 +467,7 @@ var Util = {
         for (var i = 0; i < length; i++) {
             id[i] = SOUP.charAt(Math.random() * soupLength);
         }
-        return id.join('');
+        return id.join("");
     },
     getDomChildren(dom) {
         var ary = [];
@@ -370,7 +488,7 @@ var Util = {
     getPrevStateDom(dom) {
         var parent = dom.parentNode;
         if (parent) {
-            if (parent.getAttribute('type') === 'state_opr') {
+            if (parent.getAttribute("type") === "state_opr") {
                 return parent;
             } else {
                 parent = this.getPrevStateDom(parent);
@@ -385,13 +503,13 @@ var Util = {
          */
         const gap_x = 150;
         const gap_y = 100;
-        let x = this.toNum(stateDom.getAttribute('sx'));
-        let y = this.toNum(stateDom.getAttribute('sy'));
+        let x = this.toNum(stateDom.getAttribute("sx"));
+        let y = this.toNum(stateDom.getAttribute("sy"));
 
         function getLineDom(dom) {
             var parent = dom.parentNode;
             if (parent) {
-                if (parent.getAttribute && parent.getAttribute('type') === 'state_trigger_event') {
+                if (parent.getAttribute && parent.getAttribute("type") === "state_trigger_event") {
                     return parent;
                 } else {
                     parent = getLineDom(parent);
@@ -400,9 +518,9 @@ var Util = {
             return parent;
         }
 
-        let prevLineId = getLineDom(stateDom) && getLineDom(stateDom).getAttribute('id');
+        let prevLineId = getLineDom(stateDom) && getLineDom(stateDom).getAttribute("id");
         // 正常拼接的情况下这个prevLineId是一定存在的
-        if (!x || x === 'undefined') { // x是未定义的则 y也是未定义的
+        if (!x || x === "undefined") { // x是未定义的则 y也是未定义的
             let prevStateDom = Util.getPrevStateDom(stateDom);
             if (!prevStateDom) {
                 return {
@@ -410,9 +528,9 @@ var Util = {
                     y: 0
                 }
             }
-            let prevX = this.toNum(prevStateDom.getAttribute('sx'));
-            let prevY = this.toNum(prevStateDom.getAttribute('sy'));
-            if (!prevX || prevX === 'undefined') {
+            let prevX = this.toNum(prevStateDom.getAttribute("sx"));
+            let prevY = this.toNum(prevStateDom.getAttribute("sy"));
+            if (!prevX || prevX === "undefined") {
                 prevX = 0;
                 prevY = 0;
             }
@@ -436,7 +554,90 @@ var Util = {
         }
     },
     getEntityStateId(stateDom) {
-        return stateDom.children[0].getAttribute('id');
+        return stateDom.children[0].getAttribute("id");
+    },
+
+    updateStateAry(ary) {
+        for (var i = 0; i < ary.length; i++) {
+            if (ary[i].stateId === "state-end" && (i < ary.length - 1)) {
+                var tmp = ary[i];
+                ary[i] = ary[ary.length - 1];
+                ary[ary.length - 1] = tmp;
+                return;
+            }
+        }
+    },
+    getTotalThreadLength(stateAry, initLength) {
+        for (let i = 0; i < stateAry.length; i++) {
+            initLength += 1
+            if (stateAry[i].children && stateAry[i].children.length !== 0) {
+                initLength = this.getTotalThreadLength(stateAry[i].children, initLength)
+            }
+        }
+        return initLength
+    },
+    createStateChildrenDefBlock(children, index, thread) { },
+    thread2blockly(thread, index) {
+        //debugger;
+        let blocklyXml = Util.createEl("xml");
+        blocklyXml.setAttribute(
+            "xmlns",
+            "https://developers.google.com/blockly/xml"
+        );
+        index = index || 0;
+        //将“结束状态”调整至数组最后一个元素
+        this.updateStateAry(thread.stateAry);
+        let firstState;
+        thread.stateAry.forEach(state => {
+            if (state.stateId === "state-start") {
+                firstState = state;
+            }
+        })
+        let listsDom = Util.createEl("block");
+        listsDom.setAttribute("type", "lists_state");
+        listsDom.setAttribute("x", 700 + (700 * index));
+        listsDom.setAttribute("y", 150);
+
+        let mutationDom = Util.createEl("mutation");
+        mutationDom.setAttribute("items", this.getTotalThreadLength(thread.stateAry, 0));
+        listsDom.appendChild(mutationDom);
+        console.log(this.getTotalThreadLength(thread.stateAry, 0))
+        let initIndex = 0
+        thread.stateAry.forEach(state => {
+            if (state.children && state.children.length > 0) {
+                state.children.forEach(children => {
+                    let stateDefBlock = Util.createStateDefBlock(children, initIndex, thread);
+                    initIndex += 1
+                    listsDom.appendChild(stateDefBlock);
+                })
+            }
+            let stateDefBlock = Util.createStateDefBlock(state, initIndex, thread);
+            initIndex += 1
+            listsDom.appendChild(stateDefBlock);
+            // blocklyXml.appendChild(stateDefBlock);
+        })
+        var statesDom = Util.state2dom(firstState, thread);
+        const procedureDefId = Util.genUid();
+        let threadDefDom = Util.createThreadDefDom(thread, procedureDefId);
+        let threadProcedureDom = Util.createThreadProcedureDom(thread, procedureDefId, statesDom);
+        if (Util.isDefined(thread.x)) {
+            threadDefDom.setAttribute("x", thread.x);
+        } else {
+            threadDefDom.setAttribute("x", index * 700);
+        }
+        if (Util.isDefined(thread.y)) {
+            threadDefDom.setAttribute("y", thread.y);
+        } else {
+            threadDefDom.setAttribute("y", 10);
+        }
+        threadProcedureDom.setAttribute("x", index * 700);
+        threadProcedureDom.setAttribute("y", 200);
+        //这个添加的顺序很重要！！！
+        blocklyXml.appendChild(listsDom);
+        blocklyXml.appendChild(threadProcedureDom);
+        blocklyXml.appendChild(threadDefDom);
+
+        return blocklyXml;
     },
     /**
      * 将所有线程的数据（包括了状态和连线）转为Blockly可识别的xml数据
@@ -449,59 +650,17 @@ var Util = {
          *
          */
         let statePageData = threadAry;
-
-        let blocklyXml = Util.createEl("xml");
-        blocklyXml.setAttribute(
-            "xmlns",
-            "https://developers.google.com/blockly/xml"
-        );
-
-        statePageData.forEach((thread, index) => {
-            let firstState = thread.stateAry[0];
-            let listsDom = Util.createEl('block');
-            listsDom.setAttribute('type', 'lists_state');
-            listsDom.setAttribute('x', 300 + (700 * index));
-            listsDom.setAttribute('y', 150);
-
-            let mutationDom = Util.createEl('mutation');
-            mutationDom.setAttribute('items', thread.stateAry.length);
-            listsDom.appendChild(mutationDom);
-
-            thread.stateAry.forEach((state, i) => {
-                let stateDefBlock = Util.createStateDefBlock(state, i, thread);
-                listsDom.appendChild(stateDefBlock);
-                // blocklyXml.appendChild(stateDefBlock);
-            })
-            var statesDom = Util.state2dom(firstState, thread);
-            const procedureDefId = Util.genUid();
-            let threadDefDom = Util.createThreadDefDom(thread, procedureDefId);
-            let threadProcedureDom = Util.createThreadProcedureDom(thread, procedureDefId, statesDom);
-            if (Util.isDefined(thread.x)) {
-                threadDefDom.setAttribute('x', thread.x);
-            } else {
-                threadDefDom.setAttribute('x', index * 700);
-            }
-            if (Util.isDefined(thread.y)) {
-                threadDefDom.setAttribute('y', thread.y);
-            } else {
-                threadDefDom.setAttribute('y', 10);
-            }
-            threadProcedureDom.setAttribute('x', index * 700);
-            threadProcedureDom.setAttribute('y', 200);
-            //这个添加的顺序很重要！！！
-            blocklyXml.appendChild(listsDom);
-            blocklyXml.appendChild(threadProcedureDom);
-            blocklyXml.appendChild(threadDefDom);
-        });
-
+        let index = statePageVue.activeThreadIndex;
+        let blocklyXml = this.thread2blockly(threadAry[index], index);
         return blocklyXml.outerHTML;
     },
     /**
      * 将Blockly数据转为状态图可识别的数据
      */
     blockly2state(xmlDom) {
-        if (typeof xmlDom === 'string') {
-            xmlDom = new DOMParser().parseFromString(xmlDom, 'text/xml');
+        //debugger;
+        if (typeof xmlDom === "string") {
+            xmlDom = new DOMParser().parseFromString(xmlDom, "text/xml");
         }
 
         var stateLogicDom = Util.getProceduresDefDom(xmlDom);
@@ -510,7 +669,6 @@ var Util = {
         let stateAry = []; //所有的状态数据集合
         let lineAry = []; //所有的连线数据集合
         Util.extractStateAndLine(stateLogicDom, stateAry, lineAry);
-
         Util.updateChildrenOfState(stateAry, listStateDom, lineAry);
         return {
             stateAry: stateAry,
@@ -518,11 +676,12 @@ var Util = {
         }
     },
     extractStateAndLine(stateDom, stateAry, lineAry) {
+        //debugger;
         /* <block type="state_opr" id="0eRjWo`*LW!O%5)$3!bj" sx="394" sy="201">
             <field name="field_state" id="state-1607658086399">状态描述0</field>
         </block> */
-        const STATE_BLOCK = 'state_opr';
-        if (stateDom && stateDom.tagName === 'block' && stateDom.getAttribute('type') === STATE_BLOCK) {
+        const STATE_BLOCK = "state_opr";
+        if (stateDom && stateDom.tagName === "block" && stateDom.getAttribute("type") === STATE_BLOCK) {
             let stateId = Util.getEntityStateId(stateDom);
             let existThisStateObj = false;
             // 这个stateId有可能已经存在 看一下xml数据就能明白了
@@ -533,39 +692,41 @@ var Util = {
             if (!stateObj) {
                 stateObj = {
                     stateId: Util.getEntityStateId(stateDom), //!!!这里的id不是block.state_opr的 id 哟，而是它下面的field.field_state的id
-                    stateType: stateDom.getAttribute('type') === STATE_BLOCK ? 'stateDiv' : 'loopDiv',
-                    bx: parseInt(stateDom.getAttribute('x'), 10), // blockly中与此对应的图形块的x
-                    by: parseInt(stateDom.getAttribute('y'), 10), // blockly中与此对应的图形块的y
-                    x: Util.getStateXY(stateDom, stateAry).x, //stateDom.getAttribute('sx'),
+                    stateType: stateDom.getAttribute("s_type"),
+                    bx: parseInt(stateDom.getAttribute("x"), 10), // blockly中与此对应的图形块的x
+                    by: parseInt(stateDom.getAttribute("y"), 10), // blockly中与此对应的图形块的y
+                    x: Util.getStateXY(stateDom, stateAry).x, //stateDom.getAttribute("sx"),
                     y: Util.getStateXY(stateDom, stateAry).y,
-                    width: stateDom.getAttribute('s_width') || '76px',
-                    height: stateDom.getAttribute('s_height') || '40px',
+                    width: stateDom.getAttribute("s_width") || "100px",
+                    height: stateDom.getAttribute("s_height") || "40px",
                     // virtualHeight: Util.getVirtualHeight(outputAry), //TODO 开始状态为这个stateDom的所有状态高度之和
                     name: stateDom.children[0].textContent,
-                    mode: stateDom.getAttribute('mode') || 'default',
                     inputAry: [],
                     outputAry: [],
                     children: [],
                     parent: null,
                     nodeHeight: 0 // 如果该节点有2个分支，且分支是叶子节点，则这个节点的nodeHeight = 2; 总之，nodeHeight = 各分支nodeHeight之和 - 这个参数为自动布局所用
                 }
-                
-            }else{
+                if (stateObj.stateType === "stateDiv") {
+                    stateObj.mode = stateDom.getAttribute("mode") || "default"
+                }
+
+            } else {
                 //如果stateAry里面已经有了这个stateObj且stateObj.outputAry非空  则说明分析过了，不用再调用findOutputLinesOfStateDom进行分析
                 /* if (!stateObj.outputAry.length){
                     findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
                 }
                 if (!stateObj.inputAry.length) {
                     findInputLinesOfStateDom(stateDom, stateObj.inputAry);
-                }    */             
-                
+                }    */
+
             }
             findOutputLinesOfStateDom(stateDom, stateObj.outputAry);
             findInputLinesOfStateDom(stateDom, stateObj.inputAry);
 
             function dom2State(dom) {
-                let stateId = dom.getAttribute('id');
-                if (dom.getAttribute('type') === STATE_BLOCK) {
+                let stateId = dom.getAttribute("id");
+                if (dom.getAttribute("type") === STATE_BLOCK) {
                     stateId = Util.getEntityStateId(dom);
                 }
                 return {
@@ -579,25 +740,33 @@ var Util = {
                 // 然后将这个block.state_trigger_event作为新的stateDom，查找其包含的block.state_trigger_event 这样遍历查找所有的block.state_trigger_event就找到了outputLines
                 let children = Util.getDomChildren(stateDom);
                 children.forEach(child => {
-                    if (child.tagName === 'next') { //所有next节点的children都只有1个
-                        if (child.children && child.children[0] && child.children[0].getAttribute('type') === 'state_trigger_event') {
+                    if (child.tagName === "next") { //所有next节点的children都只有1个
+                        if (child.children && child.children[0] && child.children[0].getAttribute("type") === "state_trigger_event") {
                             let lineDom = child.children[0];
                             let newLine = {
-                                lineId: lineDom.getAttribute('id'),
-                                d: lineDom.getAttribute('d'),
-                                type: lineDom.getAttribute('s_type'),
+                                lineId: lineDom.getAttribute("id"),
+                                d: lineDom.getAttribute("d"),
+                                type: lineDom.getAttribute("s_type"),
                                 startState: dom2State(Util.getStartStateDomOfLine(lineDom)),
                                 endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
+                                verticalOffset: parseInt(lineDom.getAttribute("s_verticalOffset"), 10),
+                                startPointClass: lineDom.getAttribute("s_startPointClass"),
+                                endPointClass: lineDom.getAttribute("s_endPointClass"),
+                                desc: lineDom.getAttribute("s_desc") ? lineDom.getAttribute("s_desc") : "",
+                                event: {
+                                    ioStateNum: lineDom.getAttribute("s_event_ioNum") ? parseInt(lineDom.getAttribute("s_event_ioNum"), 10) : null,
+                                    ioStateBool: lineDom.getAttribute("s_event_ioBool") ? parseInt(lineDom.getAttribute("s_event_ioBool"), 10) : null
+                                }
                             };
                             let existLineOfOutputLines = outputLines.find(item => {
-                                return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
+                                return (item.lineId === lineDom.getAttribute("id")) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                             })
                             if (!existLineOfOutputLines) {
                                 outputLines.push(newLine);
                             }
 
                             let existLineOfLineAry = lineAry.find(item => {
-                                return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId) )
+                                return (item.lineId === lineDom.getAttribute("id")) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                             })
                             if (!existLineOfLineAry) {
                                 lineAry.push(newLine);
@@ -610,15 +779,24 @@ var Util = {
             }
 
             function findInputLinesOfStateDom(stateDom, inputLines) {
-                //逐级往上寻找type === 'state_opr'的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
+                //逐级往上寻找type === "state_opr"的块即inputLines    //  block.state_trigger_event > statement > block.state_opr
                 let lineDom = stateDom.parentNode && stateDom.parentNode.parentNode;
-                if (lineDom && lineDom.getAttribute('type') === 'state_trigger_event') {
+                if (lineDom && lineDom.getAttribute("type") === "state_trigger_event") {
                     let newLine = {
-                        lineId: lineDom.getAttribute('id'),
-                        d: lineDom.getAttribute('d'),
-                        type: lineDom.getAttribute('s_type'),
+                        lineId: lineDom.getAttribute("id"),
+                        d: lineDom.getAttribute("d"),
+                        type: lineDom.getAttribute("s_type"),
                         startState: dom2State(Util.getPrevStateDom(lineDom)),
-                        endState: dom2State(Util.getEndStateDomOfLine(lineDom))
+                        endState: dom2State(Util.getEndStateDomOfLine(lineDom)),
+                        verticalOffset: parseInt(lineDom.getAttribute("s_verticalOffset"), 10),
+                        startPointClass: lineDom.getAttribute("s_startPointClass"),
+                        endPointClass: lineDom.getAttribute("s_endPointClass"),
+                        desc: lineDom.getAttribute("s_desc") ? lineDom.getAttribute("s_desc") : "",
+                        event: {
+                            ioStateNum: lineDom.getAttribute("s_event_ioNum") ? parseInt(lineDom.getAttribute("s_event_ioNum"), 10) : null,
+                            ioStateBool: lineDom.getAttribute("s_event_ioBool") ? parseInt(lineDom.getAttribute("s_event_ioBool"), 10) : null
+                        }
+
                     };
                     let existLineOfInputLines = inputLines.find(item => {
                         return (item.lineId === newLine.lineId) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
@@ -628,7 +806,7 @@ var Util = {
                     }
 
                     let existLineOfLineAry = lineAry.find(item => {
-                        return (item.lineId === lineDom.getAttribute('id')) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
+                        return (item.lineId === lineDom.getAttribute("id")) || ((item.startState.stateId === newLine.startState.stateId) && (item.endState.stateId === newLine.endState.stateId))
                     })
                     if (!existLineOfLineAry) {
                         lineAry.push(newLine);
@@ -653,16 +831,17 @@ var Util = {
         }
     },
     updateChildrenOfState(stateAry, xmlDom, lineAry) {
-        if (xmlDom && xmlDom.tagName === 'block' && xmlDom.getAttribute('type') === 'state_def') {
+        //debugger;
+        if (xmlDom && xmlDom.tagName === "block" && xmlDom.getAttribute("type") === "state_def") {
             if (xmlDom.childNodes) {
                 var ary = Array.prototype.slice.call(xmlDom.childNodes);
                 var subStatesDom = ary.find(element => {
-                    return element.tagName === 'statement'
+                    return element.tagName === "statement"
                 });
                 if (subStatesDom) {
                     var stateAry2 = [];
                     var childrenData = Util.extractStateAndLine(subStatesDom, stateAry2, lineAry);
-                    var state = Util.getStateById(stateAry, xmlDom.getAttribute('id'));
+                    var state = Util.getStateById(stateAry, xmlDom.getAttribute("id"));
                     if (state) {
                         state.children = stateAry2;
                         stateAry2.forEach(item => {
@@ -684,7 +863,7 @@ var Util = {
     },
     getProceduresDefDom(dom) {
         var result;
-        if (dom.tagName === 'block' && dom.getAttribute('type') === 'procedures_defnoreturn') {
+        if (dom.tagName === "block" && dom.getAttribute("type") === "procedures_defnoreturn") {
             result = dom;
         } else {
             var children = Array.prototype.slice.call(dom.childNodes);
@@ -699,7 +878,7 @@ var Util = {
     },
     getListStateDom(dom) {
         var result;
-        if (dom && dom.tagName && dom.tagName === 'block' && dom.getAttribute('type') === 'lists_state') {
+        if (dom && dom.tagName && dom.tagName === "block" && dom.getAttribute("type") === "lists_state") {
             result = dom;
         } else {
             var children = Array.prototype.slice.call(dom.childNodes);
@@ -732,14 +911,14 @@ var Util = {
     getEndStateDomOfLine(lineDom) {
         let children = Array.prototype.slice.call(lineDom.childNodes);
         let statement = children.find(dom => {
-            return dom.nodeName === 'statement'
+            return dom.nodeName === "statement"
         })
         let statementChildren = Array.prototype.slice.call(statement.childNodes);
         let endStateDom = statementChildren.find(dom => {
-            return dom.nodeName === 'block'
+            return dom.nodeName === "block"
         })
         if (!endStateDom) {
-            console.error('数据错误：触发事件连线没有连接正确的状态');
+            console.error("数据错误：触发事件连线没有连接正确的状态");
         }
         return endStateDom;
     },
@@ -760,15 +939,15 @@ var Util = {
         document.body.removeChild(hiddenInput);
     },
     workspace2dom() {
-        var xmlText = '';
-        var iframeDom = document.getElementById('blocklyIframe');
+        var xmlText = "";
+        var iframeDom = document.getElementById("blocklyIframe");
         if (iframeDom) {
             var win = iframeDom.contentWindow;
             var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
             xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
 
         } else {
-            console.error('当前页面没有嵌入blockly');
+            console.error("当前页面没有嵌入blockly");
         }
         return xmlText;
     },
@@ -832,14 +1011,13 @@ var Util = {
         }
     },
     getDomByStateId(stateId) {
-        let doms = document.getElementsByClassName('state-wrap');
+        let doms = document.getElementsByClassName("state-wrap");
         return Array.prototype.slice.call(doms).find(item => {
-            return item.getAttribute('stateid') === stateId;
+            return item.getAttribute("stateid") === stateId;
         })
     },
     /**
      * 根据当前所在的层级生成用于自动布局的graphlib图
-     * NOTE: 当前寻找state的代码为hardcode，需要讨论如何在statePage内获取当前线程的Index后修改
      * @param {*} layer 
      * @param {*} lineAry 
      * 
@@ -849,8 +1027,8 @@ var Util = {
             //multigraph: true,
         });
         g.setGraph({
-            rankdir: 'LR',
-            align: 'UL',
+            rankdir: "LR",
+            align: "UL",
             edgesep: 0,
             ranksep: RANKSEP,
         });
@@ -870,48 +1048,17 @@ var Util = {
                 width: QBlock.State.getStateWidth(state),
                 height: QBlock.State.getStateHeight(state)
             });
-            /*
-            state.inputAry.forEach(line => {
-                let lineObj = lineAry.find(item => {
-                    return item.lineId === line.lineId
-                })
-                let startState = store.getState(threadIndex, lineObj.startState.stateId)
-                
-                //处理可能存在的从循环状态内连接至循环状态外的连线，若存在这种连线，则将连线起始点模拟到与被连入状态处在同一层级的父状态上
-                if (startState.parent !== state.parent) {
-                    while (startState.parent !== state.parent) {
-                        if (startState.parent === null && startState.parent !== state.parent) {
-                            return
-                        } else {
-                            startState = store.getState(threadIndex, startState.parent)
-                        }
-                    }
-                    g.setEdge(startState.stateId, state.stateId, {
-                        label: line.lineId
-                    })
-                }
-            })*/
-
             state.outputAry.forEach(line => {
                 let lineObj = lineAry.find(item => {
                     return item.lineId === line.lineId;
                 })
                 let endState = store.getState(threadIndex, lineObj.endState.stateId)
-                /*
-                if (endState.parent !== state.parent) {
-                    //处理可能存在的从循环状态外连接至循环状态内的连线，若存在这种连线，则将连线结束点模拟到与被连入状态处在同一层级的父状态上
-                    while (endState.parent !== state.parent) {
-                        if (endState.parent === null && endState.parent !== state.parent) {
-                            return
-                        } else {
-                            endState = store.getState(threadIndex, endState.parent)
-                        }
-                    }
-                }*/
                 // g.setEdge(state.stateId, endState.stateId, line.lineId, lineObj.desc); //这种设置方式会报错 可能是dagre对graphlib的封装接口未同步
-                g.setEdge(state.stateId, endState.stateId, {
-                    label: line.lineId
-                });
+                if (lineObj.type === "default") {
+                    g.setEdge(state.stateId, endState.stateId, {
+                        label: line.lineId
+                    });
+                }
             })
         })
         return g
@@ -919,8 +1066,8 @@ var Util = {
     setStateXYbyNode(state, node) {
         let halfStateWidth = QBlock.State.getStateWidth(state) / 2
         let halfStateHeight = QBlock.State.getStateHeight(state) / 2
-        state.x = node.x - halfStateWidth + 20
-        state.y = node.y - halfStateHeight + 20
+        state.x = node.x - halfStateWidth + 40
+        state.y = node.y - halfStateHeight + 40
         return
     },
     setStateXYbyLayer(threadIndex, g, layer) {
@@ -945,10 +1092,100 @@ var Util = {
         });
     },
     testLayout(threadIndex, thread, lineAry) {
-        //处理在自动布局前被用户所调整过的连线
         let g = this.genGraphByLayer(threadIndex, thread, lineAry)
         dagre.layout(g); //布局分析
         this.setStateXYbyLayer(threadIndex, g, thread)
     },
+    findChildByAttribute(parentNode, filterKey, filterVal, deep) {
+        let ret = null;
+        let children = Array.prototype.slice.call(parentNode.children);
+        for (var i = 0; i < children.length; i++) {
+            let child = children[i];
+            if (child.getAttribute(filterKey) === filterVal) {
+                ret = child;
+                break;
+            } else {
+                //深度遍历
+                if (deep) {
+                    ret = this.findChildByAttribute(child, filterKey, filterVal, deep);
+                    if (ret) {
+                        break;
+                    }
+                }
+            }
+        }
+        return ret;
+    },
+    findChildByTagName(parentNode, tagName) {
+        let children = Array.prototype.slice.call(parentNode.children);
+        children.forEach(child => {
+            if (child.tagName === tagName) {
+                return child;
+            }
+        })
+        return null;
+    },
+    findChildByFilter(parentNode, filter) {
+        let children = Array.prototype.slice.call(parentNode.children);
+        children.forEach(child => {
+            if (filter.call(this, child)) {
+                return child;
+            }
+        })
+        return null;
+    },
+    toArray(collection) {
+        return Array.prototype.slice.call(collection);
+    },
+    deepCopy(obj) {
+        if (typeof obj !== "object") {
+            return obj;
+        }
+
+        let type = Object.prototype.toString.apply(obj);
+        let ret = type === "[object Array]" ? [] : {};
+
+        if (type === "[object Array]") {
+            ret = [];
+            let i = 0;
+            while (i < obj.length) {
+                ret[i] = this.deepCopy(obj[i]);
+                i++;
+            }
+        } else {
+            ret = {};
+            for (let k in obj) {
+                if (obj.hasOwnProperty(k)) {
+                    ret[k] = this.deepCopy(obj[k]);
+                }
+            }
+        }
+
+        return ret;
+    },
+    apply(target, source, exclude) {
+        if (typeof source === "object") {
+            if (!target) {
+                target = {};
+            }
+            for (var key in source) {
+                if (source.hasOwnProperty(key)) {
+                    if (exclude && exclude.length) {
+                        let index = exclude.indexOf(key);
+                        if (index < 0) {
+                            target[key] = this.deepCopy(source[key]);
+                        } else {
+                            exclude.splice(index, 1);
+                        }
+                    } else {
+                        target[key] = this.deepCopy(source[key]);
+                    }
+                }
+            }
+        } else {
+            console.error("参数错误");
+        }
+        return target;
+    }
 }
 export default Util;

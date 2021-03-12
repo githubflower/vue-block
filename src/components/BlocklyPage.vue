@@ -7,7 +7,7 @@
       width="100%"
       height="100%"
     ></iframe>
-    <SwitchBtn/>
+    <!-- <SwitchBtn/> -->
   </div>
 </template>
 <script>
@@ -18,7 +18,52 @@ export default {
     SwitchBtn
   },
   data() {
-    return {};
+    return {
+      activeThreadIndex: null
+    };
+  },
+  methods: {
+    dom2text(dom){
+      var blocklyIframe = this.$el.querySelector('#blocklyIframe');
+      var win = blocklyIframe.contentWindow;
+      var text = win.Blockly.Xml.domToPrettyText(dom); 
+      return text;
+    },
+    loadData(blocklyXml){
+      if(this._isMounted){
+        /* if(typeof blocklyXml === 'string'){
+          blocklyXml = new DOMParser().parseFromString(blocklyXml, 'text/xml');
+        } */
+        var blocklyIframe = this.$el.querySelector('#blocklyIframe');
+        blocklyIframe.contentWindow.Code.workspace.clear();
+        debugger;
+        blocklyIframe.contentWindow.Code.loadBlocks(blocklyXml);
+      }
+    },
+    saveData(){
+      var blocklyIframe = this.$el.querySelector('#blocklyIframe');
+      var win = blocklyIframe.contentWindow;
+      var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
+      var xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
+
+      //如果localStorage中threadsData不存在，则创建一个
+      var threadsData = window.localStorage.getItem("threadsData");
+      if (threadsData) {
+        threadsData = JSON.parse(threadsData);
+      }else{
+        threadsData = [];
+      }
+      if(threadsData[this.activeThreadIndex]){
+        threadsData[this.activeThreadIndex].graphicData = xmlText;
+        debugger;
+        window.localStorage.setItem('threadsData', JSON.stringify(threadsData));
+      }
+    },
+    getBlocklyXmlFromSingleTestData(){
+      let blocklyXml;
+      blocklyXml = localStorage.getItem('test_data');
+      return blocklyXml;
+    },
   },
   activated(){
     //刷新iframe内容，从localstorage中读取blockly.xml,  
@@ -30,19 +75,37 @@ export default {
   },
   mounted(){
     //刷新iframe内容，从localstorage中读取blockly.xml,
-    var blocklyXml = window.localStorage.getItem('blocklyXml');
+    let threadsData = window.localStorage.getItem('threadsData');
+    let blocklyXml;
+    if(threadsData){
+      threadsData = JSON.parse(threadsData);
+      blocklyXml = threadsData && threadsData[0] && threadsData[0].graphicData;
+    }
+
+    //获取qblock_cfg_custom中debuggerBlockly   true:则加载localStorage.getItem('test_data')  false:加载localStorage.getItem('threadsData');
+    let qblock_cfg_custom = localStorage.getItem('qblock_cfg_custom');
+    if(qblock_cfg_custom){
+      qblock_cfg_custom = JSON.parse(qblock_cfg_custom);
+      if(qblock_cfg_custom.debuggerBlockly){
+        blocklyXml = this.getBlocklyXmlFromSingleTestData();
+      }
+    }
+    
     var blocklyIframe = this.$el.querySelector('#blocklyIframe');
     blocklyIframe.onload = function(e){
       e.target.contentWindow.Code.workspace.clear();
-      e.target.contentWindow.Code.loadBlocks(blocklyXml)
+      if(blocklyXml){
+        e.target.contentWindow.Code.loadBlocks(blocklyXml)
+      }
     }
-    blocklyIframe.onunload = function(e){
+    /*blocklyIframe.onunload = function(e){
       var win = e.target.contentWindow;
       var xmlDom = win.Blockly.Xml.workspaceToDom(win.Code.workspace);
       var xmlText = win.Blockly.Xml.domToPrettyText(xmlDom);
       window.localStorage.setItem('blocklyXml', xmlText);
-    }
+    } */
   },
+  
   beforeDestroy(){
     //将Blockly图面数据更新到localstorage的blockly.xml
    /*  var blocklyIframe = this.$el.querySelector('#blocklyIframe');

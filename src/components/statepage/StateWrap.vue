@@ -37,7 +37,6 @@
       @updateActiveState="updateActiveState"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
-      @hideMenus="hideMenus"
     ></loop-div>
 
     <!-- @updateStateData="updateStateData" -->
@@ -57,7 +56,6 @@
       @updateMoveData="updateMoveData"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
-      @hideMenus="hideMenus"
     ></state-div>
     <!-- <div> -->
     <state-wrap
@@ -79,7 +77,6 @@
       @updateMoveData="updateMoveData"
       @setParentDraggable="setParentDraggable"
       @stopMoving="stopMoving"
-      @hideMenus="hideMenus"
     ></state-wrap>
     <!-- </div> -->
     <!-- <component v-for="(item, cIndex) in stateData.children" :key="cIndex" :is="getCompType(item.stateType)" 
@@ -112,9 +109,14 @@ import StatePageVue from "./StatePage.vue";
 import Tools from "@/Tools.js";
 import Util from "./util.js";
 import { lineCfg } from "./graphCfg.js";
+import QBlock from "./qblock.js";
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
 const UNDO_REDO_LIMIT = lineCfg.undo_redo_limit;
+const LINE_DISPLACE = lineCfg.line_displace;
+const LINE_H = lineCfg.line_h;
+const LINE_V = lineCfg.line_v;
+const LINE_RADIUS = lineCfg.line_radius;
 // const IS_CREATING_STATE = 3; //通过拖拽新建1个状态
 export default {
   name: "StateWrap",
@@ -126,7 +128,7 @@ export default {
     "activeStates",
     "showDeleteStateMenu",
     "showLineContextMenu",
-    "startMovingLine",
+    "isMovingLine",
   ],
   components: {
     LoopDiv,
@@ -190,14 +192,14 @@ export default {
         ? stateData.width
         : stateData.stateType === "loopDiv"
         ? "192px"
-        : "76px";
+        : store.default_state_width;
     },
     getHeight(stateData) {
       return stateData.height
         ? stateData.height
         : stateData.stateType === "loopDiv"
         ? "120px"
-        : "40px";
+        : store.default_state_height;
     },
     isConnectPoint(dom) {
       let connectPointReg = /connect-point/;
@@ -225,7 +227,7 @@ export default {
         this.$emit("stopMoving");
         return false;
       }
-      if (this.startMovingLine) {
+      if (this.isMovingLine) {
         return false;
       }
       this._endInfo = {
@@ -245,7 +247,7 @@ export default {
         return false;
       }
       //若当前正在调整连线，则不触发drag
-      if (this.startMovingLine) {
+      if (this.isMovingLine) {
         e.preventDefault();
         return false;
       }
@@ -253,6 +255,7 @@ export default {
         e.preventDefault();
         return false;
       }
+      //开始拖拽状态块时，更新用于撤销的当前状态图的状态
       store.updateUndoData(this.threadIndex);
       e.dataTransfer.effectAllowed = "copyMove";
 
@@ -320,7 +323,7 @@ export default {
         this._isResizing = false;
         return false;
       }
-      if (this.startMovingLine) {
+      if (this.isMovingLine) {
         return false;
       }
       this.isDragging = false;
@@ -363,14 +366,14 @@ export default {
       //如果鼠标松开时当前拖拽对象仍然在其父组件内部，则说明只是移动状态，判断时需减去垂直滚动条的滚动距离
       let isTargetInParent = (el, e) => {
         let inFlag = true;
-        var osTop =
+        var scrollTop =
           document.documentElement.scrollTop || document.body.srcollTop;
         let info = el.getBoundingClientRect();
         if (
           e.pageX < info.x ||
           e.pageX > info.x + info.width ||
-          e.pageY - osTop < info.y ||
-          e.pageY - osTop > info.y + info.height
+          e.pageY - scrollTop < info.y ||
+          e.pageY - scrollTop > info.y + info.height
         ) {
           inFlag = false;
         }
@@ -386,6 +389,7 @@ export default {
         let TargetInFlag = isTargetInParent(this.$el, e);
         if (TargetInFlag) {
           //走到这里说明是将状态由里面移出到外面，需要冒泡到外层容器
+          //在松开鼠标停止对状态块的拖拽时，需要更新停止拖拽状态块后当前状态图的状态
           store.updatePresentData(this.threadIndex);
           e.stopPropagation();
         }
@@ -444,6 +448,7 @@ export default {
         setTimeout(() => {
           //从工具栏直接拖拽下来的状态块默认添加到线程框的最外面一层，需要在最外面一层进行删除
           stateAry.splice(dropStateIndex, 1);
+          //在松开鼠标停止对状态块的拖拽时，需要更新停止拖拽状态块后当前状态图的状态
           store.updatePresentData(this.threadIndex);
         }, 10);
       } else {
@@ -511,13 +516,14 @@ export default {
     },
     nestToDefault(stateData) {
       stateData.mode = "default";
-      stateData.width = "76px";
-      stateData.height = "40px";
+      stateData.width = store.default_state_width;
+      stateData.height = store.default_state_height;
     },
     //判断状态是从工具栏拖拽下来的还是在线程框内的移动，并返回当前状态
     dragInType(e, stateAry) {
       let theDragStateData;
       if (e.dataTransfer.getData("operate") === "addState") {
+        //当进行拖拽状态块的操作时，需要在状态块被添加之前更新用于撤销的当前状态图的状态，在状态块被添加之后更新当前状态图的状态
         store.updateUndoData(this.threadIndex);
         let threadPosInfo = e.target.getBoundingClientRect();
         let data = {
@@ -565,7 +571,7 @@ export default {
       if (!this._startInfo) {
         return;
       }
-      if (this.startMovingLine) {
+      if (this.isMovingLine) {
         return;
       }
 
@@ -613,6 +619,11 @@ export default {
       });
     },
     contextmenu(e) {
+      let highlightLineData = this.getNearestLineData(e);
+      if (highlightLineData) {
+        return;
+      }
+      EventObj.$emit("hideLineContextMenu");
       let indexAry = [];
       indexAry.push(this.index);
       let parent = this.$parent;
@@ -634,6 +645,298 @@ export default {
         stateId: e.currentTarget.getAttribute("stateid"),
       });
     },
+    getNearestLineData(e) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      if (lineAry.length === 0) {
+        return;
+      }
+      let canvasDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      let mouseDownPoint = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+      let canvasMouseDownPoint = {
+        x: e.pageX - canvasDom.getBoundingClientRect().left,
+        y: e.pageY - canvasDom.getBoundingClientRect().top,
+      };
+      let DomInLineArea = this.isInLineDomArea(mouseDownPoint, LINE_DISPLACE);
+      let testNearestLine = this.computeNearValue(
+        DomInLineArea,
+        canvasMouseDownPoint,
+        LINE_DISPLACE
+      );
+      let highlightLineData = this.getNearestLine(testNearestLine);
+      return highlightLineData;
+    },
+    isInLineDomArea(mouseDownPoint, displace) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      let lineInArea = [];
+      lineAry.forEach((line) => {
+        let lineDom = document.getElementById(line.lineId);
+        let lineDomArea = lineDom.getBoundingClientRect();
+        let lineTop = lineDomArea.top + window.scrollY;
+        let lineBottom = lineDomArea.bottom + window.scrollY;
+        let lineLeft = lineDomArea.left + window.scrollX;
+        let lineRight = lineDomArea.right + window.scrollX;
+        if (
+          mouseDownPoint.y > lineTop - displace &&
+          mouseDownPoint.y < lineBottom + displace &&
+          mouseDownPoint.x > lineLeft &&
+          mouseDownPoint.x < lineRight
+        ) {
+          lineInArea.push(line);
+        }
+      });
+      return lineInArea;
+    },
+    computeForward3LineNearValue(lineStart, lineEnd, clickPoint, displace) {
+      let smallestNearValue = 1000000;
+      let lineMiddle = lineStart.x + LINE_H + LINE_RADIUS;
+      //TODO：靠近连线右键弹出连线菜单时需要按照对应的靠近方式将连线菜单显示在连线上
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < lineMiddle
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > lineMiddle
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - lineMiddle) < displace) {
+        nearValue = clickPoint.x - lineMiddle;
+        absNearValue = Math.abs(clickPoint.x - lineMiddle);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeBackward5LineNearValue(
+      line,
+      lineStart,
+      lineEnd,
+      clickPoint,
+      displace
+    ) {
+      let smallestNearValue = 1000000;
+      let lineDom = document.getElementById(line.lineId).getAttribute("d");
+      let middleHorizontalLineRe = /V \d+/;
+      let firstVerticalLine = lineStart.x + LINE_H + LINE_RADIUS;
+      let secondVerticalLine = lineEnd.x - LINE_H - LINE_RADIUS;
+      let middleHorizontalLine = parseInt(
+        lineDom.match(middleHorizontalLineRe)[0].split(" ")[1],
+        10
+      );
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < firstVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - firstVerticalLine) < displace) {
+        nearValue = clickPoint.x - firstVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - firstVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - middleHorizontalLine) < displace &&
+        clickPoint.x < firstVerticalLine &&
+        clickPoint.x > secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - middleHorizontalLine;
+        absNearValue = Math.abs(clickPoint.y - middleHorizontalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - secondVerticalLine) < displace) {
+        nearValue = clickPoint.x - secondVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - secondVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > secondVerticalLine &&
+        clickPoint.x < lineEnd.x
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeForward5LineNearValue(
+      line,
+      lineStart,
+      lineEnd,
+      clickPoint,
+      displace
+    ) {
+      let smallestNearValue = 1000000;
+      let firstVerticalLine = lineStart.x + LINE_H + LINE_RADIUS;
+      let middleHorizontalLine = lineEnd.y + line.verticalOffset;
+      let secondVerticalLine = lineEnd.x - LINE_H - LINE_RADIUS;
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < firstVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - firstVerticalLine) < displace) {
+        nearValue = clickPoint.x - firstVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - firstVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - middleHorizontalLine) < displace &&
+        clickPoint.x > firstVerticalLine &&
+        clickPoint.x < secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - middleHorizontalLine;
+        absNearValue = Math.abs(clickPoint.y - middleHorizontalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - secondVerticalLine) < displace) {
+        nearValue = clickPoint.x - secondVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - secondVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeNearValue(lineInArea, clickPoint, displace) {
+      let lineNearValueData = [];
+      let nearData;
+      let scrollBarDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      clickPoint.x = clickPoint.x + scrollBarDom.scrollLeft - window.scrollX;
+      clickPoint.y = clickPoint.y + scrollBarDom.scrollTop - window.scrollY;
+      lineInArea.forEach((line) => {
+        let lineStart = QBlock.Line.getStartPoint(line, this.threadIndex);
+        let lineEnd = QBlock.Line.getEndPoint(line, this.threadIndex);
+        if (lineEnd.x > lineStart.x) {
+          if (line.verticalOffset === 0) {
+            nearData = this.computeForward3LineNearValue(
+              lineStart,
+              lineEnd,
+              clickPoint,
+              displace
+            );
+          } else {
+            nearData = this.computeForward5LineNearValue(
+              line,
+              lineStart,
+              lineEnd,
+              clickPoint,
+              displace
+            );
+          }
+        } else if (lineEnd.x < lineStart.x) {
+          nearData = this.computeBackward5LineNearValue(
+            line,
+            lineStart,
+            lineEnd,
+            clickPoint,
+            displace
+          );
+        }
+        if (nearData.smallestNearValue > displace) {
+          return;
+        } else {
+          lineNearValueData.push({
+            nearValue: nearData.smallestNearValue,
+            nearType: nearData.nearType,
+            lineId: line.lineId,
+          });
+        }
+      });
+      return lineNearValueData;
+    },
+    getNearestLine(lineNearValue) {
+      if (!lineNearValue) {
+        return;
+      }
+      let smallestNearValue = 1000000;
+      let smallestLineData;
+      lineNearValue.forEach((lineNearData) => {
+        if (Math.abs(lineNearData.nearValue) <= smallestNearValue) {
+          smallestNearValue = Math.abs(lineNearData.nearValue);
+          smallestLineData = lineNearData;
+        }
+      });
+      return smallestLineData;
+    },
 
     updateTempLineData(data) {
       this.$emit("updateTempLineData", data);
@@ -653,10 +956,8 @@ export default {
         stateId: data.stateId,
       });
     },
-    hideMenus() {
-      this.$emit("hideMenus");
-    },
     onResizeIconMousedown(e) {
+      //当进行改变状态尺寸的操作时，需要在状态的尺寸被改变之前更新用于撤销的当前状态图的状态
       store.updateUndoData(this.threadIndex);
       let stateId = this.$el.getAttribute("stateid");
       this.draggable = false;

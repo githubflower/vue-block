@@ -91,11 +91,14 @@ export default {
         case "default":
           clazz = "connect-line";
           break;
-        case "loopStart":
-          clazz = "connect-line";
+        case "startLoop":
+          clazz = "start-loop";
           break;
-        case "loopEnd":
-          clazz = "connect-line";
+        case "endLoop":
+          clazz = "end-loop";
+          break;
+        case "continueLoop":
+          clazz = "continue-loop";
           break;
         default:
           clazz = "connect-line";
@@ -110,8 +113,10 @@ export default {
       let forward5isDynamicRadiusFlag =
         Math.abs(startPoint.y - (endPoint.y + verticalOffset)) <
         2 * LINE_RADIUS;
-      //前向5段式连线的后两个拐角的半径
-      //若根据 verticalOffset / 2 计算的前向5段式的后两个拐角的半径大于LINE_RADIUS，则限制前向5段式的后两个拐角的半径的大小为LINE_RADIUS
+      /**
+       * 前向5段式连线的后两个拐角的半径
+       * 若根据 verticalOffset / 2 计算的前向5段式的后两个拐角的半径大于LINE_RADIUS，则限制前向5段式的后两个拐角的半径的大小为LINE_RADIUS
+       */
       var forward5LastTwoRadius = Math.min(
         Math.abs(verticalOffset / 2),
         LINE_RADIUS
@@ -119,7 +124,6 @@ export default {
       //前向3段式的拐角，后向5段式的拐角，前向5段式连线的前两个拐角的半径
       var radius = LINE_RADIUS;
       let path;
-
       //此时绘制前向直线或前向直线经调节后的五段连线
       if (endPoint.y === startPoint.y && endPoint.x > startPoint.x) {
         if (!this.line.verticalOffset || this.line.verticalOffset === 0) {
@@ -153,7 +157,12 @@ export default {
           if (isDynamicRadiusFlag) {
             radius = Math.abs(startPoint.y - endPoint.y) / 2;
           }
-          path = DrawLine.drawLine3ByPoint(startPoint, endPoint, radius);
+          path = DrawLine.drawLine3ByPoint(
+            startPoint,
+            endPoint,
+            radius,
+            this.line.type
+          );
         } else {
           //若连线调节后开始与结束状态的x坐标相差小于2 * LINE_H + 3 * LINE_RADIUS, 则此时也需要画前向三段连线
           if (endPoint.x - startPoint.x < 2 * LINE_H + 3 * LINE_RADIUS) {
@@ -161,7 +170,12 @@ export default {
             if (isDynamicRadiusFlag) {
               radius = Math.abs(startPoint.y - endPoint.y) / 2;
             }
-            path = DrawLine.drawLine3ByPoint(startPoint, endPoint, radius);
+            path = DrawLine.drawLine3ByPoint(
+              startPoint,
+              endPoint,
+              radius,
+              this.line.type
+            );
           } else {
             //在对前向5段式的连线的拐角半径进行更新时，需要根据开始点y坐标与结束点y坐标加上verticalOffset之间的差来进行更新
             if (forward5isDynamicRadiusFlag) {
@@ -325,7 +339,7 @@ export default {
       startX = startPoint.x;
       startY = startPoint.y;
       endY = endPoint.y;
-      midPointPath = `M ${startX + LINE_H} ${(startY + endY) / 2} h 300`;
+      midPointPath = `M ${startX + LINE_H} ${(startY + endY) / 2 - 5} h 300`;
       if (line.verticalOffset) {
         midPointPath = `M ${startX + LINE_H} ${
           (startY + (endY + line.verticalOffset)) / 2
@@ -337,6 +351,7 @@ export default {
       return window.genId("line");
     },
     onContextMenu(e) {
+      EventObj.$emit("hideStateContextMenu");
       EventObj.$emit("updateContextMenu", {
         lineId: this.line.lineId,
         threadIndex: this.threadIndex,
@@ -352,7 +367,7 @@ export default {
     },
   },
   created() {
-    this.$set(this.line, "showdesc", false);
+    //this.$set(this.line, "showdesc", false);
     if (!this.line.lineId) {
       this.line.lineId = this.genId();
     }
@@ -367,7 +382,6 @@ export default {
         return this.line.d;
       }
       // if(!this.line.startPoint){
-
       this.line.startPoint = QBlock.Line.getStartPoint(
         this.line,
         this.threadIndex
@@ -419,19 +433,32 @@ export default {
   fill: none;
 }
 
-.connect-line {
+.connect-line,
+.start-loop,
+.end-loop,
+.continue-loop {
   stroke: @qkmGrey;
   fill: none;
 }
 
-.connect-line:hover {
-  stroke: @qkmLightBlue;
-  fill: none;
-  cursor: pointer;
+.connect-line,
+.start-loop,
+.end-loop,
+.continue-loop {
+  &:hover {
+    stroke: @qkmLightBlue;
+    fill: none;
+    cursor: pointer;
+  }
 }
-.active .connect-line {
-  stroke: @qkmLightBlue;
-  fill: none;
+.active {
+  .connect-line,
+  .start-loop,
+  .end-loop,
+  .continue-loop {
+    stroke: @qkmLightBlue;
+    fill: none;
+  }
 }
 .warning .connect-line {
   stroke: @qkmOrange;
@@ -441,13 +468,19 @@ export default {
   stroke: @qkmRed;
   fill: none;
 }
-.showdesc .connect-line {
-  stroke: @qkmYellow;
-  fill: none;
+.showdesc {
+  .connect-line,
+  .start-loop,
+  .end-loop,
+  .continue-loop {
+    stroke: @qkmYellow;
+    fill: none;
+  }
 }
 text {
   display: none;
   fill: yellow;
+  font-size: 15px;
 }
 .active text,
 .showdesc text {

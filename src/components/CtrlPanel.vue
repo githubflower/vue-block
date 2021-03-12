@@ -4,16 +4,64 @@
       <!-- <li v-show="isExpanded" class="power-on" :style="{ backgroundImage: `url(${ powerOnIcon })` }">上电</li> -->
       <!-- <li v-show="isExpanded" class="reset" :style="{ backgroundImage: `url(${ resetIcon })` }">回零</li> -->
       <!-- <li class="emergency-stop" :style="{ backgroundImage: `url(${ emergencyStopIcon })` }">急停</li> -->
-     <!--  <li class="emergency-stop" draggable="true">
+      <!--  <li class="emergency-stop" draggable="true">
         <span class="text">急停</span>
       </li> -->
       <li>
-         <el-button type="danger">急 停</el-button>
+        <el-button type="danger">急 停</el-button>
       </li>
     </ul>
-    <!-- <span class="title">Robot控制</span> -->
-    <!-- <div class="line" @mouseenter="expandPanel"></div> -->
-    <!-- v-show="isExpanded" -->
+    <div class="ctrlpanel-button">
+      <!-- <el-button
+        type="primary"
+        plain
+        @click="state2blockly"
+        title="生成blockly.xml"
+        >生成blockly.xml</el-button
+      > -->
+      <el-button class="save-btn" type="primary" plain @click="saveAllData">保存</el-button>
+      <el-button
+        type="primary"
+        plain
+        @click="clearBlocklyXmlOfLocalStorage"
+        title="清空localStorage中blocklyXml数据"
+        >清空localStorage</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="setDebuggerModeOfBlockly(true)"
+        title="单独调试Blockly"
+        >单独调试Blockly</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="setDebuggerModeOfBlockly(false)"
+        title="单独调试Blockly"
+        >取消调试Blockly</el-button
+      >
+     <!--  <el-button
+        type="primary"
+        plain
+        @click="reloadBlocklyXmlOfLocalStorage"
+        title="reload localStorage中blocklyXml数据"
+        >reload localStorage中blocklyXml数据</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="saveQBlock2BlocklyXml"
+        title="save qblock2localStorage"
+        >save qblock2localStorage</el-button
+      > -->
+      <el-button type="primary" plain @click="testLayout" title="testLayout"
+        >自动布局</el-button
+      >
+      <!-- <span class="title">Robot控制</span> -->
+      <!-- <div class="line" @mouseenter="expandPanel"></div> -->
+      <!-- v-show="isExpanded" -->
+    </div>
     <i
       :class="[
         'icon',
@@ -27,6 +75,7 @@
   </div>
 </template>
 <script>
+import Util from "./statepage/util.js";
 export default {
   name: "CtrlPanel",
   data() {
@@ -46,6 +95,34 @@ export default {
         this.isExpanded = !this.isExpanded;
       }
     },
+    state2blockly() {
+      EventObj.$emit("state2blockly");
+    },
+    clearBlocklyXmlOfLocalStorage() {
+      EventObj.$emit("clearBlocklyXmlOfLocalStorage");
+    },
+    reloadBlocklyXmlOfLocalStorage() {
+      EventObj.$emit("reloadBlocklyXmlOfLocalStorage");
+    },
+    saveQBlock2BlocklyXml() {
+      EventObj.$emit("saveQBlock2BlocklyXml");
+    },
+    testLayout() {
+      EventObj.$emit("testLayout");
+    },
+    saveAllData(){
+      EventObj.$emit("saveAllData");
+    },
+    setDebuggerModeOfBlockly(bool){
+      let qblock_cfg_custom = window.localStorage.getItem('qblock_cfg_custom');
+      if(!qblock_cfg_custom){
+        window.localStorage.setItem('qblock_cfg_custom', JSON.stringify({}));
+      }
+      qblock_cfg_custom = JSON.parse(qblock_cfg_custom);
+      qblock_cfg_custom.debuggerBlockly = bool;
+      window.localStorage.setItem('qblock_cfg_custom', JSON.stringify(qblock_cfg_custom));
+      window.location.reload();
+    }
   },
 };
 </script>
@@ -91,53 +168,48 @@ export default {
 // @panelBgColor: #272B42;
 // @panelBgColor: #1B2143;
 @panelBgColor: #344b89;
+
 #ctrlPanel {
   position: fixed;
   top: @menuHeight;
   right: 0px;
-  z-index: 1;
+  z-index: 3;
+  height: calc(100% - @menuHeight);
   //   background-color: #0a0b44;
   background-color: @panelBgColor;
   border-left: 1px solid #aaa;
   transition: all 0.2s;
-  .title {
-    width: auto;
-    display: block;
-    color: #ffffff;
-    transform: rotate(90deg);
-    position: absolute;
-    bottom: 0;
-    right: 0;
-  }
   &.is-collapsed {
     width: 0;
-    height: calc(100% - @menuHeight);
     .icon {
       left: -20px;
+      &:hover {
+        width: 60px;
+        left: -48px;
+        background-color: #409eff;
+        color: #ffffff;
+      }
     }
   }
   &.is-expanded {
-    top: @menuHeight;
     width: 350px;
-    height: calc(100% - @menuHeight);
     // border: 1px solid #487afe;
     animation: myease 0.2s;
-    .icon {
-      left: -15px;
-    }
   }
   .icon {
     position: absolute;
-    left: -10px;
+    left: -15px;
     top: 50%;
     width: 30px;
     height: 30px;
     line-height: 30px;
     text-align: center;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     border-radius: 15px;
     transform: translateY(-50%);
+    box-shadow: 0 0 5px;
+    transition: all .3s;
   }
 }
 .line {
@@ -187,17 +259,24 @@ li.emergency-stop {
     border: 1px solid #ff2312;
     z-index: 1;
     transition: all 0.3s;
-   /*  &:hover {
+    /*  &:hover {
       box-shadow: 0 0 25px 5px #ff0000;
     } */
   }
 }
-.el-button--danger{
+
+.el-button--danger {
   padding-left: 30px;
   padding-right: 30px;
   background-color: #ff2312;
   border-color: #ff2312;
   font-size: 16px;
   font-weight: bold;
+}
+.ctrlpanel-button {
+  .el-button--primary {
+    display: block;
+    margin: 20px;
+  }
 }
 </style>

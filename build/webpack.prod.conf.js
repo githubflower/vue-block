@@ -113,7 +113,7 @@ const webpackConfig = merge(baseWebpackConfig, {
       {
         from: path.resolve(__dirname, '../static'),
         to: config.build.assetsSubDirectory,
-        ignore: ['../static/blockly/.git', '../static/blockly/.github']
+        ignore: ['.*']
       }
     ])
   ]

@@ -9,7 +9,7 @@
       { selected: isInActiveStates() },
       runningStatus,
     ]"
-    @click.stop="selectStateOrHideMenu()"
+    @click="selectStateOrHideMenu"
   >
     <div :class="runningAnimation" :v-show="runningAnimation"></div>
     <el-input
@@ -115,11 +115,15 @@ export default {
       }
       return false;
     },
-    selectStateOrHideMenu() {
+    selectStateOrHideMenu(e) {
+      let data = {
+        stateData: this.stateData,
+        e: e,
+      };
       if (this.showDeleteStateMenu || this.showLineContextMenu) {
-        this.$emit("hideMenus");
+        EventObj.$emit("hideMenus");
       } else {
-        this.$emit("updateActiveState", this.stateData);
+        this.$emit("updateActiveState", data);
       }
     },
     genId() {
@@ -145,6 +149,13 @@ export default {
      */
     onConnectPointMousedown(e) {
       // this.operate = IS_CONNECTING;
+      if (
+        this.stateData.mode === "default" &&
+        e.path[0].getAttribute("class") === "connect-point in"
+      ) {
+        return;
+      }
+      let startPointClass = e.path[0].getAttribute("class");
       window.stateManage.isConnecting = true;
       let boundingRect = e.target.getBoundingClientRect();
       let curSvg = e.target.closest("svg");
@@ -155,10 +166,7 @@ export default {
           stateId: this.stateData.stateId,
           stateIndex: this.index,
         },
-        startPoint: {
-          x: boundingRect.left - curSvgRect.left + boundingRect.width / 2,
-          y: boundingRect.top - curSvgRect.top + boundingRect.height / 2,
-        },
+        startPointClass: startPointClass,
       };
       this.$emit("updateTempLineData", data);
     },

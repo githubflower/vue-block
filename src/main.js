@@ -8,6 +8,8 @@ import Tools from "@/Tools.js";
 import 'element-ui/lib/theme-chalk/index.css';
 import axios from 'axios';
 const UNDO_REDO_LIMIT = 10//撤销与恢复的最大限制步数
+const STATE_DIV_WIDTH = 100//默认状态块的宽度
+const STATE_DIV_HEIGHT = 40//默认状态块的高度
 Vue.use(Element, { size: 'small', zIndex: 3000 });
 Vue.prototype.axios = axios;
 
@@ -24,6 +26,8 @@ const STATE_NAME_POOL = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", 
 window.store = {
   debug: true,
   statenameIndex: 0,
+  default_state_height: STATE_DIV_HEIGHT + "px",
+  default_state_width: STATE_DIV_WIDTH + "px",
   stateData: {
     threadAry: [
       {
@@ -32,9 +36,8 @@ window.store = {
         height: 500,
         stateAry: [
           {
-            width: "76px",
-            height: "40px",
-            // name: "状态描述" + this.statenameIndex++,
+            width: STATE_DIV_WIDTH + "px",
+            height: STATE_DIV_HEIGHT + "px",
             name: "开始",
             stateType: "stateDiv",
             stateId: "state-start",
@@ -42,14 +45,13 @@ window.store = {
             outputAry: [],
             parent: null,
             mode: 'default',
-            x: 50,
+            x: 20,
             y: 50,
             children: [],
           },
           {
-            width: "76px",
-            height: "40px",
-            // name: "状态描述" + this.statenameIndex++,
+            width: STATE_DIV_WIDTH + "px",
+            height: STATE_DIV_HEIGHT + "px",
             name: "结束",
             stateType: "stateDiv",
             stateId: "state-end",
@@ -82,8 +84,8 @@ window.store = {
   */
   getDefaultStateCfg(data) {
     return {
-      width: data.stateType === "loopDiv" ? "300px" : "76px",
-      height: data.stateType === "loopDiv" ? "120px" : "40px",
+      width: data.stateType === "loopDiv" ? "300px" : STATE_DIV_WIDTH + "px",
+      height: data.stateType === "loopDiv" ? "120px" : STATE_DIV_HEIGHT + "px",
       name: "状态描述" + this.statenameIndex++,
       // name: STATE_NAME_POOL[this.statenameIndex++],
       stateType: data.stateType,
@@ -110,6 +112,24 @@ window.store = {
     //将连线数据添加到首尾2个状态块
     this.relateLine2startState(data);
     this.relateLine2endState(data);
+  },
+  /**
+   * 添加开始循环的连线
+   * @param { threadIndex ,lineData} data 
+   */
+  addStartLoopLine(data){
+    this.stateData.threadAry[data.threadIndex].lineAry.push(data.lineData);
+    //开始循环的连线只与其连入的循环内的状态关联
+    this.relateLine2endState(data);
+  },
+  /**
+   * 添加结束或继续循环的连线
+   * @param { threadIndex ,lineData} data 
+   */
+  addEndOrContinueLoopLine(data){
+    this.stateData.threadAry[data.threadIndex].lineAry.push(data.lineData);
+    //结束循环，继续循环的连线只与其从循环状态内部连出的状态关联
+    this.relateLine2startState(data);
   },
   /**
    * 删除存储在lineMap内的对应连线

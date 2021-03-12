@@ -175,6 +175,12 @@ export default {
     width: 0px;
     .icon {
       right: -20px;
+      &:hover{
+        width: 60px;
+        right: -48px;
+        background-color: #409EFF;
+        color: #ffffff;
+      }
     }
   }
   &.is-expanded {
@@ -191,10 +197,13 @@ export default {
     height: 30px;
     line-height: 30px;
     text-align: center;
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, .8);
     cursor: pointer;
     border-radius: 15px;
     transform: translateY(-50%);
+    box-shadow: 0 0 5px;
+    transition: all .3s;
+    
   }
 }
 </style>

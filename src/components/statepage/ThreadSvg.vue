@@ -2,23 +2,27 @@
   <!-- <div class="thread" :style="{width: thread.width + 'px', height: thread.height + 'px' }" @drop.prevent="drop" @dragover.prevent @mouseup="endResize"  -->
   <div
     :class="['thread', showThread ? 'is-expanded' : 'is-collapsed', {selected: isInActiveThread()}]"
-    :style="{ width: thread.width + 'px', height: computedH + 'px' }"
+    :style="{ width: thread.width + 'px', height: thread.height + 'px' }"
     @drop.prevent="drop"
     @dragover.prevent
-    @mouseup="endResize"
+    @mouseup="endResizeOrDrawLine"
     @mousemove="resizingStateOrMoveLine"
+    @mouseleave="stopMovingLine"
     @keyup.ctrl="handleShortcutKeys"
     tabindex="0"
   >
+  <div class="tools" v-show="showThread">
+    <el-button plain icon="el-icon-aim" @click.stop="leftTopPosition"></el-button>
+  </div>
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="100%"
-      height="100%"
+      :width=thread.width
+      :height=titleHeight
       :id="thread.id"
-      class="thread-svg"
+      class="operation-and-title-svg"
     >
-      <g>
-        <foreignObject y="0" width="100%" height="100%" @mouseup="onMouseup" @mousemove="onConnecting">
+      <g class="operation-and-title">
+        <foreignObject :width=thread.width :height=titleHeight>
           <div class="toggle-thread">
             <el-button v-if="showThread" plain icon="el-icon-arrow-up" @click.stop="toggleShowThread"></el-button>
             <el-button v-else plain icon="el-icon-arrow-down" @click.stop="toggleShowThread"></el-button>
@@ -35,65 +39,77 @@
           <div class="stopping" v-show="thread.runningStatus == 'stopping'" style="color: red;">
             <img src="../../../static/imgs/stopping.png">停止
           </div>
-          <h4 class="title" contenteditable="true" :style="titleStyle">
+          <h4 class="title" contenteditable="true" @keydown.enter.exact="updateTitle">
             {{ thread.name }}
           </h4>
-          <div class="tools">
-            <el-button plain icon="el-icon-aim" @click.stop="leftTopPosition"></el-button>
-          </div>
-          <div class="thread-body" 
-               @mousedown="startMovingCanvas" 
-               @mousemove="onMovingCanvas" 
-               @click="updateActiveThread" 
-               @mouseup="stopMovingLine">
-            <div class="scrollbar-right"></div>
-            <div class="scrollbar-bottom"></div>
-            <state-wrap
-              v-for="(stateItem, index) in thread.stateAry"
-              :key="index"
-              :stateData="stateItem"
-              :index="index"
+        </foreignObject>
+      </g>
+    </svg>
+    <div class="scroll-wrapper" 
+         :style="{ width:thread.width, height: thread.height - titleHeight + 'px' }" 
+         v-show="showThread">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      :width=computedCanvasWidth
+      :height=computedCanvasHeight
+      :id="thread.id"
+      class="state-and-line-svg">
+        <g class="state-and-line">
+            <foreignObject 
+              :width=computedCanvasWidth 
+              :height=computedCanvasHeight  
+              @click="selectNearestLine">
+            <div class="thread-body"  
+                @mouseup="stopMovingLine"
+                @mousedown="startMovingCanvas"
+                @mousemove="onMovingCanvasOrDrawTempLine"
+                @click="updateActiveThread"
+                @contextmenu="nearestLineContextMenu">
+              <state-wrap
+                v-for="(stateItem, index) in thread.stateAry"
+                :key="index"
+                :stateData="stateItem"
+                :index="index"
+                :threadIndex="threadIndex"
+                :runningStateData="runningStateData"
+                :activeStates="activeStates"
+                :showDeleteStateMenu="showDeleteStateMenu"
+                :showLineContextMenu="showLineContextMenu"
+                :isMovingLine="moveLineData.startMovingLine"
+                @updateStateData="updateStateData"
+                @updateTempLineData="updateTempLineData"
+                @updateMoveData="updateMoveData"
+                @updateActiveState="updateActiveState"
+                @stopMoving="stopMoving"
+                @stopMovingLine="stopMovingLine"
+              />
+            </div>
+          </foreignObject>
+          <g class="lines">
+            <line-comp
+            class="temp-line"
+            :line="tempLineData"
+            :lineType="'tempLine'"
+            :threadIndex="threadIndex"
+            v-if="showTempLine"
+            ></line-comp>
+            <line-comp
+              v-for="(line, index2) in thread.lineAry"
+              :key="index2"
+              :line="line"
+              :activeLines="activeLines"
+              :lineType="line.type"
               :threadIndex="threadIndex"
-              :runningStateData="runningStateData"
-              :activeStates="activeStates"
-              :showDeleteStateMenu="showDeleteStateMenu"
-              :showLineContextMenu="showLineContextMenu"
-              :startMovingLine="moveLineData.startMovingLine"
-              @updateStateData="updateStateData"
-              @updateTempLineData="updateTempLineData"
-              @updateMoveData="updateMoveData"
-              @updateActiveState="updateActiveState"
-              @stopMoving="stopMoving"
-              @hideMenus="hideMenus"
+              @updateActiveLine="updateActiveLine"
+              @updateMoveLineData="updateMoveLineData"
               @stopMovingLine="stopMovingLine"
             />
-          </div>
-        </foreignObject>
-        <g class="lines">
-          <line-comp
-          class="temp-line"
-          :line="tempLineData"
-          :lineType="'tempLine'"
-          :threadIndex="threadIndex"
-          v-if="showTempLine"
-          ></line-comp>
-          <line-comp
-            v-for="(line, index2) in thread.lineAry"
-            :key="index2"
-            :line="line"
-            :activeLines="activeLines"
-            :lineType="line.type"
-            :threadIndex="threadIndex"
-            @updateActiveLine="updateActiveLine"
-            @updateMoveLineData="updateMoveLineData"
-            @stopMovingLine="stopMovingLine"
-          />
+          </g>
         </g>
         <path-animation
           v-if="isLineInCurrentThread(runningLineId)"
           :runningLineId="runningLineId"
         ></path-animation>
-      </g>
       <defs>
         <filter id="f1" x="0" y="0" width="200%" height="200%">
           <feOffset result="offOut" in="SourceGraphic" dx="1.5" dy="1.5" />
@@ -101,7 +117,9 @@
           <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
         </filter>
       </defs>
-    </svg>
+      </svg>
+    </div>
+
     <!-- <i class="resize-icon" :style="{ backgroundImage: 'url(' + moveVerticalImg + ')'}"></i> -->
     <i
       v-show="showThread"
@@ -110,8 +128,8 @@
         backgroundImage: 'url(' + resizableImg + ')',
         backgroundRepeat: 'no-repeat',
       }"
-      @mousedown="startResize"
-      @mouseup="endResize"
+      @mousedown.stop="startResize"
+      @mouseup="endResizeOrDrawLine"
     ></i>
     <!-- <div v-if="showVirtualBox" class="virtual-box"></div> -->
   </div>
@@ -130,7 +148,10 @@ const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
 const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
-const UNDO_REDO_LIMIT = lineCfg.undo_redo_limit;
+const DEFAULT_CANVAS_WIDTH = lineCfg.default_canvas_width;
+const DEFAULT_CANVAS_HEIGHT = lineCfg.default_canvas_height;
+const LINE_DISPLACE = lineCfg.line_displace;
+const RANKSEP = lineCfg.rank_sep;
 export default {
   name: "ThreadSvg",
   props: [
@@ -150,12 +171,10 @@ export default {
   },
   data() {
     return {
-      // bgImg: '../../../../static/imgs/grid3-50x50.png',
       bgImg: "./static/imgs/tmp3.png",
       showVirtualBox: false,
       showTempLine: false,
       showThread: true,
-      //tempLineClass: "templine",
       activeStates: [],
       activeLines: [],
       tempLineData: {
@@ -173,7 +192,6 @@ export default {
         },
         d: "",
       },
-      //threadCount: 1,
       titleHeight: lineCfg.threadTitleHeight,
       moveVerticalImg: "./static/imgs/move-vertical.png",
       resizableImg: "./static/imgs/resizable.png",
@@ -190,12 +208,367 @@ export default {
           y: 0,
         },
         endPoint: {},
-      }, //在线程框内鼠标移动相关的数据
+      },
     };
   },
   methods: {
-    hideMenus() {
-      this.$emit("hideMenus");
+    //TODO: 当前视图按照当前激活的状态自动左右平移
+    move2CurrentRunningState() {
+      if (this.runningStateData.stateId !== "") {
+        let currentRunningState = store.getState(
+          this.threadIndex,
+          this.runningStateData.stateId
+        );
+        console.log(currentRunningState);
+      }
+    },
+    getNearestLineData(e) {
+      if (stateManage.hasDrawedLine) {
+        stateManage.hasDrawedLine = false;
+        return false;
+      }
+      if (stateManage.hasMovedCanvas) {
+        stateManage.hasMovedCanvas = false;
+        return false;
+      }
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      if (lineAry.length === 0) {
+        return;
+      }
+      let canvasDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      let mouseDownPoint = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+      let canvasMouseDownPoint = {
+        x: e.pageX - canvasDom.getBoundingClientRect().left,
+        y: e.pageY - canvasDom.getBoundingClientRect().top,
+      };
+      let DomInLineArea = this.isInLineDomArea(mouseDownPoint, LINE_DISPLACE);
+      let lineInDisplace = this.computeNearValue(
+        DomInLineArea,
+        canvasMouseDownPoint,
+        LINE_DISPLACE
+      );
+      let nearestLineData = this.getNearestLine(lineInDisplace);
+      return nearestLineData;
+    },
+    nearestLineContextMenu(e) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      let nearestLineData = this.getNearestLineData(e);
+      if (!nearestLineData) {
+        return;
+      }
+      let highlightLine = nearestLineData.lineId;
+      let lineData;
+      lineAry.forEach((line) => {
+        if (line.lineId === highlightLine) {
+          lineData = line;
+        }
+      });
+      let position = {
+        x: e.pageX,
+        y: e.pageY,
+      };
+      let nearOffset = -nearestLineData.nearValue;
+      //根据鼠标靠近连线的种类重新计算连线菜单所在的位置
+      if (nearestLineData.nearType === "y") {
+        position.y += nearOffset;
+      } else if (nearestLineData.nearType === "x") {
+        position.x += nearOffset;
+      }
+      EventObj.$emit("hideStateContextMenu");
+      EventObj.$emit("updateContextMenu", {
+        lineId: lineData.lineId,
+        threadIndex: this.threadIndex,
+        lineData: lineData,
+        position: position,
+      });
+    },
+    selectNearestLine(e) {
+      let nearestLineData = this.getNearestLineData(e);
+      if (!nearestLineData) {
+        return;
+      }
+      if (this.showLineContextMenu || this.showDeleteStateMenu) {
+        return;
+      }
+      let highlightLine = nearestLineData.lineId;
+      this.updateActiveLine(highlightLine);
+    },
+    isInLineDomArea(mouseDownPoint, displace) {
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
+      let lineInArea = [];
+      lineAry.forEach((line) => {
+        let lineDom = document.getElementById(line.lineId);
+        let lineDomArea = lineDom.getBoundingClientRect();
+        let lineTop = lineDomArea.top + window.scrollY;
+        let lineBottom = lineDomArea.bottom + window.scrollY;
+        let lineLeft = lineDomArea.left + window.scrollX;
+        let lineRight = lineDomArea.right + window.scrollX;
+        if (
+          mouseDownPoint.y > lineTop - displace &&
+          mouseDownPoint.y < lineBottom + displace &&
+          mouseDownPoint.x > lineLeft &&
+          mouseDownPoint.x < lineRight
+        ) {
+          lineInArea.push(line);
+        }
+      });
+      return lineInArea;
+    },
+    computeForward3LineNearValue(lineStart, lineEnd, clickPoint, displace) {
+      let smallestNearValue = 1000000;
+      let lineMiddle = lineStart.x + LINE_H + LINE_RADIUS;
+      //TODO：靠近连线右键弹出连线菜单时需要按照对应的靠近方式将连线菜单显示在连线上
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < lineMiddle
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > lineMiddle
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - lineMiddle) < displace) {
+        nearValue = clickPoint.x - lineMiddle;
+        absNearValue = Math.abs(clickPoint.x - lineMiddle);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeBackward5LineNearValue(
+      line,
+      lineStart,
+      lineEnd,
+      clickPoint,
+      displace
+    ) {
+      let smallestNearValue = 1000000;
+      let lineDom = document.getElementById(line.lineId).getAttribute("d");
+      let middleHorizontalLineRe = /V \d+/;
+      let firstVerticalLine = lineStart.x + LINE_H + LINE_RADIUS;
+      let secondVerticalLine = lineEnd.x - LINE_H - LINE_RADIUS;
+      let middleHorizontalLine = parseInt(
+        lineDom.match(middleHorizontalLineRe)[0].split(" ")[1],
+        10
+      );
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < firstVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - firstVerticalLine) < displace) {
+        nearValue = clickPoint.x - firstVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - firstVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - middleHorizontalLine) < displace &&
+        clickPoint.x < firstVerticalLine &&
+        clickPoint.x > secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - middleHorizontalLine;
+        absNearValue = Math.abs(clickPoint.y - middleHorizontalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - secondVerticalLine) < displace) {
+        nearValue = clickPoint.x - secondVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - secondVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > secondVerticalLine &&
+        clickPoint.x < lineEnd.x
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeForward5LineNearValue(
+      line,
+      lineStart,
+      lineEnd,
+      clickPoint,
+      displace
+    ) {
+      let smallestNearValue = 1000000;
+      let firstVerticalLine = lineStart.x + LINE_H + LINE_RADIUS;
+      let middleHorizontalLine = lineEnd.y + line.verticalOffset;
+      let secondVerticalLine = lineEnd.x - LINE_H - LINE_RADIUS;
+      let nearType, nearValue, absNearValue;
+      if (
+        Math.abs(clickPoint.y - lineStart.y) < displace &&
+        clickPoint.x < firstVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineStart.y;
+        absNearValue = Math.abs(clickPoint.y - lineStart.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - firstVerticalLine) < displace) {
+        nearValue = clickPoint.x - firstVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - firstVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - middleHorizontalLine) < displace &&
+        clickPoint.x > firstVerticalLine &&
+        clickPoint.x < secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - middleHorizontalLine;
+        absNearValue = Math.abs(clickPoint.y - middleHorizontalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      if (Math.abs(clickPoint.x - secondVerticalLine) < displace) {
+        nearValue = clickPoint.x - secondVerticalLine;
+        absNearValue = Math.abs(clickPoint.x - secondVerticalLine);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "x";
+        }
+      }
+      if (
+        Math.abs(clickPoint.y - lineEnd.y) < displace &&
+        clickPoint.x > secondVerticalLine
+      ) {
+        nearValue = clickPoint.y - lineEnd.y;
+        absNearValue = Math.abs(clickPoint.y - lineEnd.y);
+        if (absNearValue < smallestNearValue) {
+          smallestNearValue = nearValue;
+          nearType = "y";
+        }
+      }
+      let nearData = {
+        smallestNearValue: smallestNearValue,
+        nearType: nearType,
+      };
+      return nearData;
+    },
+    computeNearValue(lineInArea, clickPoint, displace) {
+      let lineNearValueData = [];
+      let nearData;
+      let scrollBarDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      clickPoint.x = clickPoint.x + scrollBarDom.scrollLeft - window.scrollX;
+      clickPoint.y = clickPoint.y + scrollBarDom.scrollTop - window.scrollY;
+      lineInArea.forEach((line) => {
+        let lineStart = QBlock.Line.getStartPoint(line, this.threadIndex);
+        let lineEnd = QBlock.Line.getEndPoint(line, this.threadIndex);
+        if (lineEnd.x > lineStart.x) {
+          if (line.verticalOffset === 0) {
+            nearData = this.computeForward3LineNearValue(
+              lineStart,
+              lineEnd,
+              clickPoint,
+              displace
+            );
+          } else {
+            nearData = this.computeForward5LineNearValue(
+              line,
+              lineStart,
+              lineEnd,
+              clickPoint,
+              displace
+            );
+          }
+        } else if (lineEnd.x < lineStart.x) {
+          nearData = this.computeBackward5LineNearValue(
+            line,
+            lineStart,
+            lineEnd,
+            clickPoint,
+            displace
+          );
+        }
+        if (nearData.smallestNearValue > displace) {
+          return;
+        } else {
+          lineNearValueData.push({
+            nearValue: nearData.smallestNearValue,
+            nearType: nearData.nearType,
+            lineId: line.lineId,
+          });
+        }
+      });
+      return lineNearValueData;
+    },
+    getNearestLine(lineNearValue) {
+      if (!lineNearValue) {
+        return;
+      }
+      let smallestNearValue = 1000000;
+      let smallestLineData;
+      lineNearValue.forEach((lineNearData) => {
+        if (Math.abs(lineNearData.nearValue) <= smallestNearValue) {
+          smallestNearValue = Math.abs(lineNearData.nearValue);
+          smallestLineData = lineNearData;
+        }
+      });
+      return smallestLineData;
+    },
+    updateTitle(e) {
+      e.preventDefault();
+      e.target.blur();
+      store.stateData.threadAry[this.threadIndex].name = e.target.innerText;
     },
     isInActiveThread() {
       if (this.activeThreadIndex === this.threadIndex) {
@@ -203,19 +576,14 @@ export default {
       }
       return false;
     },
-    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态和线程框的尺寸时，不触发高亮线程框的事件
+    //判断在当前线程框内鼠标移动的情况，若当前鼠标正在移动画布，绘制连线，改变状态的尺寸时，不触发高亮线程框的事件
     hasNotMovedInThread() {
       if (stateManage.hasDrawedLine) {
-        stateManage.hasDrawedLine = false;
-        return false;
-      } else if (stateManage.hasResizedThread) {
-        stateManage.hasResizedThread = false;
         return false;
       } else if (stateManage.hasResizedState) {
         stateManage.hasResizedState = false;
         return false;
       } else if (stateManage.hasMovedCanvas) {
-        stateManage.hasMovedCanvas = false;
         return false;
       }
       return true;
@@ -225,46 +593,25 @@ export default {
         this.$emit("updateActiveThread", this.threadIndex);
       }
     },
-    //获取当前状态图内最靠左的状态，以供状态图向左上角对齐使用
-    getLeftMostState() {
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let smallestStateX = 1000000;
-      let smallestStateXId;
-      stateAry.forEach((state) => {
-        if (state.x < smallestStateX) {
-          smallestStateX = state.x;
-          smallestStateXId = state.stateId;
-        }
-      });
-      let leftMostState = store.getState(this.threadIndex, smallestStateXId);
-      return leftMostState;
-    },
-    //获取当前状态图内最靠上的状态，以供状态图向左上角对齐使用
-    getUpMostState() {
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let smallestStateY = 1000000;
-      let smallestStateYId;
-      stateAry.forEach((state) => {
-        if (state.y < smallestStateY) {
-          smallestStateY = state.y;
-          smallestStateYId = state.stateId;
-        }
-      });
-      let upMostState = store.getState(this.threadIndex, smallestStateYId);
-      return upMostState;
-    },
+    //将当前状态图内的状态向左上角对齐
     leftTopPosition() {
       let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      let leftMostState = this.getLeftMostState();
-      let upMostState = this.getUpMostState();
+      let leftMostState = QBlock.State.getLeftMostState(this.threadIndex);
+      let upMostState = QBlock.State.getUpMostState(this.threadIndex);
       let offset = {
         x: leftMostState.x - 20,
-        y: upMostState.y - 20,
+        y: upMostState.y - 40,
       };
       stateAry.forEach((state) => {
         state.x = state.x - offset.x;
         state.y = state.y - offset.y;
       });
+      //对齐后重置滚动条的位置
+      let scrollBarDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      scrollBarDom.scrollLeft = 0;
+      scrollBarDom.scrollTop = 0;
     },
     isNotMainThread() {
       if (this.threadIndex === 0) {
@@ -289,6 +636,7 @@ export default {
     },
     updateActiveLine(selectedLine) {
       //处理连线的高亮
+      this.$emit("updateActiveThread", this.threadIndex);
       let lineIndex = this.activeLines.indexOf(selectedLine);
       if (lineIndex !== -1) {
         this.activeLines.splice(lineIndex, 1);
@@ -306,14 +654,18 @@ export default {
       });
     },
     updateActiveState(selectedState) {
+      let isHighlightingLine = this.getNearestLineData(selectedState.e);
+      if (isHighlightingLine) {
+        return;
+      }
       //取消选择已经存在于activeState内的state时，从activeState内删除被取消选择的状态
-      let spliceIndex = this.activeStates.indexOf(selectedState);
+      let spliceIndex = this.activeStates.indexOf(selectedState.stateData);
       if (spliceIndex !== -1) {
         let disactiveState = this.activeStates.splice(spliceIndex, 1)[0];
         this.disHighlightLines(disactiveState);
       } else {
         //选中的状态个数超出选中状态的上限时，删除存在于activeStates内的状态
-        this.activeStates.push(selectedState);
+        this.activeStates.push(selectedState.stateData);
         if (this.activeStates.length > HIGHLIGHT_LIMIT) {
           let newActiveState = this.activeStates.pop();
           while (this.activeStates.length > 0) {
@@ -397,72 +749,67 @@ export default {
         this.moveData[key] = data[key];
       });
     },
-    //停止对状态框的拖拽
+    //停止对状态的拖拽改变尺寸
     stopMoving() {
       this._isResizingState = false;
       this._resizingWidth = null;
       this._resizingHeight = null;
+      //停止对状态的拖拽改变尺寸时，更新用于储存当前状态图的状态的数据
       store.updatePresentData(this.threadIndex);
     },
-    //开始拖拽画布时，须记录状态原本的x坐标来计算状态在画布拖拽之后的位置
     startMovingCanvas(e) {
       //获取当前鼠标点下位置的path，若在path内index为1的dom的class不为null，则是在状态块以及循环状态上按下，此时不触发画布移动
       if (e.path[1].getAttribute("class") !== null) {
         return false;
-      } else {
-        stateManage.movingCanvas = true;
-        this._canvasStartInfo = {
-          x: e.pageX,
-          y: e.pageY,
-        };
-        this._stateOrigin = [];
-        let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-        stateAry.forEach((state) => {
-          this._stateOrigin.push({
-            x: state.x,
-            y: state.y,
-          });
-        });
       }
-    },
-    //拖拽画布时须动态更新状态的位置
-    updateStatePositionByCanvas(offset) {
-      let stateAry = store.stateData.threadAry[this.threadIndex].stateAry;
-      for (let i = 0; i < stateAry.length; i++) {
-        stateAry[i].x = this._stateOrigin[i].x + offset.x;
-        stateAry[i].y = this._stateOrigin[i].y + offset.y;
-      }
-    },
-    updateCanvas(e) {
-      this._canvasEndInfo = {
+      this._startMoveCanvasInfo = {
         x: e.pageX,
         y: e.pageY,
       };
-      let canvasOffset = {
-        x: this._canvasEndInfo.x - this._canvasStartInfo.x,
-        y: this._canvasEndInfo.y - this._canvasStartInfo.y,
-      };
-      this.updateStatePositionByCanvas(canvasOffset);
-      return canvasOffset;
+      this._isMovingCanvas = true;
+      let scrollBarDom = document.getElementsByClassName("scroll-wrapper")[
+        this.threadIndex
+      ];
+      this._startScrollBarLeft = scrollBarDom.scrollLeft;
+      this._startScrollBarTop = scrollBarDom.scrollTop;
     },
-    onMovingCanvas(e) {
-      if (!stateManage.movingCanvas) {
+    //根据鼠标的位移来设置滑动条的偏移值，从而实现拖动画布
+    onMovingCanvasOrDrawTempLine(e) {
+      if (stateManage.isConnecting) {
+        this.drawTempLine(e);
+      } else if (!this._isMovingCanvas) {
+        return false;
+      } else if (this.moveLineData.startMovingLine) {
         return false;
       } else {
         if (e.buttons === 1) {
-          let canvasOffset = this.updateCanvas(e);
-          if (canvasOffset.x !== 0 && canvasOffset.y !== 0) {
+          this._endMoveCanvasInfo = {
+            x: e.pageX,
+            y: e.pageY,
+          };
+          let canvasOffset = {
+            x: -(this._endMoveCanvasInfo.x - this._startMoveCanvasInfo.x),
+            y: -(this._endMoveCanvasInfo.y - this._startMoveCanvasInfo.y),
+          };
+          let scrollBarDom = document.getElementsByClassName("scroll-wrapper")[
+            this.threadIndex
+          ];
+          let offsetX, offsetY;
+          offsetX = canvasOffset.x + this._startScrollBarLeft;
+          offsetY = canvasOffset.y + this._startScrollBarTop;
+          scrollBarDom.scrollLeft = offsetX;
+          scrollBarDom.scrollTop = offsetY;
+          if (canvasOffset.x !== 0 || canvasOffset.y !== 0) {
             stateManage.hasMovedCanvas = true;
           }
         } else {
-          this._canvasStartInfo = null;
-          this._canvasEndInfo = null;
-          this._stateOrigin = null;
-          stateManage.movingCanvas = false;
+          this._isMovingCanvas = false;
+          this._startMoveCanvasInfo = null;
+          this._endMoveCanvasInfo = null;
         }
       }
     },
-    onConnecting(e) {
+    drawTempLine(e) {
       if (stateManage.isConnecting) {
         stateManage.movingCanvas = false;
         //检测鼠标左键是否仍是按下状态    ===1 说明鼠标左键被按下后未松开
@@ -491,6 +838,7 @@ export default {
       this.moveLineData.startMovingLine = false;
       this._isMovingLine = false;
       this._movingVerticalOffset = null;
+      //停止调节连线时，更新当前状态图的状态
       store.updatePresentData(this.threadIndex);
     },
     //监测线程框内的鼠标移动，改变状态的尺寸
@@ -516,7 +864,6 @@ export default {
       let moveData = this.moveData;
       let moveLineData = this.moveLineData;
       if (this._isResizingState) {
-        stateManage.hasResizedState = true;
         this.resizingState(moveData);
       } else if (this._isMovingLine) {
         this.movingLine(moveLineData);
@@ -540,6 +887,7 @@ export default {
     },
     //改变状态的尺寸，嵌套状态内部的状态的尺寸不得大于其父状态
     resizingState(moveData) {
+      stateManage.hasResizedState = true;
       let resizingState = store.getState(this.threadIndex, moveData.stateId);
       if (!this._resizingWidth) {
         this._resizingWidth = Util.translatePX2Num(resizingState.width);
@@ -580,15 +928,49 @@ export default {
       resizingState.width = stateWidth + "px";
       resizingState.height = stateHeight + "px";
     },
-    titleStyle() {
-      return `height: ${this.titleHeight}px;`;
-    },
     updateTempLineData(lineData) {
       Object.keys(lineData).forEach((key) => {
         this.tempLineData[key] = lineData[key];
       });
     },
+    setLineType(lineData) {
+      let lineType;
+      lineType = "default";
+      if (lineData.startPointClass === "connect-point in") {
+        lineType = "startLoop";
+      } else if (lineData.endPointClass === "connect-point loop") {
+        lineType = "continueLoop";
+      } else if (
+        lineData.startPointClass === "connect-point out" &&
+        lineData.endPointClass === "connect-point out"
+      ) {
+        lineType = "endLoop";
+      }
+      return lineType;
+    },
+    drawConnectLineByType(lineData) {
+      if (lineData.type === "startLoop") {
+        store.addStartLoopLine({
+          threadIndex: this.threadIndex,
+          lineData: lineData,
+        });
+      } else if (
+        lineData.type === "continueLoop" ||
+        lineData.type === "endLoop"
+      ) {
+        store.addEndOrContinueLoopLine({
+          threadIndex: this.threadIndex,
+          lineData: lineData,
+        });
+      } else {
+        store.addLine({
+          threadIndex: this.threadIndex,
+          lineData: lineData,
+        });
+      }
+    },
     drawConnectLine(e) {
+      //当绘制连线时，需要在连线被绘制之前更新用于撤销的当前状态图的状态，在连线被绘制后更新当前状态图的状态
       store.updateUndoData(this.threadIndex);
       store.focusCurrentThread(this.threadIndex);
       let endStateId = this.getEndState(e).stateId;
@@ -601,12 +983,13 @@ export default {
       lineData.endState = endState;
       lineData.lineId = window.genId("line");
       lineData.desc = "";
-      lineData.type = "default";
+      lineData.type = this.setLineType(lineData);
       lineData.verticalOffset = 0;
-      store.addLine({
-        threadIndex: this.threadIndex,
-        lineData: lineData,
-      });
+      lineData.event = {
+        ioStateNum: null,
+        ioStateBool: null,
+      };
+      this.drawConnectLineByType(lineData);
       store.updatePresentData(this.threadIndex);
       //需要通过lineId来寻找可能需要删除的连线
       return lineData.lineId;
@@ -618,17 +1001,16 @@ export default {
      * 判断两根连线是否相同,如果连线1的开始状态==连线2的开始状态，且连线1的结束状态==连线2的结束状态，说明是同一根连线
      * @return Boolean
      */
-    isSameLine(line1, line2, endStateId) {
-      return (
-        line1.startState.stateId === line2.startState.stateId &&
-        line1.endState.stateId === endStateId
-      );
-    },
     isDuplicateLine(line, endStateId) {
       let dupFlag = false;
       let currentThread = store.stateData.threadAry[this.threadIndex];
       currentThread.lineAry.forEach((item) => {
-        if (this.isSameLine(item, line, endStateId)) {
+        if (
+          item.startState.stateId === line.startState.stateId &&
+          item.endState.stateId === endStateId &&
+          item.startPointClass === line.startPointClass &&
+          item.endPointClass === line.endPointClass
+        ) {
           dupFlag = true;
           return false;
         }
@@ -636,27 +1018,21 @@ export default {
       return dupFlag;
     },
     /**
-     * 画连接线时找出起始的状态块
-     */
-    getStartState() {},
-    /**
      * 获取鼠标松开时停留在哪个状态块上面
      * @return object { stateId: 状态块的stateid属性}
      */
     getEndState(e) {
       let stateId = null,
         clazz = ".state-wrap",
-        stateIndex;
+        stateIndex,
+        endPointClass;
       if (e.target.closest(clazz)) {
+        endPointClass = e.target.getAttribute("class");
         stateId = e.target.closest(clazz).getAttribute("stateid");
-        stateIndex = parseInt(
-          e.target.closest(clazz).getAttribute("index"),
-          10
-        );
       }
       return {
         stateId: stateId,
-        stateIndex: stateIndex,
+        endPointClass: endPointClass,
       };
     },
     getEndPoint(e) {
@@ -671,68 +1047,19 @@ export default {
             e.target.getBoundingClientRect().left -
             curSvgRect.left -
             2 +
-            e.target.getBoundingClientRect().width / 2, //e.target.offsetLeft + e.offsetX, // e.clientX,
+            e.target.getBoundingClientRect().width / 2,
           y:
             e.target.getBoundingClientRect().top -
             curSvgRect.top +
-            e.target.getBoundingClientRect().height / 2, //e.target.offsetTop + e.offsetY // e.clientY
+            e.target.getBoundingClientRect().height / 2,
         };
       } else {
         point = {
-          x: e.clientX - curSvgRect.left - 2, //e.target.offsetLeft + e.offsetX, // e.clientX,
-          y: e.clientY - curSvgRect.top - 2, //e.target.offsetTop + e.offsetY // e.clientY
+          x: e.clientX - curSvgRect.left - 2,
+          y: e.clientY - curSvgRect.top - 2,
         };
       }
       return point;
-    },
-    onMouseup(e) {
-      if (!stateManage.isConnecting) {
-        this.showTempLine = false;
-      }
-      if (stateManage.isConnecting) {
-        //TODO 触发EventObj更新lineObj
-        let curSvg = e.target.closest("svg");
-        let curSvgRect = curSvg.getBoundingClientRect();
-        let target_class = e.target.getAttribute("class");
-        let regIsConnectPoint = /connect-point/;
-        let existedLine = false;
-        let endStateId = this.getEndState(e).stateId;
-        let startState = store.getState(
-          this.threadIndex,
-          this.tempLineData.startState.stateId
-        );
-        let endState;
-        if (endStateId) {
-          endState = store.getState(this.threadIndex, endStateId);
-        }
-        if (regIsConnectPoint.test(target_class)) {
-          //绘制连接线
-          existedLine = this.isDuplicateLine(this.tempLineData, endStateId);
-          if (existedLine) {
-            this.showTempLine = false;
-            return;
-          } else if (startState.parent !== endState.parent) {
-            this.showTempLine = false;
-            return;
-          } else if (
-            endState &&
-            endStateId === this.tempLineData.startState.stateId
-          ) {
-            return;
-          } else {
-            //TODO: 添加循环组件内部的连线
-            let drawingLineId = this.drawConnectLine(e);
-            this.handleLoops(
-              drawingLineId,
-              endStateId,
-              this.tempLineData.startState.stateId
-            );
-            store.updatePresentData(this.threadIndex);
-          }
-        }
-        this.showTempLine = false;
-        stateManage.isConnecting = false;
-      }
     },
     /**
      * 获取与可能形成循环的状态处在同一级的所有状态
@@ -751,8 +1078,7 @@ export default {
     },
     /**
      * 判断与处理状态图内可能存在的循环结构
-     *
-     * @param {drawingLineId, endStateId}
+     * @param {drawingLineId, endStateId, startStateId}
      */
     handleLoops(drawingLineId, endStateId, startStateId) {
       let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
@@ -765,19 +1091,14 @@ export default {
           threadIndex: this.threadIndex,
         });
         let loopStateData = this.createLoop(inLoopStatesId, statesInLoopLayer);
-        //若走到这里，则可以判断当前的endstate为循环状态内的起始状态
-        //TODO: 考虑循环状态内部的连线样式
-        this.relateLine2LoopStart(
-          endStateId,
-          loopStateData,
-          statesInLoopLayer,
-          lineAry
-        );
-        this.relateLine2LoopEnd(
-          startStateId,
-          loopStateData,
-          statesInLoopLayer,
-          lineAry
+        let loopState = loopStateData.loopState;
+        let startState = store.getState(this.threadIndex, startStateId);
+        this.relateLine2LoopStart(loopStateData, statesInLoopLayer, lineAry);
+        this.relateLine2LoopEnd(loopStateData, statesInLoopLayer, lineAry);
+        QBlock.Line.addContinueLoopLine2State(
+          startState,
+          loopState,
+          this.threadIndex
         );
       }
     },
@@ -910,11 +1231,11 @@ export default {
         maxX = currentState.x > maxX ? currentState.x : maxX;
         return false;
       });
-      let width = maxX - minX + rightestStateWidth + 80 + "px";
+      let width = maxX - minX + rightestStateWidth + 120 + "px";
       return width;
     },
     /**
-     * //计算循环状态的高度
+     * 计算循环状态的高度
      * @param {inLoopStatesId}
      */
     calculateLoopHeight(inLoopStatesId) {
@@ -945,7 +1266,7 @@ export default {
         minY = currentState.y < minY ? currentState.y : minY;
       });
 
-      let height = lowestStateBottom - minY + 80 + "px";
+      let height = lowestStateBottom - minY + 180 + "px";
       return height;
     },
     /**
@@ -962,83 +1283,248 @@ export default {
         loopState.children.push(currentState);
       }
     },
-    relateLine2LoopEnd(
-      lastLoopStateId,
-      loopStateData,
-      statesInLoopLayer,
-      lineAry
-    ) {
+    /**
+     * 获取形成循环状态时所有与从循环内侧连出循环内侧状态连线相连的状态
+     */
+    getStateRelated2LoopEnd(loopStateData, statesInLoopLayer, lineAry) {
       let loopStateIndex;
       statesInLoopLayer.forEach((state, index) => {
         if (state.stateId === loopStateData.stateId) {
           loopStateIndex = index;
         }
       });
-      let lastLoopState = store.getState(this.threadIndex, lastLoopStateId);
 
-      for (let i = 0; i < lastLoopState.outputAry.length; i++) {
-        let lineData;
-        lineAry.forEach((item) => {
-          if (item.lineId === lastLoopState.outputAry[i].lineId) {
-            lineData = item;
-          }
-        });
-        lineData.startPoint = {
-          x: loopStateData.endPoint.x,
-          y: loopStateData.endPoint.y,
-        };
-        lineData.startState = {
-          stateId: loopStateData.stateId,
-          stateIndex: loopStateIndex,
-        };
-        store.relateLine2startState({
-          threadIndex: this.threadIndex,
-          lineData: lineData,
-        });
-      }
-      lastLoopState.outputAry = [];
-      this.updateLines(lastLoopState);
+      let loopState = store.getState(this.threadIndex, loopStateData.stateId);
+      let loopStateChildren = loopState.children;
+      let statesOutsideLoop = [];
+      let loopStateHasOutsideLine = [];
+      let lineToDelete = [];
+      loopStateChildren.forEach((stateInLoop) => {
+        if (stateInLoop.outputAry.length !== 0) {
+          stateInLoop.outputAry.forEach((outputLine) => {
+            let lineData;
+            lineAry.forEach((item) => {
+              if (item.lineId === outputLine.lineId) {
+                lineData = item;
+              }
+            });
+            let endState = store.getState(
+              this.threadIndex,
+              lineData.endState.stateId
+            );
+            if (endState.parent !== stateInLoop.parent) {
+              if (statesOutsideLoop.indexOf(lineData.endState.stateId) === -1) {
+                statesOutsideLoop.push(endState.stateId);
+              }
+              if (loopStateHasOutsideLine.indexOf(stateInLoop.stateId) === -1) {
+                loopStateHasOutsideLine.push(stateInLoop.stateId);
+              }
+              lineToDelete.push(lineData.lineId);
+            }
+          });
+        }
+      });
+      let dataRelated2LoopEnd = {
+        statesOutsideLoop: statesOutsideLoop,
+        loopStateHasOutsideLine: loopStateHasOutsideLine,
+        lineToDelete: lineToDelete,
+      };
+      return dataRelated2LoopEnd;
+    },
+    //用于在连线形成循环结构时，对循环状态内连出至循环状态外的状态添加从循环连接至循环外部的连线
+    addLine2LoopEnd(statesOutsideLoop, loopState) {
+      statesOutsideLoop.forEach((stateId, timeOutIndex) => {
+        let stateConnect2LoopEnd = store.getState(this.threadIndex, stateId);
+        if (
+          stateConnect2LoopEnd.stateType !== "loopDiv" &&
+          stateConnect2LoopEnd.mode !== "nest"
+        ) {
+          setTimeout(() => {
+            QBlock.Line.addDefaultLine2State(
+              loopState,
+              stateConnect2LoopEnd,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 1));
+        } else {
+          setTimeout(() => {
+            QBlock.Line.addEndLoopLine2State(
+              loopState,
+              stateConnect2LoopEnd,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 1));
+          /*
+          setTimeout(() => {
+            QBlock.Line.addContinueLoopLine2State(
+              loopState,
+              stateConnect2LoopEnd,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 2));
+          */
+        }
+      });
+    },
+    //用于在连线形成循环结构时，添加结束循环的连线
+    addLineFromLoopEnd2StateOutsideLoop(loopStateHasOutsideLine, loopState) {
+      loopStateHasOutsideLine.forEach((stateId, timeOutIndex) => {
+        let endLoopState = store.getState(this.threadIndex, stateId);
+        setTimeout(() => {
+          QBlock.Line.addEndLoopLine2State(
+            endLoopState,
+            loopState,
+            this.threadIndex
+          );
+        }, 10 * (timeOutIndex + 1));
+      });
     },
     /**
-     * 将外层状态连入循环状态中第一个被执行的状态的连线连接到循环状态的连入点
-     * @param {firstLoopStateId, loopStateData, statesInLoopLayer, lineAry}
+     * 将循环状态中连出至外层状态的连线连接到循环状态的连出点
      */
-    relateLine2LoopStart(
-      firstLoopStateId,
-      loopStateData,
-      statesInLoopLayer,
-      lineAry
-    ) {
+    relateLine2LoopEnd(loopStateData, statesInLoopLayer, lineAry) {
+      let loopState = loopStateData.loopState;
+      let dataRelated2LoopEnd = this.getStateRelated2LoopEnd(
+        loopStateData,
+        statesInLoopLayer,
+        lineAry
+      );
+      let lineToDelete = dataRelated2LoopEnd.lineToDelete;
+      //TODO:根据line的type来决定新增的循环内连线的种类
+      lineToDelete.forEach((lineId) => {
+        store.deleteLine({
+          threadIndex: this.threadIndex,
+          lineId: lineId,
+        });
+      });
+      this.$nextTick(function () {
+        this.addLine2LoopEnd(dataRelated2LoopEnd.statesOutsideLoop, loopState);
+        setTimeout(() => {
+          this.addLineFromLoopEnd2StateOutsideLoop(
+            dataRelated2LoopEnd.loopStateHasOutsideLine,
+            loopState
+          );
+        }, 10);
+      });
+    },
+    /**
+     * 获取形成循环状态时所有与从循环外侧连入循环内侧状态连线相连的状态
+     */
+    getStateRelated2LoopStart(loopStateData, statesInLoopLayer, lineAry) {
       let loopStateIndex;
       statesInLoopLayer.forEach((state, index) => {
         if (state.stateId === loopStateData.stateId) {
           loopStateIndex = index;
         }
       });
-      let firstLoopState = store.getState(this.threadIndex, firstLoopStateId);
 
-      for (let i = 0; i < firstLoopState.inputAry.length; i++) {
-        let lineData;
-        lineAry.forEach((item) => {
-          if (item.lineId === firstLoopState.inputAry[i].lineId) {
-            lineData = item;
-          }
-        });
-        lineData.endPoint = {
-          x: loopStateData.startPoint.x,
-          y: loopStateData.startPoint.y,
-        };
-        lineData.endState = {
-          stateId: loopStateData.stateId,
-          stateIndex: loopStateIndex,
-        };
-        store.relateLine2endState({
+      let loopState = store.getState(this.threadIndex, loopStateData.stateId);
+      let loopStateChildren = loopState.children;
+      let statesOutsideLoop = [];
+      let loopStateHasOutsideLine = [];
+      let lineToDelete = [];
+      loopStateChildren.forEach((stateInLoop) => {
+        if (stateInLoop.inputAry.length !== 0) {
+          stateInLoop.inputAry.forEach((inputLine) => {
+            let lineData;
+            lineAry.forEach((item) => {
+              if (item.lineId === inputLine.lineId) {
+                lineData = item;
+              }
+            });
+            let startState = store.getState(
+              this.threadIndex,
+              lineData.startState.stateId
+            );
+            if (startState.parent !== stateInLoop.parent) {
+              if (
+                statesOutsideLoop.indexOf(lineData.startState.stateId) === -1
+              ) {
+                statesOutsideLoop.push(startState.stateId);
+              }
+              if (loopStateHasOutsideLine.indexOf(stateInLoop.stateId) === -1) {
+                loopStateHasOutsideLine.push(stateInLoop.stateId);
+              }
+              lineToDelete.push(lineData.lineId);
+            }
+          });
+        }
+      });
+      let dataRelated2LoopStart = {
+        statesOutsideLoop: statesOutsideLoop,
+        loopStateHasOutsideLine: loopStateHasOutsideLine,
+        lineToDelete: lineToDelete,
+      };
+      return dataRelated2LoopStart;
+    },
+    //用于在连线形成循环结构时，对循环状态外连入循环状态内的状态添加从循环外部连接至循环的连线
+    addLine2LoopStart(statesOutsideLoop, loopState) {
+      statesOutsideLoop.forEach((stateId, timeOutIndex) => {
+        let stateConnect2LoopStart = store.getState(this.threadIndex, stateId);
+        if (
+          stateConnect2LoopStart.stateType !== "loopDiv" &&
+          stateConnect2LoopStart.mode !== "nest"
+        ) {
+          setTimeout(() => {
+            QBlock.Line.addDefaultLine2State(
+              stateConnect2LoopStart,
+              loopState,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 1));
+        } else {
+          setTimeout(() => {
+            QBlock.Line.addStartLoopLine2State(
+              stateConnect2LoopStart,
+              loopState,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 1));
+        }
+      });
+    },
+    //用于在连线形成循环结构时，添加开始循环的连线
+    addLineFromLoopStart2StateInLoop(loopStateHasOutsideLine, loopState) {
+      loopStateHasOutsideLine.forEach((stateId, timeOutIndex) => {
+        let startLoopState = store.getState(this.threadIndex, stateId);
+        setTimeout(() => {
+          QBlock.Line.addStartLoopLine2State(
+            loopState,
+            startLoopState,
+            this.threadIndex
+          );
+        }, 10 * (timeOutIndex + 1));
+      });
+    },
+    /**
+     * 将外层状态连入循环状态中状态的连线连接到循环状态的连入点
+     */
+    relateLine2LoopStart(loopStateData, statesInLoopLayer, lineAry) {
+      let loopState = loopStateData.loopState;
+      let dataRelated2LoopStart = this.getStateRelated2LoopStart(
+        loopStateData,
+        statesInLoopLayer,
+        lineAry
+      );
+      let lineToDelete = dataRelated2LoopStart.lineToDelete;
+      lineToDelete.forEach((lineId) => {
+        store.deleteLine({
           threadIndex: this.threadIndex,
-          lineData: lineData,
+          lineId: lineId,
         });
-      }
-      firstLoopState.inputAry = [];
-      this.updateLines(firstLoopState);
+      });
+      this.$nextTick(function () {
+        this.addLine2LoopStart(
+          dataRelated2LoopStart.statesOutsideLoop,
+          loopState
+        );
+        setTimeout(() => {
+          this.addLineFromLoopStart2StateInLoop(
+            dataRelated2LoopStart.loopStateHasOutsideLine,
+            loopState
+          );
+        }, 10);
+      });
     },
     /**
      * 将状态加入循环状态后删除原来的状态
@@ -1054,12 +1540,8 @@ export default {
     },
     drop(e) {
       //TODO：需要处理不允许用户跨线程拖拽状态块的问题
-      if (this.moveLineData.startMovingLine) {
-        this.stopMovingLine();
-        this.moveLineData.startMovingLine = false;
-        return false;
-      }
       if (e.dataTransfer.getData("operate") === "addState") {
+        //当进行拖拽添加状态块的操作时，需要在状态块被添加之前更新用于撤销的当前状态图的状态，在状态块被添加之后更新当前状态图的状态
         store.updateUndoData(this.threadIndex);
         this.addStateToThread(e);
         store.focusCurrentThread(this.threadIndex);
@@ -1120,47 +1602,21 @@ export default {
         store.focusCurrentThread(this.threadIndex);
       }
     },
-    getStateParentCount(state) {
-      let parentCount = 0;
-      while (state.parent !== null) {
-        parentCount += 1;
-        state = store.getState(this.threadIndex, state.parent);
-      }
-      return parentCount;
-    },
-    getDragStateLineType(line, dragData) {
-      let startState =
-        line.startState.stateId === dragData.stateId
-          ? dragData
-          : store.getState(this.threadIndex, line.startState.stateId);
-      let endState =
-        line.endState.stateId === dragData.stateId
-          ? dragData
-          : store.getState(this.threadIndex, line.endState.stateId);
-      let startStateParentCount = this.getStateParentCount(startState);
-      let endStateParentCount = this.getStateParentCount(endState);
-      if (startState.parent === endState.parent) {
-        return "default";
-      } else if (startStateParentCount > endStateParentCount) {
-        return "loopOut";
-      } else if (endStateParentCount > startStateParentCount) {
-        return "loopIn";
-      }
-    },
     //将从工具栏上拖拽下来的状态添加进当前线程内
     addStateToThread(e) {
       let threadPosInfo = e.target.getBoundingClientRect();
       let leftGap = e.dataTransfer.getData("mousedowntoleft");
       let topGap = e.dataTransfer.getData("mousedowntotop");
-      let osTop = document.documentElement.scrollTop || document.body.srcollTop;
+      let scrollTop =
+        document.documentElement.scrollTop || document.body.srcollTop;
       let data = {
         index: this.threadIndex,
         x: e.x - threadPosInfo.x - leftGap,
         y: e.y - threadPosInfo.y - topGap,
         stateType: e.dataTransfer.getData("stateType"),
       };
-      if (osTop) {
-        data.y = data.y + osTop;
+      if (scrollTop) {
+        data.y = data.y + scrollTop;
       }
       store.addState(data);
       return;
@@ -1239,7 +1695,6 @@ export default {
 
     startResize(e) {
       this.showVirtualBox = true;
-      stateManage.hasResizedThread = true;
       stateManage.movingCanvas = false;
       EventObj.$emit("operateChange", {
         operate: "resize-thread",
@@ -1252,15 +1707,88 @@ export default {
         originH: this.$el.offsetHeight,
       });
     },
-    endResize(e) {
-      if (!this.showVirtualBox) {
-        return false;
+    //处理连线时的鼠标松开动作
+    onMouseupDrawLine(e) {
+      //TODO 触发EventObj更新lineObj
+      let target_class = e.target.getAttribute("class");
+      let regIsConnectPoint = /connect-point/;
+      let existedLine = false;
+      let endStateId = this.getEndState(e).stateId;
+      let startState = store.getState(
+        this.threadIndex,
+        this.tempLineData.startState.stateId
+      );
+      let endState;
+      this.tempLineData.endPointClass = this.getEndState(e).endPointClass;
+      if (endStateId) {
+        endState = store.getState(this.threadIndex, endStateId);
       }
+      if (regIsConnectPoint.test(target_class)) {
+        existedLine = this.isDuplicateLine(this.tempLineData, endStateId);
+        if (existedLine) {
+          this.showTempLine = false;
+          return;
+        }
+        if (startState.parent !== endState.parent) {
+          //处理循环内部状态与其属于的循环状态之间的连线
+          if (
+            endState.parent === startState.stateId ||
+            startState.parent === endState.stateId
+          ) {
+            //若从循环状态内部连线至循环状态的开始点，则禁止连线
+            if (
+              this.tempLineData.startPointClass === "connect-point out" &&
+              this.tempLineData.endPointClass === "connect-point in"
+            ) {
+              this.showTempLine = false;
+              return;
+            }
+            this.drawConnectLine(e);
+          }
+          this.showTempLine = false;
+          return;
+        }
+        if (
+          //走到这里，说明是状态自身连入自身，此时不允许绘制连线
+          endState &&
+          endStateId === startState.stateId
+        ) {
+          return;
+        } else {
+          if (
+            this.tempLineData.startPointClass ===
+            this.tempLineData.endPointClass
+          ) {
+            //走到这里，说明是从连入点连线至连入点，或是从连出点连至连出点，此时禁止用户连线
+            this.showTempLine = false;
+            return;
+          }
+          let drawingLineId = this.drawConnectLine(e);
+          //TODO：需要考虑循环内部再嵌套形成循环的情况
+          this.handleLoops(
+            drawingLineId,
+            endStateId,
+            this.tempLineData.startState.stateId
+          );
+          store.updatePresentData(this.threadIndex);
+        }
+      }
+      this.showTempLine = false;
+      stateManage.isConnecting = false;
+    },
+    onMouseupEndResize(e) {
       this.showVirtualBox = false;
       EventObj.$emit("operateChange", {
         operate: "default",
       });
       this._lastHeight = this.thread.height;
+    },
+    endResizeOrDrawLine(e) {
+      if (this.showVirtualBox) {
+        this.onMouseupEndResize(e);
+      } else if (stateManage.isConnecting) {
+        this.onMouseupDrawLine(e);
+      }
     },
     //复制被选中的状态，开始与结束状态不可被复制
     copyState() {
@@ -1286,6 +1814,7 @@ export default {
       store.stateData.copiedStates = currentActiveStates;
       this._copiedStates = currentActiveStates;
     },
+    //新建被被复制嵌套状态的子状态
     genCopiedStateChildren(parent, state) {
       let newChildrenStateData = {
         stateType: state.stateType,
@@ -1324,7 +1853,9 @@ export default {
         stateType: state.stateType,
         x: state.x + Util.translatePX2Num(state.width) + this._offsetCount * 40,
         y:
-          state.y + Util.translatePX2Num(state.height) + this._offsetCount * 40,
+          state.y +
+          Util.translatePX2Num(state.height) +
+          this._offsetCount * Util.translatePX2Num(state.height),
       };
       let copiedStateChildren = state.children;
       let newState = store.getDefaultStateCfg(newStateData);
@@ -1360,8 +1891,11 @@ export default {
       if (undoList.length === 0) {
         return;
       }
+      //将当前状态的前一个状态添加进用于储存恢复状态的数组内
       redoList.push(store.stateData.threadAry[this.threadIndex].presentState);
+      //更新当前状态为当前状态的前一个状态
       store.stateData.threadAry[this.threadIndex].presentState = undoList.pop();
+      //加载更新后的当前状态
       store.stateData.threadAry[this.threadIndex].lineAry =
         store.stateData.threadAry[this.threadIndex].presentState.lineAry;
       store.stateData.threadAry[this.threadIndex].stateAry =
@@ -1375,8 +1909,11 @@ export default {
       if (redoList.length === 0) {
         return;
       }
+      //将当前状态的后一个状态添加进用于储存撤销状态的数组内
       undoList.push(store.stateData.threadAry[this.threadIndex].presentState);
+      //更新当前状态为当前状态的后一个状态
       store.stateData.threadAry[this.threadIndex].presentState = redoList.pop();
+      //加载更新后的当前状态
       store.stateData.threadAry[this.threadIndex].lineAry =
         store.stateData.threadAry[this.threadIndex].presentState.lineAry;
       store.stateData.threadAry[this.threadIndex].stateAry =
@@ -1405,15 +1942,35 @@ export default {
     this._offsetCount = 1;
     var _this = this;
     let el = this.$el;
+    /*
     var elm = el.querySelector("#test");
     if (elm) {
       this.stateBlock = new PlainDraggable(elm);
-    }
-    //每次重新加载组建时初始化用于恢复和撤销对状态图的操作的列表
+    }*/
+    //每次重新加载组件时初始化用于恢复和撤销对状态图的操作的列表
     store.stateData.threadAry[this.threadIndex].undoStatesList = [];
     store.stateData.threadAry[this.threadIndex].redoStatesList = [];
+    window.localStorage;
+    document.getElementsByClassName("thread")[
+      this.threadIndex
+    ].oncontextmenu = function () {
+      return false;
+    };
+    window.addEventListener("keydown", (e) => {
+      if (e.keyCode === 89 || e.keyCode === 90 || e.keyCode === 83) {
+        e.preventDefault();
+      }
+    });
   },
   created() {},
+  watch: {
+    runningStateData: {
+      handler(newVal, oldVal) {
+        console.log(newVal.stateId);
+      },
+      deep: true,
+    },
+  },
   computed: {
     computedH: function () {
       let maxY = 0;
@@ -1428,7 +1985,8 @@ export default {
             this.titleHeight +
             stateHeight +
             2 * threadDivBorderWidth +
-            2 * stateDivBorderWidth,
+            2 * stateDivBorderWidth +
+            15,
           maxY
         );
       });
@@ -1444,6 +2002,30 @@ export default {
       return this._lastHeight;
       // return Math.max(this._lastHeight, this.thread.height);
     },
+    computedCanvasWidth: function () {
+      let rightMostState = QBlock.State.getRightMostState(this.threadIndex);
+      let rightMostStateWidth = Util.translatePX2Num(rightMostState.width);
+      let leftMostState = QBlock.State.getLeftMostState(this.threadIndex);
+      let currentCanvasWidth =
+        rightMostState.x + rightMostStateWidth + 40 - leftMostState.x;
+      if (currentCanvasWidth < DEFAULT_CANVAS_WIDTH) {
+        return DEFAULT_CANVAS_WIDTH;
+      } else {
+        return currentCanvasWidth;
+      }
+    },
+    computedCanvasHeight: function () {
+      let topMostState = QBlock.State.getUpMostState(this.threadIndex);
+      let bottomMostState = QBlock.State.getBottomMostState(this.threadIndex);
+      let bottomMostStateHeight = Util.translatePX2Num(bottomMostState.height);
+      let currentCanvasHeight =
+        bottomMostState.y + bottomMostStateHeight + 80 - topMostState.y;
+      if (currentCanvasHeight < DEFAULT_CANVAS_HEIGHT) {
+        return DEFAULT_CANVAS_HEIGHT;
+      } else {
+        return currentCanvasHeight;
+      }
+    },
   },
 };
 </script>
@@ -1451,28 +2033,43 @@ export default {
 <style lang="less" scoped>
 * {
   user-select: none;
+  font-size: 0;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-corner {
+  display: none;
+}
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background-color: rgba(139, 139, 139, 0.281);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(136, 136, 136, 0.603);
 }
 div.thread {
   position: relative;
   display: inline-block;
   text-align: left;
-  /* margin-top: 50px; */
-  // margin-left: 50px;
-  // left: 50%;
-  // transform: translateX(-50%);
   margin: 25px;
+  border: 1px solid #487afe;
+  border-radius: 4px;
   &:focus {
     outline: none;
-  }
-  foreignObject {
-    // border: 1px solid #00cd9a;
-    border: 1px solid #487afe;
-    border-radius: 4px;
   }
   &.selected {
     box-shadow: 0px 0px 2px 2px #5280ff;
     border-radius: 4px;
   }
+}
+.scroll-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
 }
 h4.title {
   margin: 0;
@@ -1480,11 +2077,9 @@ h4.title {
   height: 35px;
   padding-left: 15px;
   line-height: 35px;
+  font-size: 16px;
   color: #ffffff;
   background-color: rgba(72, 122, 254, 0.42);
-  // background-color: rgba(0, 219, 255, 0.42);
-  // background-color: #487afe;
-  // background-image: linear-gradient(100deg, #82FDFF, #7898F9);
 }
 .operating,
 .pausing,
@@ -1518,7 +2113,8 @@ h4.title {
   width: 150px;
   height: 35px;
   position: absolute;
-  right: 0px;
+  top: 35px;
+  right: 15px;
   background-color: rgba(255, 255, 255, 0.05);
   z-index: 2;
 }
@@ -1542,28 +2138,10 @@ h4.title {
 .tools .el-button:focus {
   background-color: transparent;
 }
-
 .thread-body {
   position: relative;
-  height: calc(100% - 35px);
-  /* border: 1px solid #baed00; */
-}
-/**TODO: 后续需要实现状态图内的滚动条功能 */
-.scrollbar-right {
-  height: 166px;
-  width: 13px;
-  border-radius: 13px;
-  background: rgba(224, 224, 224, 0.37);
-  position: absolute;
-  right: 3px;
-}
-.scrollbar-bottom {
-  height: 13px;
-  width: 312px;
-  border-radius: 13px;
-  background: rgba(224, 224, 224, 0.37);
-  position: absolute;
-  bottom: 3px;
+  height: 100%;
+  width: 100%;
 }
 .resize-icon {
   position: absolute;
