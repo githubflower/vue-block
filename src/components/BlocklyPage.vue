@@ -1,6 +1,7 @@
 <template>
   <div id="blocklyPage">
     <iframe
+      ref="blocklyIframe"
       id="blocklyIframe"
       src="./static/blockly/demos/code/index.html"
       frameborder="0"

@@ -15,6 +15,9 @@ Vue.prototype.axios = axios;
 
 Vue.config.productionTip = false
 
+const jQuery = require('jquery');
+window.jQuery = jQuery;
+
 window.stateManage = {};//状态管理  后续采用vuex实现 TODO
 window.genId = (function () {
   var _id = 0;
