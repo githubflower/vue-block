@@ -222,18 +222,8 @@ var QBlock = {
     },
 
     addStartLoopLine2State(startState, endState, threadIndex) {
-      let startStateXY = QBlock.State.getXY2Canvas(startState, threadIndex)
-      let endStateXY = QBlock.State.getXY2Canvas(endState, threadIndex)
       let lineData = {
         d: "",
-        startPoint: {
-          x: startStateXY.x,
-          y: startStateXY.y + Util.translatePX2Num(startState.height) / 2,
-        },
-        endPoint: {
-          x: endStateXY.x,
-          y: endStateXY.y + Util.translatePX2Num(endState.height) / 2,
-        },
         startState: {
           stateId: startState.stateId,
         },
@@ -257,18 +247,8 @@ var QBlock = {
       });
     },
     addEndLoopLine2State(startState, endState, threadIndex) {
-      let startStateXY = QBlock.State.getXY2Canvas(startState, threadIndex)
-      let endStateXY = QBlock.State.getXY2Canvas(endState, threadIndex)
       let lineData = {
         d: "",
-        startPoint: {
-          x: startStateXY.x,
-          y: startStateXY.y + Util.translatePX2Num(startState.height) / 2,
-        },
-        endPoint: {
-          x: endStateXY.x + Util.translatePX2Num(endState.width),
-          y: endStateXY.y + Util.translatePX2Num(endState.height) / 2,
-        },
         startState: {
           stateId: startState.stateId,
         },
@@ -292,18 +272,8 @@ var QBlock = {
       });
     },
     addContinueLoopLine2State(startState, endState, threadIndex) {
-      let startStateXY = QBlock.State.getXY2Canvas(startState, threadIndex)
-      let endStateXY = QBlock.State.getXY2Canvas(endState, threadIndex)
       let lineData = {
         d: "",
-        startPoint: {
-          x: startStateXY.x,
-          y: startStateXY.y + Util.translatePX2Num(startState.height) / 2,
-        },
-        endPoint: {
-          x: endStateXY.x + Util.translatePX2Num(endState.width) - 10,
-          y: endStateXY.y + Util.translatePX2Num(endState.height) / 4 + 10,
-        },
         startState: {
           stateId: startState.stateId,
         },

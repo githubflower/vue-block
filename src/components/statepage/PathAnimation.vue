@@ -26,16 +26,16 @@
 </template>
 
 <script>
-import { lineCfg } from "./graphCfg.js";
+import { animationCfg } from "./graphCfg.js";
 export default {
   name: "pathAnimation",
   props: ["runningLineId"],
   data() {
     return {
-      rectCount: lineCfg.rectCount,
-      dur: lineCfg.dur, //一次完整的动画持续的时间 毫秒
+      rectCount: animationCfg.rectCount,
+      dur: animationCfg.dur, //一次完整的动画持续的时间 毫秒
       repeatCount: 1, // 'indefinite'
-      interval: lineCfg.interval, // 矩形物块开始动画的时间差 毫秒
+      interval: animationCfg.interval, // 矩形物块开始动画的时间差 毫秒
     };
   },
   methods: {

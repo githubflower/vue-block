@@ -4,5 +4,4 @@ const permission = {
         //TODO
     },
 };
-
-export default permission;
+module.export = permission

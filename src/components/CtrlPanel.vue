@@ -8,7 +8,7 @@
         <span class="text">急停</span>
       </li> -->
       <li>
-        <el-button type="danger">急 停</el-button>
+        <el-button type="danger">{{ $t("QBLOCK_EMERGENCY_STOP") }}</el-button>
       </li>
     </ul>
     <div class="ctrlpanel-button">
@@ -19,29 +19,45 @@
         title="生成blockly.xml"
         >生成blockly.xml</el-button
       > -->
-      <el-button class="save-btn" type="primary" plain @click="saveAllData">保存</el-button>
+      <el-button class="save-btn" type="primary" plain @click="saveAllData">{{
+        $t("QBLOCK_SAVE_ALL")
+      }}</el-button>
       <el-button
         type="primary"
         plain
         @click="clearBlocklyXmlOfLocalStorage"
         title="清空localStorage中blocklyXml数据"
-        >清空localStorage</el-button
+        >{{ $t("QBLOCK_CLEAR_LOCAL_STORAGE") }}</el-button
       >
       <el-button
         type="primary"
         plain
         @click="setDebuggerModeOfBlockly(true)"
         title="单独调试Blockly"
-        >单独调试Blockly</el-button
+        >{{ $t("QBLOCK_DEBUGGER_MODE_OF_BLOCKLY") }}</el-button
       >
       <el-button
         type="primary"
         plain
         @click="setDebuggerModeOfBlockly(false)"
-        title="单独调试Blockly"
-        >取消调试Blockly</el-button
+        title="取消调试Blockly"
+        >{{ $t("QBLOCK_CANCEL_DEBUGGER_MODE_OF_BLOCKLY") }}</el-button
       >
-     <!--  <el-button
+      <el-button
+        type="primary"
+        plain
+        @click="openWebSocket"
+        title="建立webSocket连接"
+        >{{ $t("QBLOCK_OPEN_WEBSOCKET") }}</el-button
+      >
+      <el-button
+        type="primary"
+        plain
+        @click="openPallasConnection"
+        title="建立pallas连接"
+        >建立pallas连接</el-button
+      >
+      <!--  <el-button
         type="primary"
         plain
         @click="reloadBlocklyXmlOfLocalStorage"
@@ -55,9 +71,12 @@
         title="save qblock2localStorage"
         >save qblock2localStorage</el-button
       > -->
-      <el-button type="primary" plain @click="testLayout" title="testLayout"
-        >自动布局</el-button
-      >
+      <el-button type="primary" plain @click="testLayout" title="testLayout">{{
+        $t("QBLOCK_AUTO_LAYOUT")
+      }}</el-button>
+      <el-button type="primary" plain @click="changeLang" title="切换语言">{{
+        $t("QBLOCK_CHANGE_LANG")
+      }}</el-button>
       <!-- <span class="title">Robot控制</span> -->
       <!-- <div class="line" @mouseenter="expandPanel"></div> -->
       <!-- v-show="isExpanded" -->
@@ -110,19 +129,53 @@ export default {
     testLayout() {
       EventObj.$emit("testLayout");
     },
-    saveAllData(){
+    saveAllData() {
       EventObj.$emit("saveAllData");
     },
-    setDebuggerModeOfBlockly(bool){
-      let qblock_cfg_custom = window.localStorage.getItem('qblock_cfg_custom');
-      if(!qblock_cfg_custom){
-        window.localStorage.setItem('qblock_cfg_custom', JSON.stringify({}));
+    openWebSocket() {
+      EventObj.$emit("openWebSocket");
+    },
+    openPallasConnection() {
+      this.axios({
+        url: "/service/connectPallas2092",
+        method: "post",
+      })
+        .then((res) => {
+          resolve();
+        })
+        .catch((err) => {
+          this.$message.error("创建pallas连接出错");
+        });
+    },
+    setDebuggerModeOfBlockly(bool) {
+      let qblock_cfg_custom = window.localStorage.getItem("qblock_cfg_custom");
+      if (!qblock_cfg_custom) {
+        window.localStorage.setItem("qblock_cfg_custom", JSON.stringify({}));
       }
       qblock_cfg_custom = JSON.parse(qblock_cfg_custom);
       qblock_cfg_custom.debuggerBlockly = bool;
-      window.localStorage.setItem('qblock_cfg_custom', JSON.stringify(qblock_cfg_custom));
+      window.localStorage.setItem(
+        "qblock_cfg_custom",
+        JSON.stringify(qblock_cfg_custom)
+      );
       window.location.reload();
-    }
+    },
+    changeLang() {
+      let QBlockCfg = JSON.parse(window.localStorage.getItem("QBlockCfg"));
+      let curLang = QBlockCfg.lang;
+      QBlockCfg.lang = curLang === "zh" ? "en" : "zh";
+      this.$i18n.i18next.changeLanguage(QBlockCfg.lang);
+      window.localStorage.setItem("QBlockCfg", JSON.stringify(QBlockCfg));
+
+      let blocklyIframe = document.getElementById("blocklyIframe");
+      blocklyIframe.contentWindow.postMessage(
+        {
+          type: "changeLanguage",
+          lang: QBlockCfg.lang,
+        },
+        "*"
+      );
+    },
   },
 };
 </script>
@@ -209,7 +262,7 @@ export default {
     border-radius: 15px;
     transform: translateY(-50%);
     box-shadow: 0 0 5px;
-    transition: all .3s;
+    transition: all 0.3s;
   }
 }
 .line {

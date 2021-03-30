@@ -3,13 +3,10 @@
   <!-- :stateId="stateId"  -->
   <div
     :index="index"
-    :class="[
-      'loop-div',
-      { active: isActive },
-      { selected: isInActiveStates() },
-    ]"
+    :class="['loop-div', { selected: isInActiveStates() }, runningStatus]"
     @click="selectStateOrHideMenu"
   >
+    <div :class="runningAnimation" :v-show="runningAnimation"></div>
     <span class="icon" :style="{ backgroundImage: `url( ${loopIcon})` }"></span>
     <el-input
       v-if="showInput"
@@ -19,7 +16,7 @@
       @keyup.enter.native="hideInput"
       @blur="hideInput"
     ></el-input>
-    <p v-else :title="stateData.name" @dblclick="rename">
+    <p :class="runningStatus" v-else :title="stateData.name" @dblclick="rename">
       {{
         stateData.name.length > 8
           ? stateData.name.slice(0, 8) + "..."
@@ -94,6 +91,8 @@ export default {
     "index",
     "threadIndex",
     "activeStates",
+    "runningStatus",
+    "runningAnimation",
     "showDeleteStateMenu",
     "showLineContextMenu",
   ],
@@ -131,6 +130,7 @@ export default {
       if (this.showDeleteStateMenu || this.showLineContextMenu) {
         EventObj.$emit("hideMenus");
       } else {
+        this.hideInput();
         this.$emit("updateActiveState", data);
       }
     },
@@ -203,7 +203,7 @@ export default {
      */
     getDesc(lineId) {
       let line =
-        statePageVue.threadAry[this.threadIndex].lineAry.find((item) => {
+        store.stateData.threadAry[this.threadIndex].lineAry.find((item) => {
           return item.lineId === lineId;
         }) || {};
       return line.desc;
@@ -283,12 +283,13 @@ export default {
 <style lang="less" scoped>
 @templateDivH: 30px;
 @qkmLightGreen: #1cf9ea;
-@qkmOrange: #ffaf3d;
+@qkmLightBlue: #70ffff;
+@qkmOrange: #ffaf3dcc;
+@qkmRed: #e83e3ecc;
 @qkmBlue: #3897e7;
 @qkmPink: #ed5e67;
-@qkmPurple: #9373ec;
-@qkmGrey: #aaaaaa;
-@qkmWhite: #ffffff;
+@qkmLightOrange: #ffaf3d;
+@qkmLightRed: #e83e3e;
 .loop-div {
   /* 76+76+40 */
   /* min-width: 192px; */
@@ -306,9 +307,115 @@ export default {
   border-color: #ce5050;
 }
 .loop-div.selected {
-  border: 2px solid @qkmOrange;
+  border: 2px solid @qkmLightOrange;
+  box-shadow: 2px 2px 4px 0px @qkmLightOrange;
+}
+.loop-div.active {
+  border: 2px solid @qkmLightBlue;
+  box-shadow: 2px 2px 4px 0px @qkmLightBlue;
+}
+.active-animation {
+  width: 10px;
+  height: 10px;
+  top: -5px;
+  left: -5px;
+  border-radius: 2px;
+  background: @qkmLightBlue;
+  box-shadow: 2px 2px 4px 0px @qkmLightBlue;
+  position: absolute;
+  float: left;
+  animation-name: activeMove;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+@keyframes activeMove {
+  0% {
+    left: -5px;
+    top: -5px;
+  }
+  25% {
+    left: calc(100% - 5px);
+    top: -5px;
+  }
+  50% {
+    left: calc(100% - 5px);
+    top: calc(100% - 5px);
+  }
+  75% {
+    left: -5px;
+    top: calc(100% - 5px);
+  }
+  100% {
+    left: -5px;
+    top: -5px;
+  }
+}
+.loop-div.warning {
+  border: 2px solid;
+  border-color: @qkmOrange;
   box-shadow: 2px 2px 4px 0px @qkmOrange;
 }
+
+.warning-animation {
+  width: 99%;
+  height: 99%;
+  border: 8px solid @qkmLightOrange;
+  float: left;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position: absolute;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+.loop-div.error {
+  border: 2px solid;
+  border-color: @qkmRed;
+  box-shadow: 2px 2px 4px 0px @qkmRed;
+}
+
+.error-animation {
+  width: 99%;
+  height: 99%;
+  border: 8px solid @qkmLightRed;
+  float: left;
+  border-radius: 5px;
+  top: -4px;
+  left: -4px;
+  position: absolute;
+  filter: blur(2px);
+  animation-name: errorWarningMove;
+  animation-delay: 0.5s;
+  animation-duration: 1s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: running;
+}
+@keyframes errorWarningMove {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  75% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 span.icon {
   position: absolute;
   display: inline-block;

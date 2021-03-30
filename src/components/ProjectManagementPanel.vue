@@ -7,12 +7,13 @@
     <div class="bg">
       <div></div>
     </div>
-    <el-tree
+    <!-- <el-tree
       v-show="!isCollapsed"
       :data="data"
       :props="defaultProps"
       @node-click="handleNodeClick"
-    ></el-tree>
+    ></el-tree> -->
+    <el-tree v-show="!isCollapsed" v-loading="treeData.loading" :data="treeData.projectData" :props="treeData.defaultProps" :expand-on-click-node="treeData.expandOnClickNode" :highlight-current="treeData.highlightCurrent" @node-click="handleNodeClick" :lazy="treeData.lazy" :load="treeData.load"></el-tree>
     <i
       :class="[
         'icon',
@@ -31,63 +32,18 @@ export default {
   data() {
     return {
       isCollapsed: true,
-      data: [
-        {
-          label: "一级 1",
-          children: [
-            {
-              label: "二级 1-1",
-              children: [
-                {
-                  label: "三级 1-1-1",
-                },
-              ],
-            },
-          ],
+      treeData: {
+        projectData: [],
+        defaultProps: {
+          children: "children",
+          label: "label",
         },
-        {
-          label: "一级 2",
-          children: [
-            {
-              label: "二级 2-1",
-              children: [
-                {
-                  label: "三级 2-1-1",
-                },
-              ],
-            },
-            {
-              label: "二级 2-2",
-              children: [
-                {
-                  label: "三级 2-2-1",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          label: "一级 3",
-          children: [
-            {
-              label: "二级 3-1",
-              children: [
-                {
-                  label: "三级 3-1-1",
-                },
-              ],
-            },
-            {
-              label: "二级 3-2",
-              children: [
-                {
-                  label: "三级 3-2-1",
-                },
-              ],
-            },
-          ],
-        },
-      ],
+        expandOnClickNode: false,
+        highlightCurrent: true,
+        loading: true,
+        selectedPath: '',
+        lazy: false,
+      },
       defaultProps: {
         children: "children",
         label: "label",
@@ -107,7 +63,22 @@ export default {
     collapse() {
       this.isCollapsed = true;
     },
+    loadProject(){
+      const PALLAS_PROJECT_DIR = '/media/flash/PallasSolutions/';
+      this.axios({
+        url: "/service/loadProject",
+        method: "post",
+        data: {
+          path: PALLAS_PROJECT_DIR
+        }
+      }).then((res) => {
+        this.treeData.projectData = res.data.data;
+      })
+    }
   },
+  created(){
+    this.loadProject();
+  }
 };
 </script>
 <style lang="less" scoped>
@@ -204,6 +175,15 @@ export default {
     box-shadow: 0 0 5px;
     transition: all .3s;
     
+  }
+  /deep/ .el-tree-node__content:hover {
+    background-color: #409eff;
+  }
+  /deep/ .el-tree--highlight-current .el-tree-node.is-current>.el-tree-node__content{
+    background-color: #00bcd4; 
+  }
+  /deep/ .el-tree-node:focus>.el-tree-node__content {
+    background-color: #409eff;
   }
 }
 </style>

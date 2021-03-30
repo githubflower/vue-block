@@ -9,31 +9,31 @@
       @select="handleSelect"
     >
       <el-submenu v-for="item in menuCfg" :index="item.id" :key="item.id">
-        <template slot="title">{{ item.name }}</template>
+        <template slot="title">{{ $t(item.name) }}</template>
         <el-menu-item
           v-for="subItem in item.children"
           :index="subItem.id"
           :key="subItem.id"
         >
-          <template>{{ subItem.name }}</template>
+          <template>{{ $t(subItem.name) }}</template>
           <el-submenu
             v-for="thirdLevelItem in subItem.children"
             :index="thirdLevelItem.id"
             :key="thirdLevelItem.id"
           >
-            <template>{{ thirdLevelItem.name }}</template>
+            <template>{{ $t(thirdLevelItem.name) }}</template>
           </el-submenu>
         </el-menu-item>
       </el-submenu>
 
       <el-submenu index="11">
-        <template slot="title">插件</template>
+        <template slot="title">{{ $t('QBLOCK_PLUGIN') }}</template>
         <el-menu-item index="11.1">
           <!--  router-link { name: '路由名称', params: { name: '插件名称'}}    -->
           <router-link
             :to="{ name: 'plugin', params: { name: 'plugin_a' } }"
             tag="div"
-            >打开插件a</router-link
+            >{{$t('QBLOCK_OPEN_PLUGIN')}}</router-link
           >
         </el-menu-item>
       </el-submenu>
@@ -47,6 +47,7 @@
 import { qblockCfg } from "@/qblockCfg.js";
 import Tools from "@/Tools.js";
 import Util from '@/components/statepage/util'
+import menuCfg from '@/assets/menuCfg'
 // import extenedMenu from '/static/plugins/cfg.json'
 
 export default {
@@ -57,52 +58,7 @@ export default {
       logoPath: "",
       activeIndex: "1",
       activeIndex2: "1",
-
-      menuCfg: [
-        {
-          id: "0",
-          name: "主页",
-          callback: null,
-          router: null,
-          children: [],
-        },
-        {
-          id: "1",
-          name: "工程管理",
-          callback: null,
-          router: null,
-          children: [
-            {
-              id: "1-0",
-              name: "新建工程",
-              callback: null,
-              router: null,
-              children: [],
-            },
-            {
-              id: "1-1",
-              name: "打开工程",
-              callback: null,
-              router: null,
-              children: [],
-            },
-            {
-              id: "1-2",
-              name: "保存工程",
-              callback: null,
-              router: null,
-              children: [],
-            },
-            {
-              id: "1-3",
-              name: "运行工程",
-              callback: null,
-              router: null,
-              children: [],
-            },
-          ],
-        },
-      ],
+      menuCfg: menuCfg.menu
     };
   },
   methods: {
@@ -113,6 +69,9 @@ export default {
       //保存工程
       console.log(key);
       switch(key){
+        case 'NEW_PROJECT':
+          this.createProject();
+          break;
         case '1-2':
           this.saveProject();
           break;
@@ -125,7 +84,7 @@ export default {
     },
 
     showCode() {
-      debugger;
+      
     },
 
     run() {
@@ -149,26 +108,83 @@ export default {
       });
     },
 
-    saveProject() {
-      let stateData = Tools.deepCopy(statePageVue.threadAry);
-     
-      // save blockly xml
-      let blocklyWindow = document.getElementsByTagName('iframe')[0].contentWindow;
-      let blocklyData = blocklyWindow.Blockly.Xml.workspaceToDom(blocklyWindow.Code.workspace);
-      // save qrl
-      let code = blocklyWindow.Blockly.Lua.workspaceToCode(blocklyWindow.Code.workspace);
-      debugger;
+    /**
+     * [createSubThreadCode 生成 创建子线程并启动 的QRL代码]
+     * @param  {[type]} data [description]
+     * @return {[type]}      [description]
+     */
+    createSubThreadCode(data){
+      let code = '';
+      for(let i = 1; i < data.length; i++){
+        let item = data[i];
+        let name = encodeURIComponent(item.basicData.name).replace(/%/g, '_');
+        code += `function_${name} = require('${name}.ql')\n` +
+          `thread_${name} = Thread.New(function_${name})()\n` +
+          `thread_${name}:Start()\n`
+      }
+      return code;
+    },
+
+    /**
+     * [createProject 新建工程]
+     * @param  {[type]} name [工程名称]
+     * @return {[type]}      [description]
+     */
+    createProject(name){
       this.axios({
-          url: '/service/saveProject',
-          method: 'post',
-          data: {
-            stateData: stateData,
-            blocklyData: blocklyData, //blocklyData,
-            code: code
+        url: '/service/newProject',
+        method: 'post',
+        data: {
+          name: 'zjie_create_' + +new Date(),
+        }
+      }).then((res) => {
+        alert('newProject success');
+      })
+    },
+
+    saveProject() {
+        let data = localStorage.getItem('threadsData');
+        if(data){
+          data = JSON.parse(data);
+        }
+        let blocklyWindow = document.getElementsByTagName('iframe')[0].contentWindow;
+        let codeAry = [];
+        data.forEach((item, index) => {
+          // item.basicData, item.graphicData
+          let xml = blocklyWindow.Blockly.Xml.textToDom(item.graphicData);
+          blocklyWindow.Code.hiddenWorkspace.clear();
+          blocklyWindow.Blockly.Xml.domToWorkspace(xml, blocklyWindow.Code.hiddenWorkspace);
+          let code = blocklyWindow.Blockly.Lua.workspaceToCode(blocklyWindow.Code.hiddenWorkspace);
+          if(index === 0){ // 主线程   main.ql
+            
+          }else{
+            // 为什么要将主线程和其他子线程的逻辑分开？  因为子线程的代码还需要在外面包裹一个function
+            code = `function ${encodeURIComponent(item.basicData.name).replace(/%/g, '_')}()\n${code}\nend\n`;
           }
-        }).then((res)=>{
-          // debugger;
+          codeAry.push(code);
         })
+        codeAry[0] += this.createSubThreadCode(data);
+
+        //将生成的code发送到WebServer端，由WebServer负责生成相应的文件存储到Pallas Flash
+        this.sendCode(data, codeAry);
+
+    },
+    /**
+     * [sendCode 将生成的code发送到WebServer端]
+     * @param  {[type]} codeAry [description]
+     * @return {[type]}         [description]
+     */
+    sendCode(data, codeAry){
+      this.axios({
+        url: '/service/saveProject',
+        method: 'post',
+        data: {
+          threadsData: data,
+          codeAry: codeAry
+        }
+      }).then((res) => {
+        alert('upload success');
+      })
     },
     run(){
       this.axios({
@@ -224,6 +240,8 @@ export default {
     if (qblockCfg.enableCustomMenu) {
       this.getExtendedMenu();
     }
+
+    
   },
 };
 </script>
@@ -306,5 +324,8 @@ export default {
 .el-menu.el-menu--horizontal {
   border-bottom: solid 1px #344b89;
   // border-bottom: none;
+}
+.el-menu--horizontal .el-menu .el-menu-item.is-active, .el-menu--horizontal .el-menu .el-submenu.is-active>.el-submenu__title{
+  color: #7898f9;
 }
 </style>

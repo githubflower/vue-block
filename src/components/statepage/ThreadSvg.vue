@@ -3,6 +3,7 @@
   <div
     :class="['thread', showThread ? 'is-expanded' : 'is-collapsed', {selected: isInActiveThread()}]"
     :style="{ width: thread.width + 'px', height: thread.height + 'px' }"
+    :id="thread.threadId"
     @drop.prevent="drop"
     @dragover.prevent
     @mouseup="endResizeOrDrawLine"
@@ -18,7 +19,6 @@
       xmlns="http://www.w3.org/2000/svg"
       :width=thread.width
       :height=titleHeight
-      :id="thread.id"
       class="operation-and-title-svg"
     >
       <g class="operation-and-title">
@@ -47,7 +47,8 @@
     </svg>
     <div class="scroll-wrapper" 
          :style="{ width:thread.width, height: thread.height - titleHeight + 'px' }" 
-         v-show="showThread">
+         v-show="showThread"
+         @mousemove="nearbyHoverLine">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       :width=computedCanvasWidth
@@ -100,6 +101,7 @@
               :activeLines="activeLines"
               :lineType="line.type"
               :threadIndex="threadIndex"
+              :nearbyHoverLineId="nearbyHoverLineId"
               @updateActiveLine="updateActiveLine"
               @updateMoveLineData="updateMoveLineData"
               @stopMovingLine="stopMovingLine"
@@ -140,6 +142,7 @@ import StateWrap from "./StateWrap";
 import LineComp from "./LineComp";
 import PathAnimation from "./PathAnimation";
 import { lineCfg } from "./graphCfg.js";
+import { threadCfg } from "./graphCfg.js";
 import Tools from "@/Tools.js";
 import QBlock from "./qblock.js";
 import dagre from "dagre";
@@ -147,11 +150,12 @@ import Util from "./util.js";
 const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
-const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
-const DEFAULT_CANVAS_WIDTH = lineCfg.default_canvas_width;
-const DEFAULT_CANVAS_HEIGHT = lineCfg.default_canvas_height;
 const LINE_DISPLACE = lineCfg.line_displace;
-const RANKSEP = lineCfg.rank_sep;
+
+const HIGHLIGHT_LIMIT = threadCfg.highlight_limit;
+const DEFAULT_CANVAS_WIDTH = threadCfg.default_canvas_width;
+const DEFAULT_CANVAS_HEIGHT = threadCfg.default_canvas_height;
+const RANKSEP = threadCfg.rank_sep;
 export default {
   name: "ThreadSvg",
   props: [
@@ -175,6 +179,7 @@ export default {
       showVirtualBox: false,
       showTempLine: false,
       showThread: true,
+      nearbyHoverLineId: "",
       activeStates: [],
       activeLines: [],
       tempLineData: {
@@ -192,7 +197,7 @@ export default {
         },
         d: "",
       },
-      titleHeight: lineCfg.threadTitleHeight,
+      titleHeight: threadCfg.threadTitleHeight,
       moveVerticalImg: "./static/imgs/move-vertical.png",
       resizableImg: "./static/imgs/resizable.png",
       moveLineData: {
@@ -220,6 +225,15 @@ export default {
           this.runningStateData.stateId
         );
         console.log(currentRunningState);
+      }
+    },
+    nearbyHoverLine(e) {
+      let nearestLineData = this.getNearestLineData(e);
+      if (nearestLineData) {
+        let nearestLineId = nearestLineData.lineId;
+        this.nearbyHoverLineId = nearestLineId;
+      } else {
+        this.nearbyHoverLineId = "";
       }
     },
     getNearestLineData(e) {
@@ -298,6 +312,7 @@ export default {
       let highlightLine = nearestLineData.lineId;
       this.updateActiveLine(highlightLine);
     },
+    //计算当前鼠标点下的位置是否在连线+-displace的范围内（鼠标点下的位置使用相对于页面左上角的位置）
     isInLineDomArea(mouseDownPoint, displace) {
       let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       let lineInArea = [];
@@ -319,10 +334,11 @@ export default {
       });
       return lineInArea;
     },
+    //对前向3段连线，分段判断鼠标靠近该连线的程度
+    //因连线的绘制是基于当前线程框的，故判断靠近连线时鼠标的位置也使用基于当前线程框左上角的位置
     computeForward3LineNearValue(lineStart, lineEnd, clickPoint, displace) {
       let smallestNearValue = 1000000;
       let lineMiddle = lineStart.x + LINE_H + LINE_RADIUS;
-      //TODO：靠近连线右键弹出连线菜单时需要按照对应的靠近方式将连线菜单显示在连线上
       let nearType, nearValue, absNearValue;
       if (
         Math.abs(clickPoint.y - lineStart.y) < displace &&
@@ -360,6 +376,8 @@ export default {
       };
       return nearData;
     },
+    //对后向5段连线，分段判断鼠标靠近该连线的程度
+    //因连线的绘制是基于当前线程框的，故判断靠近连线时鼠标的位置也使用基于当前线程框左上角的位置
     computeBackward5LineNearValue(
       line,
       lineStart,
@@ -434,6 +452,8 @@ export default {
       };
       return nearData;
     },
+    //对前向5段连线，分段判断鼠标靠近该连线的程度
+    //因连线的绘制是基于当前线程框的，故判断靠近连线时鼠标的位置也使用基于当前线程框左上角的位置
     computeForward5LineNearValue(
       line,
       lineStart,
@@ -948,7 +968,8 @@ export default {
       }
       return lineType;
     },
-    drawConnectLineByType(lineData) {
+    drawConnectLineByType(startState, lineAry, lineData) {
+      this.deleteEndOrContinueLoopLine(startState, lineAry, lineData.type);
       if (lineData.type === "startLoop") {
         store.addStartLoopLine({
           threadIndex: this.threadIndex,
@@ -980,6 +1001,7 @@ export default {
         lineData.startState.stateId
       );
       let endState = store.getState(this.threadIndex, endStateId);
+      let lineAry = store.stateData.threadAry[this.threadIndex].lineAry;
       lineData.endState = endState;
       lineData.lineId = window.genId("line");
       lineData.desc = "";
@@ -989,10 +1011,37 @@ export default {
         ioStateNum: null,
         ioStateBool: null,
       };
-      this.drawConnectLineByType(lineData);
+      this.drawConnectLineByType(startState, lineAry, lineData);
       store.updatePresentData(this.threadIndex);
       //需要通过lineId来寻找可能需要删除的连线
       return lineData.lineId;
+    },
+    //若当前状态存在跳出循环连线，且新增的连线为继续循环连线时，删除跳出循环连线，反之亦然
+    deleteEndOrContinueLoopLine(startState, lineAry, lineType) {
+      if (startState.outputAry && startState.outputAry.length !== 0) {
+        startState.outputAry.forEach((line) => {
+          let lineData;
+          lineAry.forEach((item) => {
+            if (item.lineId === line.lineId) {
+              lineData = item;
+            }
+          });
+          if (lineType === "endLoop" && lineData.type === "continueLoop") {
+            store.deleteLine({
+              threadIndex: this.threadIndex,
+              lineId: lineData.lineId,
+            });
+          } else if (
+            lineType === "continueLoop" &&
+            lineData.type === "endLoop"
+          ) {
+            store.deleteLine({
+              threadIndex: this.threadIndex,
+              lineId: lineData.lineId,
+            });
+          }
+        });
+      }
     },
     copy(obj) {
       return Tools.deepCopy(obj);
@@ -1094,7 +1143,12 @@ export default {
         let loopState = loopStateData.loopState;
         let startState = store.getState(this.threadIndex, startStateId);
         this.relateLine2LoopStart(loopStateData, statesInLoopLayer, lineAry);
-        this.relateLine2LoopEnd(loopStateData, statesInLoopLayer, lineAry);
+        this.relateLine2LoopEnd(
+          startState.stateId,
+          loopStateData,
+          statesInLoopLayer,
+          lineAry
+        );
         QBlock.Line.addContinueLoopLine2State(
           startState,
           loopState,
@@ -1354,35 +1408,39 @@ export default {
               this.threadIndex
             );
           }, 10 * (timeOutIndex + 1));
-          /*
-          setTimeout(() => {
-            QBlock.Line.addContinueLoopLine2State(
-              loopState,
-              stateConnect2LoopEnd,
-              this.threadIndex
-            );
-          }, 10 * (timeOutIndex + 2));
-          */
         }
       });
     },
     //用于在连线形成循环结构时，添加结束循环的连线
-    addLineFromLoopEnd2StateOutsideLoop(loopStateHasOutsideLine, loopState) {
+    addLineFromLoopEnd2StateOutsideLoop(
+      startStateId,
+      loopStateHasOutsideLine,
+      loopState
+    ) {
       loopStateHasOutsideLine.forEach((stateId, timeOutIndex) => {
-        let endLoopState = store.getState(this.threadIndex, stateId);
-        setTimeout(() => {
-          QBlock.Line.addEndLoopLine2State(
-            endLoopState,
-            loopState,
-            this.threadIndex
-          );
-        }, 10 * (timeOutIndex + 1));
+        if (stateId === startStateId) {
+          // do none
+        } else {
+          let endLoopState = store.getState(this.threadIndex, stateId);
+          setTimeout(() => {
+            QBlock.Line.addEndLoopLine2State(
+              endLoopState,
+              loopState,
+              this.threadIndex
+            );
+          }, 10 * (timeOutIndex + 1));
+        }
       });
     },
     /**
      * 将循环状态中连出至外层状态的连线连接到循环状态的连出点
      */
-    relateLine2LoopEnd(loopStateData, statesInLoopLayer, lineAry) {
+    relateLine2LoopEnd(
+      startStateId,
+      loopStateData,
+      statesInLoopLayer,
+      lineAry
+    ) {
       let loopState = loopStateData.loopState;
       let dataRelated2LoopEnd = this.getStateRelated2LoopEnd(
         loopStateData,
@@ -1401,6 +1459,7 @@ export default {
         this.addLine2LoopEnd(dataRelated2LoopEnd.statesOutsideLoop, loopState);
         setTimeout(() => {
           this.addLineFromLoopEnd2StateOutsideLoop(
+            startStateId,
             dataRelated2LoopEnd.loopStateHasOutsideLine,
             loopState
           );
@@ -1581,8 +1640,8 @@ export default {
           1;
         theDragStateData.x = x;
         theDragStateData.y = y;
-
         theDragStateData.parent = null;
+
         statePageVue.threadAry[this.threadIndex].stateAry.push(
           theDragStateData
         );
@@ -1956,17 +2015,12 @@ export default {
     ].oncontextmenu = function () {
       return false;
     };
-    window.addEventListener("keydown", (e) => {
-      if (e.keyCode === 89 || e.keyCode === 90 || e.keyCode === 83) {
-        e.preventDefault();
-      }
-    });
   },
   created() {},
   watch: {
     runningStateData: {
       handler(newVal, oldVal) {
-        console.log(newVal.stateId);
+        //console.log(newVal.stateId, newVal.runningStatus);
       },
       deep: true,
     },

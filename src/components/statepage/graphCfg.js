@@ -4,17 +4,24 @@ const lineCfg = {
     line_radius: 5, //连线拐角的半径
     stroke_width: 2, //连线的粗细
     desc_limit: 8, //显示在描述上的字数限制
-    rectCount: 3, //在连线运行动画中显示的动画元素个数
-    dur: 1200, //一次完整的连线运行动画持续的时间 毫秒
-    interval: 100, // 连线动画中矩形物块开始动画的时间差 毫秒
-    highlight_limit: 1, //高亮状态块的最大个数
-    threadTitleHeight: 35, //线程框标题的高度
-    rank_sep: 110, //自动布局时不同rank状态之间相隔的距离
-    default_canvas_width: 1300, //默认的画布宽度
-    default_canvas_height: 600, //默认的画布高度,
     line_displace: 10, //靠近连线的范围
 }
 
+const animationCfg = {
+    rectCount: 3, //在连线运行动画中显示的动画元素个数
+    dur: 1200, //一次完整的连线运行动画持续的时间 毫秒
+    interval: 100, // 连线动画中矩形物块开始动画的时间差 毫秒
+}
+
+const threadCfg = {
+    highlight_limit: 1, //高亮状态块的最大个数
+    threadTitleHeight: 35, //线程框标题的高度
+    rank_sep: 110, //自动布局时不同rank状态之间相隔的距离
+    default_canvas_width: 3000, //默认的画布宽度
+    default_canvas_height: 1500, //默认的画布高度,
+}
 export {
-    lineCfg
+    lineCfg,
+    animationCfg,
+    threadCfg
 }

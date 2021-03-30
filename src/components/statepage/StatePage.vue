@@ -2,8 +2,12 @@
   <div id="statePage" class="main" @mousemove="onMouseMove">
     <div class="toolbox">
       <!-- <el-button type="primary" plain @click="addThread">线程</el-button> -->
-      <div class="template-thread el-icon-circle-plus" @click="addThread">
-        新建线程
+      <div
+        :class="['template-thread', 'el-icon-circle-plus']"
+        :style="{ width: getCurrentLang() === 'zh' ? '100px' : '150px' }"
+        @click="addThread"
+      >
+        {{ $t("QBLOCK_ADD_THREAD") }}
       </div>
       <!-- dragStart事件只能绑定在html5元素上，绑定el组件无效，所以这里用span包裹一层  -->
       <span
@@ -13,7 +17,9 @@
         @dragend="dragEnd"
       >
         <!-- <el-button type="primary" plain stateType="stateDiv">状态</el-button> -->
-        <div class="template-state" stateType="stateDiv">状态</div>
+        <div class="template-state" stateType="stateDiv">
+          {{ $t("QBLOCK_STATE") }}
+        </div>
       </span>
       <span
         draggable="true"
@@ -22,16 +28,11 @@
         @dragend="dragEnd"
       >
         <!-- <el-button type="primary" plain stateType="loopDiv">循环</el-button> -->
-        <div class="template-loop" stateType="loopDiv">循环</div>
+        <div class="template-loop" stateType="loopDiv">
+          {{ $t("QBLOCK_LOOP") }}
+        </div>
       </span>
       <!-- <SwitchBtn /> -->
-      <div class="demo">
-        <!--
-        <el-button type="primary" plain @click="showDemo('active')">运行至当前状态</el-button>
-        <el-button type="primary" plain @click="showDemo('warning')">运行至当前状态警告</el-button>
-        <el-button type="primary" plain @click="showDemo('error')">运行至当前状态错误</el-button>
-        -->
-      </div>
       <!-- <el-button type="primary" plain @click="save">保存</el-button> -->
       <!-- <el-button
         type="primary"
@@ -148,9 +149,8 @@ import LineContextMenu from "./LineContextMenu";
 import StateContextMenu from "./StateContextMenu";
 import Tools from "@/Tools.js";
 import Util from "./util.js";
-import { lineCfg } from "./graphCfg.js";
+import { animationCfg } from "./graphCfg.js";
 import QBlock from "./qblock.js";
-const SCROLL_RATIO = lineCfg.scroll_ratio;
 export default {
   name: "StatePage",
   props: ["ctrlPanelMenuData"],
@@ -196,56 +196,50 @@ export default {
         },
       },
       fileList: [],
+      prevRunningState: "thread-1617094666583-state-start",
     };
   },
   methods: {
+    getCurrentLang() {
+      let QBlockCfg = JSON.parse(window.localStorage.getItem("QBlockCfg"));
+      let curLang = QBlockCfg.lang;
+      return curLang;
+    },
     updateActiveThread(threadIndex) {
       this.activeThreadIndex = threadIndex;
-    },
-    //TODO：开始循环，结束循环，继续循环的运行动画逻辑需要修改
-    showDemo(runningStatus) {
-      let demoData = {
-        stateId: store.demoStateData.stateId,
-        runningStatus: runningStatus,
-      };
-      let demoStateData = store.demoStateData;
-
-      if (store.demoStateData.inputAry[0]) {
-        let demoLineId = store.demoStateData.inputAry[0].lineId;
-        this.runAnimation(demoLineId, demoStateData, runningStatus);
-      } else {
-        this.runStateAnimation(demoData);
-      }
     },
     generateStartState() {
       let startStateData = {
         stateType: "stateDiv",
         x: 20,
-        y: 50,
+        y: 40,
       };
       let startState = store.getDefaultStateCfg(startStateData);
-      startState.name = "开始";
-      startState.stateId = "state-start";
+      startState.name = this.$t("QBLOCK_START_STATE");
       return startState;
     },
     generateEndState() {
       let endStateData = {
         stateType: "stateDiv",
         x: 500,
-        y: 50,
+        y: 40,
       };
       let endState = store.getDefaultStateCfg(endStateData);
-      endState.name = "结束";
-      endState.stateId = "state-end";
+      endState.name = this.$t("QBLOCK_END_STATE");
       return endState;
     },
     addThread() {
       let startState = this.generateStartState();
       let endState = this.generateEndState();
+      let threadId = window.genId("thread");
+      startState.stateId = threadId + "-state-start";
+      endState.stateId = threadId + "-state-end";
       store.addThread({
-        name: "线程名称" + (this.threadAry.length + 1),
+        name:
+          this.$t("QBLOCK_THREAD_DESCRIPTION") + (this.threadAry.length + 1),
         width: 1200,
         height: 500,
+        threadId: threadId,
         stateAry: [startState, endState],
         lineAry: [],
         runningStatus: "",
@@ -527,12 +521,8 @@ export default {
     },
     importFile() {},
 
-    handleExceed() {
-      debugger;
-    },
-    onUpload(rs, file, fileList) {
-      debugger;
-    },
+    handleExceed() {},
+    onUpload(rs, file, fileList) {},
     state2blockly() {
       var blocklyXml = Util.state2blockly(this.threadAry);
       Util.copyBlocklyXml2Clipboard(blocklyXml);
@@ -652,11 +642,10 @@ export default {
      *
      */
     runLineAnimation(lineId) {
-      this.runningStateData = {};
       this.runningLineId = lineId;
-      const interval = lineCfg.interval; // @PathAnimation.vue > interval
-      const during = lineCfg.dur; // @PathAnimation.vue > dur
-      const rectCount = lineCfg.rectCount; // @PathAnimation.vue > rectCount
+      const interval = animationCfg.interval; // @PathAnimation.vue > interval
+      const during = animationCfg.dur; // @PathAnimation.vue > dur
+      const rectCount = animationCfg.rectCount; // @PathAnimation.vue > rectCount
       setTimeout(function () {
         let triggerAnimationDom = document.getElementById("animationComp");
         triggerAnimationDom.focus();
@@ -673,21 +662,17 @@ export default {
     },
 
     //封装过后的高亮连线与状态的方法
-    runAnimation(lineId, state, runningStatus) {
-      const interval = lineCfg.interval; // @PathAnimation.vue > interval
-      const during = lineCfg.dur; // @PathAnimation.vue > dur
-      const rectCount = lineCfg.rectCount; // @PathAnimation.vue > rectCount
-      let stateData = {
-        stateId: state.stateId,
-        runningStatus: runningStatus,
-      };
-
-      this.runLineAnimation(lineId);
+    runAnimation(lineId, stateData) {
+      const interval = animationCfg.interval; // @PathAnimation.vue > interval
+      const during = animationCfg.dur; // @PathAnimation.vue > dur
+      const rectCount = animationCfg.rectCount; // @PathAnimation.vue > rectCount
+      if (lineId) {
+        this.runLineAnimation(lineId);
+      }
       setTimeout(() => {
         this.runStateAnimation(stateData);
       }, during + interval * (rectCount - 1));
     },
-
     loadData(data, index) {
       if (typeof index !== "number") {
         index = this.activeThreadIndex;
@@ -855,6 +840,67 @@ export default {
         });
       }, 3000);
     },
+    findConnectionLine(prevRunningState, currentRunningState, threadId) {
+      if (prevRunningState === "" || !currentRunningState || !threadId) {
+        return;
+      } else {
+        let currentThread, lineId;
+        store.stateData.threadAry.forEach((thread) => {
+          if (thread.threadId === threadId) {
+            currentThread = thread;
+          }
+        });
+        //console.log(currentThread)
+        currentThread.lineAry.forEach((line) => {
+          if (
+            line.startState.stateId === prevRunningState &&
+            line.endState.stateId === currentRunningState &&
+            line.type === "default"
+          ) {
+            lineId = line.lineId;
+          }
+        });
+        return lineId;
+      }
+    },
+    openWebSocket() {
+      const url = "ws://localhost:3000";
+      const connection = new WebSocket(url);
+
+      connection.onopen = function (e) {
+        console.log("Connected to WebSocket");
+      };
+      connection.onclose = function () {
+        console.log("Disconnected to WebSocket");
+      };
+      connection.onerror = function () {
+        console.log("Connection Error");
+      };
+      connection.onmessage = (e) => {
+        if (e.data) {
+          let pallasData = JSON.parse(e.data);
+          let runningData = {
+            stateId: pallasData.stateId,
+            runningStatus: pallasData.runningStatus,
+          };
+          if (runningData.stateId === "" || runningData.runningStatus === "") {
+            this.runningStateData = runningData;
+          } else {
+            let prevLineId = this.findConnectionLine(
+              this.prevRunningState,
+              runningData.stateId,
+              pallasData.threadId
+            );
+            this.runStateAnimation(runningData);
+            //this.runAnimation(prevLineId, runningData);
+            this.prevRunningState = runningData.stateId;
+          }
+        }
+      };
+      window.onbeforeunload = function () {
+        websocket.close();
+      };
+    },
   },
 
   computed: {
@@ -895,7 +941,9 @@ export default {
       this
     );
     EventObj.$on("saveQBlock2BlocklyXml", this.saveQBlock2BlocklyXml, this);
+    EventObj.$on("openWebSocket", this.openWebSocket, this);
     EventObj.$on("testLayout", this.testLayout, this);
+
     window.addEventListener("message", function (e) {
       let data = e.data;
       if (data.eventType === "setBreakpoint") {
@@ -903,9 +951,13 @@ export default {
       }
     });
     this.loadAllData();
+    this.prevRunningState = "";
   },
   mounted() {
     window.statePageVue = this;
+    //let threadDom = document.getElementsByClassName("en")[0]
+    //let threadDomClass = threadDom.getAttribute("class").replace("en", "zh")
+    //threadDom.setAttribute("class", threadDomClass)
     /* var importFileBtn = document.getElementById("importFile");
     if (importFileBtn) {
       importFileBtn.addEventListener("change", function (e) {
@@ -1000,13 +1052,32 @@ export default {
   @qkmPurple: #9373ec;
   @qkmGrey: #aaaaaa;
   @qkmWhite: #ffffff;
-  .template-thread,
+  .template-thread {
+    display: inline-block;
+    position: relative;
+    margin-left: 20px;
+    height: 40px;
+    line-height: 40px;
+    border: 1px solid #00dbff;
+    border-radius: 5px;
+    // color: #00dbff;
+    color: #aaaaaa;
+    text-align: center;
+    cursor: grab;
+    font-size: 14px;
+    &:hover {
+      // border-image: -webkit-linear-gradient(-45deg, #50FBFF, #7898F9) 5 5;
+      // animation: qkm_scale .3s;
+      // box-shadow: 0 0 5px 1px #fff;
+      color: #fff;
+    }
+  }
   .template-state,
   .template-loop {
     display: inline-block;
     position: relative;
     margin-left: 20px;
-    width: 76px;
+    width: 100px;
     height: 40px;
     line-height: 40px;
     border: 1px solid #00dbff;
@@ -1045,15 +1116,6 @@ export default {
     // background-color: #ed5e67;
     border-color: @qkmPink;
     box-shadow: inset 0 0 5px 1px @qkmPink;
-  }
-  .demo {
-    position: absolute;
-    top: 150px;
-    right: 200px;
-    .el-button {
-      display: block;
-      margin: 20px;
-    }
   }
 }
 </style>    

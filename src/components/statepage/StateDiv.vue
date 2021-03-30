@@ -88,7 +88,6 @@ export default {
     "index",
     "threadIndex",
     "activeStates",
-    "showDescData",
     "runningStatus",
     "runningAnimation",
     "showDeleteStateMenu",
@@ -284,8 +283,8 @@ export default {
 @qkmWhiteTransparent: #ffffffaf;
 @qkmOrange: #ffaf3dcc;
 @qkmRed: #e83e3ecc;
-@qkmAnimationOrange: #ffaf3d;
-@qkmAnimationRed: #e83e3e;
+@qkmLightOrange: #ffaf3d;
+@qkmLightRed: #e83e3e;
 .state-div {
   width: 100%;
   height: 100%;
@@ -299,13 +298,11 @@ export default {
   border-color: @qkmWhite;
 }
 .state-div.active {
-  border: 2px solid;
-  border-color: @qkmLightBlue;
+  border: 2px solid @qkmLightBlue;
   box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
 .state-div.selected {
-  border: 2px solid;
-  border-color: @qkmLightBlue;
+  border: 2px solid @qkmLightBlue;
   box-shadow: 2px 2px 4px 0px @qkmLightBlue;
 }
 .active-animation {
@@ -355,7 +352,7 @@ export default {
 .warning-animation {
   width: calc(99% - 1px);
   height: calc(99% - 4px);
-  border: 8px solid @qkmAnimationOrange;
+  border: 8px solid @qkmLightOrange;
   float: left;
   border-radius: 5px;
   top: -4px;
@@ -372,7 +369,7 @@ export default {
 .nest .warning-animation {
   width: 99%;
   height: 99%;
-  border: 8px solid @qkmAnimationOrange;
+  border: 8px solid @qkmLightOrange;
   float: left;
   border-radius: 5px;
   top: -4px;
@@ -394,7 +391,7 @@ export default {
 .error-animation {
   width: calc(99% - 1px);
   height: calc(99% - 4px);
-  border: 8px solid @qkmAnimationRed;
+  border: 8px solid @qkmLightRed;
   float: left;
   border-radius: 5px;
   top: -4px;
@@ -411,7 +408,7 @@ export default {
 .nest .error-animation {
   width: 99%;
   height: 99%;
-  border: 8px solid @qkmAnimationRed;
+  border: 8px solid @qkmLightRed;
   float: left;
   border-radius: 5px;
   top: -4px;

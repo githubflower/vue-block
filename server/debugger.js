@@ -92,4 +92,4 @@ const Debugger = {
     }
 };
 
-export default Debugger;
+module.exports = Debugger

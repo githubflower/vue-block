@@ -30,6 +30,8 @@
       :index="index"
       :threadIndex="threadIndex"
       :activeStates="activeStates"
+      :runningStatus="runningStatus"
+      :runningAnimation="runningAnimation"
       :showDeleteStateMenu="showDeleteStateMenu"
       :showLineContextMenu="showLineContextMenu"
       @updateTempLineData="updateTempLineData"
@@ -112,7 +114,7 @@ import { lineCfg } from "./graphCfg.js";
 import QBlock from "./qblock.js";
 const IS_MOVING = 1;
 const IS_CONNECTING = 2;
-const UNDO_REDO_LIMIT = lineCfg.undo_redo_limit;
+
 const LINE_DISPLACE = lineCfg.line_displace;
 const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
@@ -426,7 +428,23 @@ export default {
       ) {
         this.defaultToNest(this.stateData);
       }
-
+      //若是拖拽状态到循环状态内，则自动添加开始循环与继续循环的连线
+      if (this.stateData.stateType === "loopDiv") {
+        this.$nextTick(function () {
+          QBlock.Line.addStartLoopLine2State(
+            this.stateData,
+            theDragStateData,
+            this.threadIndex
+          );
+          setTimeout(() => {
+            QBlock.Line.addContinueLoopLine2State(
+              theDragStateData,
+              this.stateData,
+              this.threadIndex
+            );
+          }, 10);
+        });
+      }
       let dragStateParentStates = stateAry;
       //获取在直接拖拽形成嵌套时，正在拖拽的状态父状态的索引
       let directDropIndexAry = this.getdropParentIndexAry(this);

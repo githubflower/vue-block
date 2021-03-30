@@ -34,55 +34,21 @@ app.use(express.static(path.join(__dirname, 'www')))
 
 //======================中间件=======================================================
 //使用中间件处理权限 TODO   业务逻辑写到各自的中间件里面
+/*const qrlDebugger = require('./Debugger.js');
+const robot = require('./robot.js');
+const permission = require('./permission.js');
+app.use('/service/setting', permission.checkPermission);
+app.use('/service/move', [permission.checkPermission, robot.test]);*/
 
 var projectManage = require('./project_manage.js');
-
-app.use('/service/saveProject', projectManage.saveProject);
-app.use('/service/newProject', projectManage.newProject);
-
-
-const wss = new WebSocket.Server({ port: 3000 });
-let globalWs;
-
-
-wss.on('connection', ws => {
-	globalWs = ws;
-	ws.on('message', message => {
-		console.log(`${message}`)
-	})
-})
-
-const connectPallas2092 = function () {
-	let dataReg = />#QBLOCK#([\s\S]*?)</
+const connectPallas2092 = function(){
 	net.connect({ port: 2092, host: '192.168.12.249' }, function () {
 		console.log(' Connected');
+		//console.log(' local= %s:%s', this.localAddress, this.localPort);
+		//console.log(' remote= %s:%s', this._remoteAddress, this._remoteAddress);
 		this.setEncoding('utf8');
-		let sendingData = {
-			stateId: "",
-			runningStatus: "",
-			threadId: ""
-		}
 		this.on('data', function (data) {
-			console.log(" From Server:" + data);
-			if (data.match(dataReg)) {
-				let filteredData = data.match(dataReg)[1].replace("\t", " ").split(" ")
-				let filteredThreadId = filteredData[0]
-				let filteredId = filteredData[1]
-				let filterRunningStatus = filteredData[2]
-				if (filteredId[0] !== "/" && filterRunningStatus) {
-					console.log(filteredId, filterRunningStatus)
-					sendingData.stateId = filteredId
-					sendingData.runningStatus = filterRunningStatus
-					sendingData.threadId = filteredThreadId
-					globalWs.send(JSON.stringify(sendingData))
-				}
-			} else {
-				sendingData.stateId = ""
-				sendingData.runningStatus = ""
-				sendingData.threadId = ""
-				globalWs.send(JSON.stringify(sendingData))
-			}
-			//console.log(" filtered data:", filteredData)
+			console.log(" From Server:" + data.toString());
 		});
 		this.on('end', function () {
 			console.log(' disconnection');
@@ -98,8 +64,56 @@ const connectPallas2092 = function () {
 		});
 	})
 }
+
+
+app.use('/service/saveProject', projectManage.saveProject);
+app.use('/service/loadProject', projectManage.loadProject);
 app.use('/service/connectPallas2092', connectPallas2092);
+
+const wss = new WebSocket.Server({ port: 3000 });
+let globalWs;
+
+
+wss.on('connection', ws => {
+	globalWs = ws;
+	ws.on('message', message => {
+		console.log(`${message}`)
+	})
+	let data = {
+		stateId: "state-end",
+		runningStatus: "active"
+	}
+	ws.send(JSON.stringify(data))
+	let interval
+	/*
+	interval = setInterval(() => {
+		ws.send("stateId: start-state")
+	}, 1000)
+	let data1 = {
+		stateId: "state-start",
+		runningStatus: "warning"
+	}
+	setTimeout(() => {
+		ws.send(JSON.stringify(data1))
+	}, 10000);*/
+})
+
+
 //所有获取数据尽量使用get请求
+
+/*
+setTimeout(() => {
+	globalWs.send(JSON.stringify({stateId: "1231230", runningStatus:"123123"}));
+}, 15000);
+*/
+
+/*
+*/
+
+
+
+
+
 
 app.listen(80, () => {
 	console.log(`App listening at port 80`)

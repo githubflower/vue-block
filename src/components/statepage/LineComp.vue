@@ -3,7 +3,11 @@
     @contextmenu.prevent="onContextMenu"
     @click.stop="activeLineChange"
     @mouseup="stopMovingLine"
-    :class="[{ showdesc: line.showdesc }, { active: isInActiveLines() }]"
+    :class="[
+      { showdesc: line.showdesc },
+      { active: isInActiveLines() },
+      { 'nearby-hover': isNearbyHoverLine() },
+    ]"
   >
     <path
       :lineId="line.lineId"
@@ -44,18 +48,26 @@
 
 <script>
 import { lineCfg } from "./graphCfg.js";
+import { threadCfg } from "./graphCfg.js";
 import Util from "./util.js";
 import QBlock from "./qblock.js";
 import DrawLine from "./drawLine.js";
 const LINE_H = lineCfg.line_h;
 const LINE_V = lineCfg.line_v;
 const LINE_RADIUS = lineCfg.line_radius;
-const HIGHLIGHT_LIMIT = lineCfg.highlight_limit;
 const STROKE_WIDTH = lineCfg.stroke_width;
 const DESC_LIMIT = lineCfg.desc_limit;
+
+const HIGHLIGHT_LIMIT = threadCfg.highlight_limit;
 export default {
   name: "LineComp",
-  props: ["line", "threadIndex", "lineType", "activeLines"],
+  props: [
+    "line",
+    "threadIndex",
+    "lineType",
+    "activeLines",
+    "nearbyHoverLineId",
+  ],
   data() {
     return {
       strokeWidth: STROKE_WIDTH,
@@ -64,6 +76,12 @@ export default {
     };
   },
   methods: {
+    isNearbyHoverLine() {
+      if (this.line.lineId === this.nearbyHoverLineId) {
+        return true;
+      }
+      return false;
+    },
     activeLineChange() {
       if (this._hasMovedLine) {
         this._hasMovedLine = false;
@@ -218,7 +236,6 @@ export default {
           y: startState.y + Util.translatePX2Num(startState.height) / 2,
         };
       } else {
-        //debugger;
       }
       return line.startPoint;
     },
@@ -240,7 +257,6 @@ export default {
           y: endState.y + Util.translatePX2Num(endState.height) / 2,
         };
       } else {
-        //debugger;
       }
       return line.endPoint;
     },
@@ -371,6 +387,9 @@ export default {
     if (!this.line.lineId) {
       this.line.lineId = this.genId();
     }
+    if (!this.line.threadIndex) {
+      this.line.threadIndex = this.threadIndex;
+    }
     if (this.line.type !== "tempLine") {
       store.stateData.lineMap[this.line.lineId] = this;
     }
@@ -449,6 +468,16 @@ export default {
     stroke: @qkmLightBlue;
     fill: none;
     cursor: pointer;
+  }
+}
+
+.nearby-hover {
+  .connect-line,
+  .start-loop,
+  .end-loop,
+  .continue-loop {
+    stroke: @qkmLightBlue;
+    fill: none;
   }
 }
 .active {
